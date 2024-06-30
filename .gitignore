@@ -400,3 +400,7 @@ FodyWeavers.xsd
 # CMake
 build/
 .idea/
+
+.vscode/
+
+data/scenes/
