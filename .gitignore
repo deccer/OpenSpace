@@ -399,6 +399,8 @@ FodyWeavers.xsd
 
 # CMake
 build/
+cmake-build-debug/
+cmake-build-release/
 .idea/
 
 .vscode/
