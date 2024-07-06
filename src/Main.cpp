@@ -56,7 +56,7 @@
 
 #include <debugbreak.h>
 #include <spdlog/spdlog.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <imgui.h>
@@ -857,7 +857,7 @@ std::unordered_map<SSamplerDescriptor, SSamplerId> g_samplerDescriptors;
 
 auto InitializeRhi() -> bool {
 
-    if (gladLoadGL() == GL_FALSE) {
+    if (gladLoadGL(glfwGetProcAddress) == GL_FALSE) {
         return false;
     }
 
