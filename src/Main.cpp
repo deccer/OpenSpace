@@ -69,6 +69,17 @@
 
 // - Core Types ---------------------------------------------------------------
 
+template <auto TDeleterCallback>
+struct SUniqueDeleter {
+    template <typename T>
+    constexpr void operator()(T* t) const {
+        callback(t);
+    }
+};
+
+template <typename T, auto callback>
+using SDeletableUniquePtr = std::unique_ptr<T, SUniqueDeleter<TDeleterCallback>>;
+
 template<class TTag>
 struct SIdImpl {
     enum class Id : std::size_t { Invalid = SIZE_MAX };
