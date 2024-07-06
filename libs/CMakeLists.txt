@@ -24,23 +24,22 @@ FetchContent_MakeAvailable(glfw)
 if(TARGET glad)
 message("already fetched glad")
 else()
-FetchContent_Declare(
-    glad
-    GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-    GIT_SHALLOW    TRUE
-    GIT_PROGRESS   TRUE
-)
+    FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/Dav1dde/glad
+        GIT_TAG        v2.0.6
+        GIT_SHALLOW    TRUE
+        GIT_PROGRESS   TRUE
+    )
 
-FetchContent_GetProperties(glad)
-if(NOT glad_POPULATED)
-    message("Fetching glad")
-    FetchContent_Populate(glad)
-    set(GLAD_PROFILE "core" CACHE STRING "OpenGL profile")
-    set(GLAD_API "gl=4.6" CACHE STRING "API type/version pairs, like \"gl=4.6\", no version means latest")
-    set(GLAD_GENERATOR "c" CACHE STRING "Language to generate the binding for")
-    set(GLAD_EXTENSIONS "GL_ARB_bindless_texture GL_EXT_texture_compression_s3tc" CACHE STRING "Extensions to take into consideration when generating the bindings")
-    add_subdirectory(${glad_SOURCE_DIR} ${glad_BINARY_DIR})
-endif()
+    FetchContent_GetProperties(glad)
+    if(NOT glad_POPULATED)
+        message("Fetching glad")
+        FetchContent_MakeAvailable(glad)
+
+        add_subdirectory("${glad_SOURCE_DIR}/cmake" glad_cmake)
+        glad_add_library(glad REPRODUCIBLE EXCLUDE_FROM_ALL LOADER API gl:core=4.6 EXTENSIONS GL_ARB_bindless_texture GL_EXT_texture_compression_s3tc)
+    endif()
 endif()
 
 #- glm ----------------------------------------------------------------------------------------------------------------
@@ -67,7 +66,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(stb)
 if(NOT stb_image_POPULATED)
-    FetchContent_Populate(stb)
+    FetchContent_MakeAvailable(stb)
     message("Fetching stb")
 
     add_library(stb INTERFACE ${stb_SOURCE_DIR}/stb_image.h)
@@ -119,7 +118,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)
     message("Fetching imgui")
-    FetchContent_Populate(imgui)
+    FetchContent_MakeAvailable(imgui)
 
     add_library(imgui
         ${imgui_SOURCE_DIR}/imgui.cpp
@@ -205,7 +204,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(debugbreak)
 if(NOT debugbreak_POPULATED)
     message("Fetching debugbreak")
-    FetchContent_Populate(debugbreak)
+    FetchContent_MakeAvailable(debugbreak)
 
     add_library(debugbreak INTERFACE ${debugbreak_SOURCE_DIR}/debugbreak.h)
     target_include_directories(debugbreak INTERFACE ${debugbreak_SOURCE_DIR})
