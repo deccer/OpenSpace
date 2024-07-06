@@ -1575,6 +1575,12 @@ auto FormatToFormatClass(EFormat format) -> EFormatClass
 
 /////////////////////////////////////////////////////////////
 
+auto FreeImage(void* pixels) -> void {
+    if (pixels != nullptr) {
+        stbi_image_free(pixels);
+    }
+}
+
 auto LoadImageFromMemory(
     std::byte* encodedData,
     size_t encodedDataSize,
