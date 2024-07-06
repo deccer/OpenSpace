@@ -2229,6 +2229,17 @@ struct SGpuMesh {
     glm::mat4 InitialTransform;
 };
 
+struct SGpuMaterial {
+    glm::vec4 BaseColor;
+    glm::vec4 Factors; // use .x = basecolor factor .y = normal strength, .z = metalness, .w = roughness
+
+    uint64_t BaseColorTexture;
+    uint64_t NormalTexture;
+
+    uint64_t ArmTexture;
+    uint64_t EmissiveTexture;
+};
+
 struct SGlobalLight {
 
     float Azimuth;
@@ -2299,6 +2310,7 @@ struct SAssetMesh {
     std::vector<SGpuVertexPosition> VertexPositions;
     std::vector<SGpuVertexNormalUvTangent> VertexNormalUvTangents;
     std::vector<uint32_t> Indices;
+    std::string MaterialName;
 };
 
 struct SAssetSampler {
@@ -2592,14 +2604,16 @@ auto CreateAssetMesh(
     std::string_view name,
     glm::mat4 initialTransform,
     const std::pair<std::vector<SGpuVertexPosition>, std::vector<SGpuVertexNormalUvTangent>>& vertices,
-    const std::vector<uint32_t> indices) -> SAssetMesh {
+    const std::vector<uint32_t> indices,
+    const std::string& materialName) -> SAssetMesh {
 
     return SAssetMesh{
         .Name = name,
         .InitialTransform = initialTransform,
         .VertexPositions = std::move(vertices.first),
         .VertexNormalUvTangents = std::move(vertices.second),
-        .Indices = std::move(indices)
+        .Indices = std::move(indices),
+        .MaterialName = materialName
     };
 }
 
@@ -2622,7 +2636,8 @@ auto CreateAssetImage(
 auto CreateAssetMaterial(
     const std::string& modelName,
     const fastgltf::Asset& asset,
-    const fastgltf::Material& fgMaterial) -> void {
+    const fastgltf::Material& fgMaterial,
+    size_t assetMaterialIndex) -> void {
 
     SAssetMaterial assetMaterial = {};
     assetMaterial.BaseColorFactor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
@@ -2633,8 +2648,9 @@ auto CreateAssetMaterial(
     if (fgMaterial.pbrData.baseColorTexture.has_value()) {
         auto& fgBaseColorTexture = fgMaterial.pbrData.baseColorTexture.value();
         auto& fgTexture = asset.textures[fgBaseColorTexture.textureIndex];
-        auto fgTextureImageName = GetSafeResourceName(modelName.data(), nullptr, "image", g_assetImages.size() + fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", g_assetSamplers.size() + fgTexture.samplerIndex.value_or(0));        
+        auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
+        auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = SAssetMaterialChannel{
             .Usage = EMaterialChannelUsage::SRgb,
@@ -2646,8 +2662,9 @@ auto CreateAssetMaterial(
     if (fgMaterial.normalTexture.has_value()) {
         auto& fgNormalTexture = fgMaterial.normalTexture.value();
         auto& fgTexture = asset.textures[fgNormalTexture.textureIndex];
-        auto fgTextureImageName = GetSafeResourceName(modelName.data(), nullptr, "image", g_assetImages.size() + fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", g_assetSamplers.size() + fgTexture.samplerIndex.value_or(0));        
+        auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
+        auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = SAssetMaterialChannel{
             .Usage = EMaterialChannelUsage::Normal,
@@ -2659,8 +2676,9 @@ auto CreateAssetMaterial(
     if (fgMaterial.pbrData.metallicRoughnessTexture.has_value()) {
         auto& fgMetallicRoughnessTexture = fgMaterial.pbrData.metallicRoughnessTexture.value();
         auto& fgTexture = asset.textures[fgMetallicRoughnessTexture.textureIndex];
-        auto fgTextureImageName = GetSafeResourceName(modelName.data(), nullptr, "image", g_assetImages.size() + fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", g_assetSamplers.size() + fgTexture.samplerIndex.value_or(0));        
+        auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
+        auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.OcclusionRoughnessMetallnessChannel = SAssetMaterialChannel{
             .Usage = EMaterialChannelUsage::MetalnessRoughness,
@@ -2672,8 +2690,9 @@ auto CreateAssetMaterial(
     if (fgMaterial.emissiveTexture.has_value()) {
         auto& fgEmissiveTexture = fgMaterial.emissiveTexture.value();
         auto& fgTexture = asset.textures[fgEmissiveTexture.textureIndex];
-        auto fgTextureImageName = GetSafeResourceName(modelName.data(), nullptr, "image", g_assetImages.size() + fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", g_assetSamplers.size() + fgTexture.samplerIndex.value_or(0));        
+        auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
+        auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = SAssetMaterialChannel{
             .Usage = EMaterialChannelUsage::SRgb,
@@ -2682,7 +2701,7 @@ auto CreateAssetMaterial(
         };
     }
     
-    auto materialName = std::string(fgMaterial.name.data());
+    auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", assetMaterialIndex);
     return AddAssetMaterial(materialName, assetMaterial);
 }
 
