@@ -754,6 +754,10 @@ struct SPipeline {
         glProgramUniform1ui(Id, location, value);
     }
 
+    inline auto SetUniform(int32_t location, uint64_t value) -> void {
+        glProgramUniformHandleui64ARB(Id, location, value);
+    }
+
     inline auto SetUniform(int32_t location, const glm::vec2& value) -> void {
         glProgramUniform2fv(Id, location, 1, glm::value_ptr(value));
     }
@@ -1762,6 +1766,22 @@ auto UploadTexture(const STextureId& textureId, const SUploadTextureDescriptor& 
                                 updateTextureDescriptor.PixelData);
             break;
     }
+}
+
+auto MakeTextureResident(const STextureId& textureId) -> uint64_t {
+    
+    auto& texture = GetTexture(textureId);
+
+    auto textureHandle = glGetTextureHandleARB(texture.Id);
+    glMakeTextureHandleResidentARB(textureHandle);
+
+    return textureHandle;
+}
+
+auto GenerateMipmaps(const STextureId textureId) -> void {
+
+    auto& texture = GetTexture(textureId);
+    glGenerateTextureMipmap(texture.Id);
 }
 
 auto GetOrCreateSampler(const SSamplerDescriptor& samplerDescriptor) -> SSamplerId {
