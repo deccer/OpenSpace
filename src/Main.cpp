@@ -2747,32 +2747,32 @@ auto LoadModelFromFile(
 
         auto imageData = [&] {
 
-            if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
-                auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
-                auto filePathParent = filePath.parent_path();
-                if (filePathFixed.is_relative()) {
-                    filePathFixed = filePath.parent_path() / filePathFixed;
-                }
-                auto fileData = ReadBinaryFromFile(filePathFixed);
-                return CreateAssetImage(fileData.first.get(), fileData.second, filePathUri->mimeType, fgImage.name);
+        if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
+            auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
+            auto filePathParent = filePath.parent_path();
+            if (filePathFixed.is_relative()) {
+                filePathFixed = filePath.parent_path() / filePathFixed;
             }
-            if (const auto* array = std::get_if<fastgltf::sources::Array>(&fgImage.data)) {
-                return CreateAssetImage(array->bytes.data(), array->bytes.size(), array->mimeType, fgImage.name);
+            auto fileData = ReadBinaryFromFile(filePathFixed);
+            return CreateAssetImage(fileData.first.get(), fileData.second, filePathUri->mimeType, fgImage.name);
+        }
+        if (const auto* array = std::get_if<fastgltf::sources::Array>(&fgImage.data)) {
+            return CreateAssetImage(array->bytes.data(), array->bytes.size(), array->mimeType, fgImage.name);
+        }
+        if (const auto* vector = std::get_if<fastgltf::sources::Vector>(&fgImage.data)) {
+            return CreateAssetImage(vector->bytes.data(), vector->bytes.size(), vector->mimeType, fgImage.name);
+        }
+        if (const auto* view = std::get_if<fastgltf::sources::BufferView>(&fgImage.data)) {
+            auto& bufferView = fgAsset.bufferViews[view->bufferViewIndex];
+            auto& buffer = fgAsset.buffers[bufferView.bufferIndex];
+            if (const auto* array = std::get_if<fastgltf::sources::Array>(&buffer.data)) {
+                return CreateAssetImage(
+                    array->bytes.data() + bufferView.byteOffset,
+                    bufferView.byteLength,
+                    view->mimeType,
+                    fgImage.name);
             }
-            if (const auto* vector = std::get_if<fastgltf::sources::Vector>(&fgImage.data)) {
-                return CreateAssetImage(vector->bytes.data(), vector->bytes.size(), vector->mimeType, fgImage.name);
-            }
-            if (const auto* view = std::get_if<fastgltf::sources::BufferView>(&fgImage.data)) {
-                auto& bufferView = fgAsset.bufferViews[view->bufferViewIndex];
-                auto& buffer = fgAsset.buffers[bufferView.bufferIndex];
-                if (const auto* array = std::get_if<fastgltf::sources::Array>(&buffer.data)) {
-                    return CreateAssetImage(
-                        array->bytes.data() + bufferView.byteOffset, 
-                        bufferView.byteLength,
-                        view->mimeType,
-                        fgImage.name);
-                }
-            }
+        }
             
             return SAssetImage{};
         }();
@@ -2788,7 +2788,7 @@ auto LoadModelFromFile(
             &width,
             &height,
             &components);
-        
+
         imageData.Width = width;
         imageData.Height = height;
         imageData.Components = 4; // LoadImageFromMemory is forcing 4 components
