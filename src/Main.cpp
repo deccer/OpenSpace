@@ -3601,7 +3601,26 @@ auto main(
         currentTimeInSeconds = glfwGetTime();
 
         // Update State
-        HandleCamera(deltaTimeInSeconds);
+        HandleCamera(static_cast<float>(deltaTimeInSeconds));
+
+        ///////////////////////
+        // Create Gpu Resources if necessary
+        ///////////////////////
+        auto createGpuResourcesNecessaryView = g_gameRegistry.view<SComponentCreateGpuResourcesNecessary>();
+        for (auto& entity : createGpuResourcesNecessaryView) {
+
+            ZoneScopedN("In RenderLoop: Create Gpu Resources");
+            auto& meshComponent = g_gameRegistry.get<SComponentMesh>(entity);
+            auto& materialComponent = g_gameRegistry.get<SComponentMaterial>(entity);
+
+            CreateGpuMesh(meshComponent.Mesh);
+            CreateGpuMaterial(materialComponent.Material);
+
+            g_gameRegistry.emplace<SComponentGpuMesh>(entity, meshComponent.Mesh);
+            g_gameRegistry.emplace<SComponentGpuMaterial>(entity, materialComponent.Material);
+
+            g_gameRegistry.remove<SComponentCreateGpuResourcesNecessary>(entity);
+        }
 
         // Update Per Frame Uniforms
 
@@ -3657,10 +3676,11 @@ auto main(
 
         g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-        auto& assetMeshIds = GetAssetModelMeshNames("Test");
-        for(auto& assetMeshId : assetMeshIds) {
+        /*
+        auto& assetMeshNames = GetAssetModelMeshNames("Test");
+        for(auto& assetMeshName : assetMeshNames) {
 
-            auto mesh = CreateGpuMesh(assetMeshId);
+            auto mesh = CreateGpuMesh(assetMeshName);
 
             g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(mesh.VertexPositionBuffer, 1);
             g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(mesh.VertexNormalUvTangentBuffer, 2);
@@ -3670,7 +3690,29 @@ auto main(
             glBindTextureUnit(1, g_gridTexture);
             glBindSampler(1, g_fullscreenSamplerNearestClampToEdge.Id);
         }
-        
+        */
+        auto renderablesView = g_gameRegistry.view<SComponentGpuMesh, SComponentGpuMaterial, SComponentWorldMatrix>();
+        renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
+        //for (auto& renderableEntity : renderablesView) {
+
+            ZoneScopedN("In RenderLoop: Draw");
+
+            //auto& [meshComponent, materialComponent, initialTransform] = renderablesView.get<SComponentGpuMesh&, SComponentGpuMaterial&, SComponentWorldMatrix&>(renderableEntity);
+            auto& gpuMaterial = GetGpuMaterial(materialComponent.GpuMaterial);
+            auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+
+            glBindSampler(1, g_fullscreenSamplerNearestClampToEdge.Id);
+
+            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
+            g_geometryGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
+            g_geometryGraphicsPipeline.SetUniform(8, gpuMaterial.BaseColorTexture);
+            g_geometryGraphicsPipeline.SetUniform(9, gpuMaterial.NormalTexture);
+
+            g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+
+        });
+
         /*
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBlitNamedFramebuffer(g_geometryFramebuffer.Id, 0, 
@@ -3691,7 +3733,7 @@ auto main(
 
             g_debugLinesGraphicsPipeline.Bind();
             g_debugLinesGraphicsPipeline.BindBufferAsVertexBuffer(g_debugLinesVertexBuffer, 0, 0, sizeof(SDebugLine) / 2);
-            g_debugLinesGraphicsPipeline.BindBufferAsUniformBuffer(0, globalUniformsBuffer);
+            g_debugLinesGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
             g_debugLinesGraphicsPipeline.DrawArrays(0, g_debugLines.size() * 2);
             
             glEnable(GL_CULL_FACE);
@@ -3731,7 +3773,7 @@ auto main(
                 ImGui::Text("rfps: %.0f", framesPerSecond);
                 ImGui::Text("rpms: %.0f", framesPerSecond * 60.0f);
                 ImGui::Text("  ft: %.2f ms", deltaTimeInSeconds * 1000.0f);
-                ImGui::Text("   f: %.d", frameCounter);
+                ImGui::Text("   f: %lu", frameCounter);
             }
             ImGui::End();
             ImGui::PopStyleColor();
@@ -3759,7 +3801,7 @@ auto main(
                     g_sceneViewerResized = true;
                 }
 
-                auto texture = g_geometryFramebuffer.ColorAttachments[0].value().Texture.Id;
+                auto texture = g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
                 auto imagePosition = ImGui::GetCursorPos();
                 ImGui::Image(reinterpret_cast<ImTextureID>(texture), availableSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(imagePosition);
