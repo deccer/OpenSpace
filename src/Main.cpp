@@ -1769,6 +1769,12 @@ auto GenerateMipmaps(const STextureId textureId) -> void {
     glGenerateTextureMipmap(texture.Id);
 }
 
+auto DeleteTextures() -> void {
+    for(auto& texture : g_textures) {
+        glDeleteTextures(1, &texture.Id);
+    }
+}
+
 auto GetOrCreateSampler(const SSamplerDescriptor& samplerDescriptor) -> SSamplerId {
 
     if (auto existingSamplerDescriptor = g_samplerDescriptors.find(samplerDescriptor); existingSamplerDescriptor != g_samplerDescriptors.end()) {
@@ -3818,6 +3824,8 @@ auto main(
     DeleteFramebuffer(g_geometryFramebuffer);
     DeletePipeline(g_geometryGraphicsPipeline);
     DeletePipeline(g_debugLinesGraphicsPipeline);
+
+    DeleteTextures();
 
     UnloadRhi();
 
