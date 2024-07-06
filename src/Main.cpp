@@ -3659,28 +3659,11 @@ auto main(
 
         g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-        /*
-        auto& assetMeshNames = GetAssetModelMeshNames("Test");
-        for(auto& assetMeshName : assetMeshNames) {
-
-            auto mesh = CreateGpuMesh(assetMeshName);
-
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(mesh.VertexPositionBuffer, 1);
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(mesh.VertexNormalUvTangentBuffer, 2);
-            g_geometryGraphicsPipeline.SetUniform(0, mesh.InitialTransform);
-            g_geometryGraphicsPipeline.SetUniform(4, 0, 0, 0, 0);
-            g_geometryGraphicsPipeline.DrawElements(mesh.IndexBuffer, mesh.IndexCount);
-            glBindTextureUnit(1, g_gridTexture);
-            glBindSampler(1, g_fullscreenSamplerNearestClampToEdge.Id);
-        }
-        */
         auto renderablesView = g_gameRegistry.view<SComponentGpuMesh, SComponentGpuMaterial, SComponentWorldMatrix>();
         renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
-        //for (auto& renderableEntity : renderablesView) {
 
             ZoneScopedN("In RenderLoop: Draw");
 
-            //auto& [meshComponent, materialComponent, initialTransform] = renderablesView.get<SComponentGpuMesh&, SComponentGpuMaterial&, SComponentWorldMatrix&>(renderableEntity);
             auto& gpuMaterial = GetGpuMaterial(materialComponent.GpuMaterial);
             auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
