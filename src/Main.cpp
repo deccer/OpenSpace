@@ -1613,14 +1613,9 @@ auto LoadImageFromFile(
     }
 }
 
-auto FreeImage(void* pixels) -> void {
-    if (pixels != nullptr) {
-        stbi_image_free(pixels);
-    }
-}
-
 auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> STextureId {
 
+    ZoneScopedN("CreateTexture");
     STexture texture = {};
 
     glCreateTextures(TextureTypeToGL(createTextureDescriptor.TextureType), 1, &texture.Id);
@@ -1713,7 +1708,8 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
 }
 
 auto UploadTexture(const STextureId& textureId, const SUploadTextureDescriptor& updateTextureDescriptor) -> void {
-    
+
+    ZoneScopedN("UploadTexture");
     auto& texture = GetTexture(textureId);
 
     uint32_t format = 0;
@@ -2421,34 +2417,42 @@ auto AddAssetSampler(
 
 auto GetAssetImage(const std::string& assetImageName) -> SAssetImage& {
 
-    assert(!assetImageName.empty());
+    assert(!assetImageName.empty() || g_assetImages.contains(assetImageName));
     ZoneScopedN("GetAssetImage");
 
-    return g_assetImages[assetImageName];
+    return g_assetImages.at(assetImageName);
 }
 
 auto GetAssetMesh(const std::string& assetMeshName) -> SAssetMesh& {
 
-    assert(!assetMeshName.empty());
+    assert(!assetMeshName.empty() || g_assetMeshes.contains(assetMeshName));
     ZoneScopedN("GetAssetMesh");
 
-    return g_assetMeshes[assetMeshName];
+    return g_assetMeshes.at(assetMeshName);
+}
+
+auto GetAssetMaterial(const std::string& assetMaterialName) -> SAssetMaterial& {
+
+    assert(!assetMaterialName.empty() || g_assetMaterials.contains(assetMaterialName));
+    ZoneScopedN("GetAssetMaterial");
+
+    return g_assetMaterials.at(assetMaterialName);
 }
 
 auto GetAssetModelMeshNames(const std::string& modelName) -> std::vector<std::string>& {
 
-    assert(!modelName.empty());
+    assert(!modelName.empty() || g_assetModelMeshes.contains(modelName));
     ZoneScopedN("GetAssetModelMeshNames");
 
-    return g_assetModelMeshes[modelName];
+    return g_assetModelMeshes.at(modelName);
 }
 
-auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler {
+auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler& {
 
-    assert(!assetSamplerName.empty());
+    assert(!assetSamplerName.empty() || g_assetSamplers.contains(assetSamplerName));
     ZoneScopedN("GetAssetSampler");
 
-    return g_assetSamplers[assetSamplerName];
+    return g_assetSamplers.at(assetSamplerName);
 }
 
 /*
@@ -2470,6 +2474,7 @@ auto GetAssetTexture(const std::string& assetTextureName) -> SAssetTexture& {
 
     ZoneScopedN("GetAssetTexture");
     assert(!assetTextureName.empty());
+
     return g_assetTextures[assetTextureName];
 }
 
