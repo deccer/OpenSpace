@@ -3546,19 +3546,19 @@ auto main(
     // - Load Assets ////////////
 
     LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured.glb");
-    //LoadModelFromFile("Test", "data/scenes/Tower/scene.gltf");
+    //LoadModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
     
     //LoadModelFromFile("SM_DeccerCube", "data/scenes/stylized_low-poly_sand_block.glb");
-    //LoadModelFromFile("SM_Cube", "data/scenes/stylized_low-poly_sand_block.glb");
+    //LoadModelFromFile("SM_Cube1", "data/scenes/stylized_low-poly_sand_block.glb");
     //LoadModelFromFile("SM_Cube_1by1by1", "data/basic/SM_Cube_1by1by1.glb");
     
     //LoadModelFromFile("SM_Cube_1by1_x5", "data/basic/SM_Cube_1by1_x5.glb");
     //LoadModelFromFile("SM_Cube_1by1_y5", "data/basic/SM_Cube_1by1_y5.glb");
     //LoadModelFromFile("SM_Cube_1by1_z5", "data/basic/SM_Cube_1by1_z5.glb");
     //LoadModelFromFile("Test", "data/basic/Cubes/SM_Cube_1by1_5y.gltf");
-    //LoadModelFromFile("Test", "data/basic/Cubes2/SM_Cube_1by1_5y.gltf");
+    //LoadModelFromFile("Test2", "data/basic/Cubes2/SM_Cube_1by1_5y.gltf");
     
-    //LoadModelFromFile("Test", "data/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
+    //LoadModelFromFile("SM_IntelSponza", "data/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
 
     uint32_t g_gridTexture;
 
