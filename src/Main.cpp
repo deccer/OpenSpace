@@ -3578,7 +3578,14 @@ auto main(
     
     /// Setup Scene ////////////
 
-    /// Start Renderloop ///////
+    AddEntity(std::nullopt, "Test", glm::mat4(1.0f));
+
+    //AddEntity(std::nullopt, "Test2", glm::translate(glm::mat4(1.0f), {0.0f, 0.0f, -10.0f}));
+    //AddEntity(std::nullopt, "SM_Tower", glm::scale(glm::mat4(1.0f), {0.01f, 0.01f, 0.01f}) * glm::translate(glm::mat4(1.0f), {-5.0f, -2.0f, -10.0f}));
+    //AddEntity(std::nullopt, "SM_Cube1", glm::translate(glm::mat4(1.0f), {0.0f, 10.0f, 10.0f}));
+    //AddEntity(std::nullopt, "SM_IntelSponza", glm::translate(glm::mat4(1.0f), {0.0f, -10.0f, 0.0f}));
+
+    /// Start Render Loop ///////
 
     uint64_t frameCounter = 0;
     auto currentTimeInSeconds = glfwGetTime();    
