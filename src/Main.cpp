@@ -2930,6 +2930,136 @@ auto LoadModelFromFile(
     }
 }
 
+// - Renderer -----------------------------------------------------------------
+
+using SGpuMeshId = SId<struct TGpuMeshId>;
+using SGpuSamplerId = SId<struct TGpuSamplerId>;
+using SGpuMaterialId = SId<struct TGpuMaterialId>;
+
+SIdGenerator<SGpuMeshId> g_gpuMeshCounter = {};
+
+SFramebuffer g_geometryFramebuffer = {};
+SGraphicsPipeline g_geometryGraphicsPipeline = {};
+std::vector<SGpuGlobalLight> g_gpuGlobalLights;
+
+bool g_drawDebugLines = true;
+std::vector<SDebugLine> g_debugLines;
+uint32_t g_debugInputLayout = 0;
+uint32_t g_debugLinesVertexBuffer = 0;
+SGraphicsPipeline g_debugLinesGraphicsPipeline = {};
+
+SGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
+SSampler g_fullscreenSamplerNearestClampToEdge = {};
+
+std::unordered_map<std::string, SGpuMesh> g_gpuMeshes = {};
+std::unordered_map<std::string, SSampler> g_gpuSamplers = {};
+std::unordered_map<std::string, SGpuMaterial> g_gpuMaterials = {};
+
+auto DrawFullscreenTriangleWithTexture(const STexture& texture) -> void {
+    
+    g_fullscreenTriangleGraphicsPipeline.Bind();
+    g_fullscreenTriangleGraphicsPipeline.BindTextureAndSampler(0, texture.Id, g_fullscreenSamplerNearestClampToEdge.Id);
+    g_fullscreenTriangleGraphicsPipeline.DrawArrays(0, 3);
+}
+
+auto CreateGpuMesh(const std::string& assetMeshName) -> void {
+
+    auto& assetMesh = GetAssetMesh(assetMeshName);
+
+    uint32_t buffers[3] = {};
+    {
+        ZoneScopedN("Create GL Buffers + Upload Data");
+        glCreateBuffers(3, buffers);
+
+        glNamedBufferStorage(buffers[0], sizeof(SGpuVertexPosition) * assetMesh.VertexPositions.size(),
+                             assetMesh.VertexPositions.data(), 0);
+        glNamedBufferStorage(buffers[1], sizeof(SGpuVertexNormalUvTangent) * assetMesh.VertexNormalUvTangents.size(),
+                             assetMesh.VertexNormalUvTangents.data(), 0);
+        glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMesh.Indices.size(), assetMesh.Indices.data(), 0);
+    }
+
+    auto gpuMesh = SGpuMesh{
+        .Name = assetMesh.Name,
+        .VertexPositionBuffer = buffers[0],
+        .VertexNormalUvTangentBuffer = buffers[1],
+        .IndexBuffer = buffers[2],
+
+        .VertexCount = assetMesh.VertexPositions.size(),
+        .IndexCount = assetMesh.Indices.size(),
+
+        .InitialTransform = assetMesh.InitialTransform,
+    };
+
+    {
+        ZoneScopedN("Add gpu mesh");
+        g_gpuMeshes[assetMeshName] = gpuMesh;
+    }
+}
+
+auto GetGpuMesh(const std::string& assetMeshName) -> SGpuMesh& {
+    assert(!assetMeshName.empty() && g_gpuMeshes.contains(assetMeshName));
+
+    return g_gpuMeshes[assetMeshName];
+}
+
+auto GetGpuMaterial(const std::string& assetMaterialName) -> SGpuMaterial& {
+    assert(!assetMaterialName.empty() && g_gpuMaterials.contains(assetMaterialName));
+
+    return g_gpuMaterials[assetMaterialName];
+}
+
+auto CreateTextureForMaterialChannel(SAssetMaterialChannel& assetMaterialChannel) -> int64_t {
+
+    ZoneScopedN("CreateTextureForMaterialChannel");
+
+    auto& image = GetAssetImage(assetMaterialChannel.Image);
+
+    auto textureId = CreateTexture(SCreateTextureDescriptor{
+        .TextureType = ETextureType::Texture2D,
+        .Format = EFormat::R8G8B8A8_UNORM,                
+        .Extent = SExtent3D{static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+        .MipMapLevels = static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(image.Width), static_cast<float>(image.Height))))),
+        .Layers = 1,
+        .SampleCount = ESampleCount::One,
+        .Label = image.Name,
+    });
+    
+    UploadTexture(textureId, SUploadTextureDescriptor{
+        .Level = 0,
+        .Offset = SOffset3D{0, 0, 0},
+        .Extent = SExtent3D{static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+        .UploadFormat = EUploadFormat::Auto,
+        .UploadType = EUploadType::Auto,
+        .PixelData = image.DecodedData.get()
+    });
+
+    GenerateMipmaps(textureId);
+
+    //auto& sampler = GetAssetSampler(assetMaterialChannel.Sampler);
+
+    return MakeTextureResident(textureId);
+}
+
+auto CreateGpuMaterial(const std::string& assetMaterialName) -> void {
+
+    auto& assetMaterial = GetAssetMaterial(assetMaterialName);
+    uint64_t baseColorTexture = assetMaterial.BaseColorChannel.has_value()
+        ? CreateTextureForMaterialChannel(assetMaterial.BaseColorChannel.value())
+        : 0;
+
+    uint64_t normalTexture = assetMaterial.NormalsChannel.has_value()
+        ? CreateTextureForMaterialChannel(assetMaterial.NormalsChannel.value())
+        : 0;
+
+    auto gpuMaterial = SGpuMaterial{
+        .BaseColor = assetMaterial.BaseColorFactor,
+        .BaseColorTexture = baseColorTexture,
+        .NormalTexture = normalTexture,
+    };
+
+    g_gpuMaterials[assetMaterialName] = gpuMaterial;
+}
+
 // - Game ---------------------------------------------------------------------
 
 SCamera g_mainCamera = {};
@@ -2960,107 +3090,69 @@ struct SComponentChildOf {
 };
 
 struct SComponentMesh {
-    SAssetMeshId Mesh;
+    std::string Mesh;
 };
 
 struct SComponentMaterial {
-    SAssetMaterialId Material;
+    std::string Material;
+};
+
+struct SComponentCreateGpuResourcesNecessary {
+};
+
+struct SComponentGpuMesh {
+    std::string GpuMesh;
+};
+
+struct SComponentGpuMaterial {
+    std::string GpuMaterial;
 };
 
 auto AddEntity(
     std::optional<entt::entity> parent,
-    SAssetMeshId assetMeshId,
-    SAssetMaterialId assetMaterialId,
-    SComponentWorldMatrix initialTransform) -> entt::entity {
+    const std::string& assetMeshName,
+    const std::string& assetMaterialName,
+    glm::mat4x4 initialTransform) -> entt::entity {
 
     auto entityId = g_gameRegistry.create();
     if (parent.has_value()) {
-        auto& parentComponent = g_gameRegistry.get<SComponentParent>(parent.value());
+        auto parentComponent = g_gameRegistry.get_or_emplace<SComponentParent>(parent.value());
         parentComponent.Children.push_back(entityId);
-
         g_gameRegistry.emplace<SComponentChildOf>(entityId, parent.value());
     }
-    g_gameRegistry.emplace<SAssetMeshId>(entityId, assetMeshId);
-    g_gameRegistry.emplace<SAssetMaterialId>(entityId, assetMaterialId);    
+    g_gameRegistry.emplace<SComponentMesh>(entityId, assetMeshName);
+    g_gameRegistry.emplace<SComponentMaterial>(entityId, assetMaterialName);    
     g_gameRegistry.emplace<SComponentWorldMatrix>(entityId, initialTransform);
+    g_gameRegistry.emplace<SComponentCreateGpuResourcesNecessary>(entityId);
 
     return entityId;
 }
 
-// - Renderer -----------------------------------------------------------------
+auto AddEntity(
+    std::optional<entt::entity> parent,
+    const std::string& modelName,
+    glm::mat4 initialTransform) -> entt::entity {
 
-SFramebuffer g_geometryFramebuffer = {};
-SGraphicsPipeline g_geometryGraphicsPipeline = {};
-std::vector<SGpuGlobalLight> g_gpuGlobalLights;
+    auto entityId = g_gameRegistry.create();
+    if (parent.has_value()) {
+        auto& parentComponent = g_gameRegistry.get_or_emplace<SComponentParent>(parent.value());
+        parentComponent.Children.push_back(entityId);
 
-bool g_drawDebugLines = true;
-std::vector<SDebugLine> g_debugLines;
-uint32_t g_debugInputLayout = 0;
-uint32_t g_debugLinesVertexBuffer = 0;
-SGraphicsPipeline g_debugLinesGraphicsPipeline = {};
+        g_gameRegistry.emplace<SComponentChildOf>(entityId, parent.value());
+    }
 
-SGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
-SSampler g_fullscreenSamplerNearestClampToEdge = {};
+    if (g_assetModelMeshes.contains(modelName)) {
+        auto& modelMeshesNames = g_assetModelMeshes[modelName];
+        for(auto& modelMeshName : modelMeshesNames) {
 
-auto DrawFullscreenTriangleWithTexture(const STexture& texture) -> void {
-    
-    g_fullscreenTriangleGraphicsPipeline.Bind();
-    g_fullscreenTriangleGraphicsPipeline.BindTextureAndSampler(0, texture.Id, g_fullscreenSamplerNearestClampToEdge.Id);
-    g_fullscreenTriangleGraphicsPipeline.DrawArrays(0, 3);
+            auto& assetMesh = GetAssetMesh(modelMeshName);
+            
+            AddEntity(entityId, modelMeshName, assetMesh.MaterialName, initialTransform);
+        }
+    }
+
+    return entityId;
 }
-
-auto CreateGpuMesh(const std::string& assetMeshName) -> SGpuMesh {
-
-    auto& assetMesh = GetAssetMesh(assetMeshName);
-
-    uint32_t buffers[3] = {};
-    glCreateBuffers(3, buffers);
-
-    glNamedBufferStorage(buffers[0], sizeof(SGpuVertexPosition) * assetMesh.VertexPositions.size(), assetMesh.VertexPositions.data(), 0);
-    glNamedBufferStorage(buffers[1], sizeof(SGpuVertexNormalUvTangent) * assetMesh.VertexNormalUvTangents.size(), assetMesh.VertexNormalUvTangents.data(), 0);
-    glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMesh.Indices.size(), assetMesh.Indices.data(), 0);
-
-    return {
-        .Name = assetMesh.Name,
-        .VertexPositionBuffer = buffers[0],
-        .VertexNormalUvTangentBuffer = buffers[1],
-        .IndexBuffer = buffers[2],
-
-        .VertexCount = assetMesh.VertexPositions.size(),
-        .IndexCount = assetMesh.Indices.size(),
-
-        .InitialTransform = assetMesh.InitialTransform,
-    };
-}
-
-/*
-auto CreateAndUploadGpuTexture(const SAssetTextureId& assetTextureId) -> STextureId {
-
-    auto& assetTexture = g_assetTextureLibrary.GetAssetTexture(assetTextureId);
-    auto& assetImage = g_assetImageLibrary.GetAssetImage(assetTexture.ImageId)
-
-    auto textureId = CreateTexture(SCreateTextureDescriptor{
-        .TextureType = ETextureType::Texture2D,
-        .Format = EFormat::R8G8B8A8_UNORM,                
-        .Extent = SExtent3D{static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
-        .MipMapLevels = static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height)))) + 1),
-        .Layers = 1,
-        .SampleCount = ESampleCount::One,
-        .Label = std::string(fgAsset.textures[textureIndex].name),
-    });
-    
-    UploadTexture(textureId, SUploadTextureDescriptor{
-        .Level = 0,
-        .Offset = SOffset3D{0, 0, 0},
-        .Extent = SExtent3D{static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
-        .UploadFormat = EUploadFormat::Auto,
-        .UploadType = EUploadType::Auto,
-        .PixelData = imageData.EncodedData.get()
-    });
-
-    return textureId;
-}
-*/
 
 // - Application --------------------------------------------------------------
 
