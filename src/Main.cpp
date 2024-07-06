@@ -2858,11 +2858,11 @@ auto LoadModelFromFile(
     for (auto assetTextureIndex : assetTextureIndices) {
 
         auto& fgTexture = fgAsset.textures[assetTextureIndex];
-        auto textureName = GetSafeResourceName(modelName.data(), fgTexture.name.data(), "texture", g_assetTextures.size() + assetTextureIndex);
+        auto textureName = GetSafeResourceName(modelName.data(), fgTexture.name.data(), "texture", assetTextureIndex);
 
         AddAssetTexture(textureName, SAssetTexture{
-            .ImageName = GetSafeResourceName(modelName.data(), nullptr, "image", g_assetImages.size() + fgTexture.imageIndex.value_or(0)),
-            .SamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", g_assetSamplers.size() + fgTexture.samplerIndex.value_or(0))
+            .ImageName = GetSafeResourceName(modelName.data(), nullptr, "image", fgTexture.imageIndex.value_or(0)),
+            .SamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0))
         });
     }
 
@@ -2873,9 +2873,8 @@ auto LoadModelFromFile(
     for (auto assetMaterialIndex : assetMaterialIndices) {
 
         auto& fgMaterial = fgAsset.materials[assetMaterialIndex];
-        auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", g_assetMaterials.size() + assetMaterialIndex);
 
-        CreateAssetMaterial(modelName, fgAsset, fgMaterial);
+        CreateAssetMaterial(modelName, fgAsset, fgMaterial, assetMaterialIndex);
     }
 
     std::stack<std::pair<const fastgltf::Node*, glm::mat4>> nodeStack;
@@ -2915,9 +2914,14 @@ auto LoadModelFromFile(
 
             auto vertices = GetVertices(fgAsset, fgPrimitive);
             auto indices = GetIndices(fgAsset, fgPrimitive);
-            
+
             auto meshName = GetSafeResourceName(modelName.data(), fgMesh.name.data(), "mesh", primitiveIndex);
-            auto assetMesh = CreateAssetMesh(meshName, globalTransform, std::move(vertices), std::move(indices));
+
+            auto materialIndex = fgPrimitive.materialIndex.value_or(0);
+            auto& fgMaterial = fgAsset.materials[materialIndex];
+            auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", g_assetMaterials.size() + materialIndex);
+
+            auto assetMesh = CreateAssetMesh(meshName, globalTransform, std::move(vertices), std::move(indices), materialName);
             AddAssetMesh(meshName, assetMesh);
             g_assetModelMeshes[modelName].push_back(meshName);
 
