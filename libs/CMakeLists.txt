@@ -65,7 +65,7 @@ FetchContent_Declare(
     GIT_PROGRESS    TRUE
 )
 FetchContent_GetProperties(stb)
-if(NOT stb_image_POPULATED)
+if(NOT stb_POPULATED)
     FetchContent_MakeAvailable(stb)
     message("Fetching stb")
 
