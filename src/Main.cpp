@@ -1,20 +1,8 @@
-#define GLM_FORCE_CXX2A
-#define GLM_FORCE_AVX2
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_RIGHT_HANDED
-#define GLM_FORCE_SILENT_WARNINGS
-#define GLM_FORCE_SWIZZLE
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
-#include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/color_space.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -64,19 +52,19 @@
 // - Core Types ---------------------------------------------------------------
 
 template<class TTag>
-struct SIdImpl {
+struct TIdImpl {
     enum class Id : std::size_t { Invalid = SIZE_MAX };
 
-    bool operator==(const SIdImpl&) const noexcept = default;
+    bool operator==(const TIdImpl&) const noexcept = default;
 };
 
 template<class TTag>
-using SId = typename SIdImpl<TTag>::Id;
+using TId = typename TIdImpl<TTag>::Id;
 
 template<class TTag>
 struct SIdGenerator {
 public:
-    auto Next() -> SId<TTag> {
+    auto Next() -> TId<TTag> {
         _counter += 1;
         return { _counter };
     }
@@ -97,204 +85,204 @@ constexpr uint32_t operator"" _hash(const char* str, size_t) {
     return HashString(str);
 }
 
-struct SExtent2D
+struct TExtent2D
 {
     uint32_t Width{};
     uint32_t Height{};
 
-    bool operator==(const SExtent2D&) const noexcept = default;
-    constexpr SExtent2D operator+(const SExtent2D& other) const { return { Width + other.Width, Height + other.Height }; }
-    constexpr SExtent2D operator-(const SExtent2D& other) const { return { Width - other.Width, Height - other.Height }; }
-    constexpr SExtent2D operator*(const SExtent2D& other) const { return { Width * other.Width, Height * other.Height }; }
-    constexpr SExtent2D operator/(const SExtent2D& other) const { return { Width / other.Width, Height / other.Height }; }
-    constexpr SExtent2D operator>>(const SExtent2D& other) const { return { Width >> other.Width, Height >> other.Height }; }
-    constexpr SExtent2D operator<<(const SExtent2D& other) const { return { Width << other.Width, Height << other.Height }; }
-    constexpr SExtent2D operator+(uint32_t value) const { return *this + SExtent2D{ value, value }; }
-    constexpr SExtent2D operator-(uint32_t value) const { return *this - SExtent2D{ value, value }; }
-    constexpr SExtent2D operator*(uint32_t value) const { return *this * SExtent2D{ value, value }; }
-    constexpr SExtent2D operator/(uint32_t value) const { return *this / SExtent2D{ value, value }; }
-    constexpr SExtent2D operator>>(uint32_t value) const { return *this >> SExtent2D{ value, value }; }
-    constexpr SExtent2D operator<<(uint32_t value) const { return *this << SExtent2D{ value, value }; }
+    bool operator==(const TExtent2D&) const noexcept = default;
+    constexpr TExtent2D operator+(const TExtent2D& other) const { return { Width + other.Width, Height + other.Height }; }
+    constexpr TExtent2D operator-(const TExtent2D& other) const { return { Width - other.Width, Height - other.Height }; }
+    constexpr TExtent2D operator*(const TExtent2D& other) const { return { Width * other.Width, Height * other.Height }; }
+    constexpr TExtent2D operator/(const TExtent2D& other) const { return { Width / other.Width, Height / other.Height }; }
+    constexpr TExtent2D operator>>(const TExtent2D& other) const { return { Width >> other.Width, Height >> other.Height }; }
+    constexpr TExtent2D operator<<(const TExtent2D& other) const { return { Width << other.Width, Height << other.Height }; }
+    constexpr TExtent2D operator+(uint32_t value) const { return *this + TExtent2D{ value, value }; }
+    constexpr TExtent2D operator-(uint32_t value) const { return *this - TExtent2D{ value, value }; }
+    constexpr TExtent2D operator*(uint32_t value) const { return *this * TExtent2D{ value, value }; }
+    constexpr TExtent2D operator/(uint32_t value) const { return *this / TExtent2D{ value, value }; }
+    constexpr TExtent2D operator>>(uint32_t value) const { return *this >> TExtent2D{ value, value }; }
+    constexpr TExtent2D operator<<(uint32_t value) const { return *this << TExtent2D{ value, value }; }
 };
 
-constexpr SExtent2D operator+(uint32_t value, SExtent2D extent) {   
+constexpr TExtent2D operator+(uint32_t value, TExtent2D extent) {
     return extent + value;
 }
 
-constexpr SExtent2D operator-(uint32_t value, SExtent2D extent) {
+constexpr TExtent2D operator-(uint32_t value, TExtent2D extent) {
     return extent - value;
 }
 
-constexpr SExtent2D operator*(uint32_t value, SExtent2D extent) {
+constexpr TExtent2D operator*(uint32_t value, TExtent2D extent) {
     return extent * value;
 }
 
-constexpr SExtent2D operator/(uint32_t value, SExtent2D extent) {
+constexpr TExtent2D operator/(uint32_t value, TExtent2D extent) {
     return extent / value;
 }
 
-constexpr SExtent2D operator>>(uint32_t value, SExtent2D extent) {
+constexpr TExtent2D operator>>(uint32_t value, TExtent2D extent) {
     return extent >> value;
 }
 
-constexpr SExtent2D operator<<(uint32_t value, SExtent2D extent) {
+constexpr TExtent2D operator<<(uint32_t value, TExtent2D extent) {
     return extent << value;
 }
 
-struct SExtent3D
+struct TExtent3D
 {
     uint32_t Width{};
     uint32_t Height{};
     uint32_t Depth{};
 
-    operator SExtent2D() const { return { Width, Height }; }
-    bool operator==(const SExtent3D&) const noexcept = default;
-    constexpr SExtent3D operator+(const SExtent3D& other) const { return { Width + other.Width, Height + other.Height, Depth + other.Depth }; }
-    constexpr SExtent3D operator-(const SExtent3D& other) const { return { Width - other.Width, Height - other.Height, Depth - other.Depth }; }
-    constexpr SExtent3D operator*(const SExtent3D& other) const { return { Width * other.Width, Height * other.Height, Depth * other.Depth }; }
-    constexpr SExtent3D operator/(const SExtent3D& other) const { return { Width / other.Width, Height / other.Height, Depth / other.Depth }; }
-    constexpr SExtent3D operator>>(const SExtent3D& other) const { return { Width >> other.Width, Height >> other.Height, Depth >> other.Depth }; }
-    constexpr SExtent3D operator<<(const SExtent3D& other) const { return { Width << other.Width, Height << other.Height, Depth << other.Depth }; }
-    constexpr SExtent3D operator+(uint32_t value) const { return *this + SExtent3D{ value, value, value }; }
-    constexpr SExtent3D operator-(uint32_t value) const { return *this - SExtent3D{ value, value, value }; }
-    constexpr SExtent3D operator*(uint32_t value) const { return *this * SExtent3D{ value, value, value }; }
-    constexpr SExtent3D operator/(uint32_t value) const { return *this / SExtent3D{ value, value, value }; }
-    constexpr SExtent3D operator>>(uint32_t value) const { return *this >> SExtent3D{ value, value, value }; }
-    constexpr SExtent3D operator<<(uint32_t value) const { return *this << SExtent3D{ value, value, value }; }
+    operator TExtent2D() const { return { Width, Height }; }
+    bool operator==(const TExtent3D&) const noexcept = default;
+    constexpr TExtent3D operator+(const TExtent3D& other) const { return { Width + other.Width, Height + other.Height, Depth + other.Depth }; }
+    constexpr TExtent3D operator-(const TExtent3D& other) const { return { Width - other.Width, Height - other.Height, Depth - other.Depth }; }
+    constexpr TExtent3D operator*(const TExtent3D& other) const { return { Width * other.Width, Height * other.Height, Depth * other.Depth }; }
+    constexpr TExtent3D operator/(const TExtent3D& other) const { return { Width / other.Width, Height / other.Height, Depth / other.Depth }; }
+    constexpr TExtent3D operator>>(const TExtent3D& other) const { return { Width >> other.Width, Height >> other.Height, Depth >> other.Depth }; }
+    constexpr TExtent3D operator<<(const TExtent3D& other) const { return { Width << other.Width, Height << other.Height, Depth << other.Depth }; }
+    constexpr TExtent3D operator+(uint32_t value) const { return *this + TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator-(uint32_t value) const { return *this - TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator*(uint32_t value) const { return *this * TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator/(uint32_t value) const { return *this / TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator>>(uint32_t value) const { return *this >> TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator<<(uint32_t value) const { return *this << TExtent3D{ value, value, value }; }
 };
 
-constexpr SExtent3D operator+(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator+(uint32_t value, TExtent3D extent) {
     return extent + value;
 }
 
-constexpr SExtent3D operator-(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator-(uint32_t value, TExtent3D extent) {
     return extent - value;
 }
 
-constexpr SExtent3D operator*(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator*(uint32_t value, TExtent3D extent) {
     return extent * value;
 }
 
-constexpr SExtent3D operator/(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator/(uint32_t value, TExtent3D extent) {
     return extent / value;
 }
 
-constexpr SExtent3D operator>>(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator>>(uint32_t value, TExtent3D extent) {
     return extent >> value;
 }
 
-constexpr SExtent3D operator<<(uint32_t value, SExtent3D extent) {
+constexpr TExtent3D operator<<(uint32_t value, TExtent3D extent) {
     return extent << value;
 }
 
-struct SOffset2D {
+struct TOffset2D {
 
     uint32_t X{};
     uint32_t Y{};
 
-    bool operator==(const SOffset2D&) const noexcept = default;
-    constexpr SOffset2D operator+(const SOffset2D & other) const { return { X + other.X, Y + other.Y }; }
-    constexpr SOffset2D operator-(const SOffset2D & other) const { return { X - other.X, Y - other.Y }; }
-    constexpr SOffset2D operator*(const SOffset2D & other) const { return { X * other.X, Y * other.Y }; }
-    constexpr SOffset2D operator/(const SOffset2D & other) const { return { X / other.X, Y / other.Y }; }
-    constexpr SOffset2D operator>>(const SOffset2D & other) const { return { X >> other.X, Y >> other.Y }; }
-    constexpr SOffset2D operator<<(const SOffset2D & other) const { return { X << other.X, Y << other.Y }; }
-    constexpr SOffset2D operator+(uint32_t value) const { return *this + SOffset2D{ value, value }; }
-    constexpr SOffset2D operator-(uint32_t value) const { return *this - SOffset2D{ value, value }; }
-    constexpr SOffset2D operator*(uint32_t value) const { return *this * SOffset2D{ value, value }; }
-    constexpr SOffset2D operator/(uint32_t value) const { return *this / SOffset2D{ value, value }; }
-    constexpr SOffset2D operator>>(uint32_t value) const { return *this >> SOffset2D{ value, value }; }
-    constexpr SOffset2D operator<<(uint32_t value) const { return *this << SOffset2D{ value, value }; }
+    bool operator==(const TOffset2D&) const noexcept = default;
+    constexpr TOffset2D operator+(const TOffset2D & other) const { return { X + other.X, Y + other.Y }; }
+    constexpr TOffset2D operator-(const TOffset2D & other) const { return { X - other.X, Y - other.Y }; }
+    constexpr TOffset2D operator*(const TOffset2D & other) const { return { X * other.X, Y * other.Y }; }
+    constexpr TOffset2D operator/(const TOffset2D & other) const { return { X / other.X, Y / other.Y }; }
+    constexpr TOffset2D operator>>(const TOffset2D & other) const { return { X >> other.X, Y >> other.Y }; }
+    constexpr TOffset2D operator<<(const TOffset2D & other) const { return { X << other.X, Y << other.Y }; }
+    constexpr TOffset2D operator+(uint32_t value) const { return *this + TOffset2D{ value, value }; }
+    constexpr TOffset2D operator-(uint32_t value) const { return *this - TOffset2D{ value, value }; }
+    constexpr TOffset2D operator*(uint32_t value) const { return *this * TOffset2D{ value, value }; }
+    constexpr TOffset2D operator/(uint32_t value) const { return *this / TOffset2D{ value, value }; }
+    constexpr TOffset2D operator>>(uint32_t value) const { return *this >> TOffset2D{ value, value }; }
+    constexpr TOffset2D operator<<(uint32_t value) const { return *this << TOffset2D{ value, value }; }
 };
 
-constexpr SOffset2D operator+(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator+(uint32_t value, TOffset2D offset) {
     return offset + value;
 }
 
-constexpr SOffset2D operator-(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator-(uint32_t value, TOffset2D offset) {
     return offset - value;
 }
 
-constexpr SOffset2D operator*(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator*(uint32_t value, TOffset2D offset) {
     return offset * value;
 }
 
-constexpr SOffset2D operator/(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator/(uint32_t value, TOffset2D offset) {
     return offset / value;
 }
 
-constexpr SOffset2D operator>>(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator>>(uint32_t value, TOffset2D offset) {
     return offset >> value;
 }
 
-constexpr SOffset2D operator<<(uint32_t value, SOffset2D offset) {
+constexpr TOffset2D operator<<(uint32_t value, TOffset2D offset) {
     return offset << value;
 }
 
-struct SOffset3D {
+struct TOffset3D {
 
     uint32_t X{};
     uint32_t Y{};
     uint32_t Z{};
 
-    operator SOffset2D() const { return { X, Y }; }
-    bool operator==(const SOffset3D&) const noexcept = default;
-    constexpr SOffset3D operator+(const SOffset3D& other) const { return { X + other.X, Y + other.Y, Z + other.Z }; }
-    constexpr SOffset3D operator-(const SOffset3D& other) const { return { X - other.X, Y - other.Y, Z - other.Z }; }
-    constexpr SOffset3D operator*(const SOffset3D& other) const { return { X * other.X, Y * other.Y, Z * other.Z }; }
-    constexpr SOffset3D operator/(const SOffset3D& other) const { return { X / other.X, Y / other.Y, Z / other.Z }; }
-    constexpr SOffset3D operator>>(const SOffset3D& other) const { return { X >> other.X, Y >> other.Y, Z >> other.Z }; }
-    constexpr SOffset3D operator<<(const SOffset3D& other) const { return { X << other.X, Y << other.Y, Z << other.Z }; }
-    constexpr SOffset3D operator+(uint32_t value) const { return *this + SOffset3D{ value, value, value }; }
-    constexpr SOffset3D operator-(uint32_t value) const { return *this - SOffset3D{ value, value, value }; }
-    constexpr SOffset3D operator*(uint32_t value) const { return *this * SOffset3D{ value, value, value }; }
-    constexpr SOffset3D operator/(uint32_t value) const { return *this / SOffset3D{ value, value, value }; }
-    constexpr SOffset3D operator>>(uint32_t value) const { return *this >> SOffset3D{ value, value, value }; }
-    constexpr SOffset3D operator<<(uint32_t value) const { return *this << SOffset3D{ value, value, value }; }
+    operator TOffset2D() const { return { X, Y }; }
+    bool operator==(const TOffset3D&) const noexcept = default;
+    constexpr TOffset3D operator+(const TOffset3D& other) const { return { X + other.X, Y + other.Y, Z + other.Z }; }
+    constexpr TOffset3D operator-(const TOffset3D& other) const { return { X - other.X, Y - other.Y, Z - other.Z }; }
+    constexpr TOffset3D operator*(const TOffset3D& other) const { return { X * other.X, Y * other.Y, Z * other.Z }; }
+    constexpr TOffset3D operator/(const TOffset3D& other) const { return { X / other.X, Y / other.Y, Z / other.Z }; }
+    constexpr TOffset3D operator>>(const TOffset3D& other) const { return { X >> other.X, Y >> other.Y, Z >> other.Z }; }
+    constexpr TOffset3D operator<<(const TOffset3D& other) const { return { X << other.X, Y << other.Y, Z << other.Z }; }
+    constexpr TOffset3D operator+(uint32_t value) const { return *this + TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator-(uint32_t value) const { return *this - TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator*(uint32_t value) const { return *this * TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator/(uint32_t value) const { return *this / TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator>>(uint32_t value) const { return *this >> TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator<<(uint32_t value) const { return *this << TOffset3D{ value, value, value }; }
 };
 
-constexpr SOffset3D operator+(uint32_t value, SOffset3D offset) {
+constexpr TOffset3D operator+(uint32_t value, TOffset3D offset) {
     return offset + value;
 }
 
-constexpr SOffset3D operator-(uint32_t value, SOffset3D offset) { 
+constexpr TOffset3D operator-(uint32_t value, TOffset3D offset) {
     return offset - value;
 }
 
-constexpr SOffset3D operator*(uint32_t value, SOffset3D offset) { 
+constexpr TOffset3D operator*(uint32_t value, TOffset3D offset) {
     return offset * value;
 }
 
-constexpr SOffset3D operator/(uint32_t value, SOffset3D offset) { 
+constexpr TOffset3D operator/(uint32_t value, TOffset3D offset) {
     return offset / value;
 }
 
-constexpr SOffset3D operator>>(uint32_t value, SOffset3D offset) {
+constexpr TOffset3D operator>>(uint32_t value, TOffset3D offset) {
     return offset >> value;
 }
 
-constexpr SOffset3D operator<<(uint32_t value, SOffset3D offset) {
+constexpr TOffset3D operator<<(uint32_t value, TOffset3D offset) {
     return offset << value;
 }
 
-enum class EWindowStyle {
+enum class TWindowStyle {
     Windowed,
     Fullscreen,
     FullscreenExclusive
 };
 
-struct SWindowSettings {
+struct TWindowSettings {
     int32_t ResolutionWidth;
     int32_t ResolutionHeight;
     float ResolutionScale;
-    EWindowStyle WindowStyle;
+    TWindowStyle WindowStyle;
     bool IsDebug;
     bool IsVSyncEnabled;
 };
 
 // - RHI ----------------------------------------------------------------------
 
-enum class EFormat : uint32_t {
+enum class TFormat : uint32_t {
 
     Undefined,
 
@@ -393,19 +381,19 @@ enum class EFormat : uint32_t {
     BC7_RGBA_SRGB
 };
 
-enum class EFormatClass {
+enum class TFormatClass {
     Float,
     Integer,
     Long
 };
 
-enum class EBaseTypeClass {
+enum class TBaseTypeClass {
     Float,
     Integer,
     UnsignedInteger
 };
 
-enum class ETextureType : uint32_t {
+enum class TTextureType : uint32_t {
     Texture1D,
     Texture1DArray,
     Texture2D,
@@ -417,7 +405,7 @@ enum class ETextureType : uint32_t {
     TextureCubeArray,
 };
 
-enum class ESampleCount : uint32_t {
+enum class TSampleCount : uint32_t {
     One = 1,
     Two = 2,
     Four = 4,
@@ -426,7 +414,7 @@ enum class ESampleCount : uint32_t {
     ThirtyTwo = 32,
 };
 
-enum class EUploadFormat : uint32_t
+enum class TUploadFormat : uint32_t
 {
     Undefined,
     Auto,
@@ -447,7 +435,7 @@ enum class EUploadFormat : uint32_t
     DepthStencilIndex,
 };
 
-enum class EUploadType : uint32_t
+enum class TUploadType : uint32_t
 {
     Undefined,
     Auto,
@@ -472,7 +460,7 @@ enum class EUploadType : uint32_t
     UnsignedInteger2101010Reversed,
 };
 
-enum class EAttachmentType : uint32_t {
+enum class TAttachmentType : uint32_t {
     ColorAttachment0 = 0u,
     ColorAttachment1,
     ColorAttachment2,
@@ -485,7 +473,7 @@ enum class EAttachmentType : uint32_t {
     StencilAttachment
 };
 
-enum class ETextureAddressMode {
+enum class TTextureAddressMode {
     Repeat,
     RepeatMirrored,
     ClampToEdge,
@@ -493,7 +481,7 @@ enum class ETextureAddressMode {
     ClampToEdgeMirrored,
 };
 
-enum class ETextureMinFilter {
+enum class TTextureMinFilter {
     Nearest,
     NearestMipmapLinear,
     NearestMipmapNearest,
@@ -502,63 +490,63 @@ enum class ETextureMinFilter {
     LinearMipmapNearest,
 };
 
-enum class ETextureMagFilter {
+enum class TTextureMagFilter {
     Nearest,
     Linear
 };
 
-enum class EPrimitiveTopology {
+enum class TPrimitiveTopology {
     Triangles,
-    TriangleStip,
+    TriangleStrip,
     TriangleFan,
     Lines,
 };
 
-enum class EFramebufferAttachmentLoadOperation {
+enum class TFramebufferAttachmentLoadOperation {
     Load,
     Clear,
     DontCare
 };
 
-using STextureId = SId<struct TTextureId>;
-using SSamplerId = SId<struct TSamplerId>;
-using SFramebufferId = SId<struct TFramebufferId>;
-using SBufferId = SId<struct TBufferId>;
-using SGraphicsPipelineId = SId<struct TGraphicsPipelineId>;
-using SComputePipelineId = SId<struct TComputePipelineId>;
+using TTextureId = TId<struct GTextureId>;
+using TSamplerId = TId<struct GSamplerId>;
+using TFramebufferId = TId<struct GFramebufferId>;
+using TBufferId = TId<struct GBufferId>;
+using TGraphicsPipelineId = TId<struct GGraphicsPipelineId>;
+using TComputePipelineId = TId<struct GComputePipelineId>;
 
-struct SCreateTextureDescriptor {
-    ETextureType TextureType = {};
-    EFormat Format = {};
-    SExtent3D Extent = {};
+struct TCreateTextureDescriptor {
+    TTextureType TextureType = {};
+    TFormat Format = {};
+    TExtent3D Extent = {};
     uint32_t MipMapLevels = 0;
     uint32_t Layers = 0;
-    ESampleCount SampleCount = {};
+    TSampleCount SampleCount = {};
     std::string Label = {};
 };
 
-struct SUploadTextureDescriptor {
+struct TUploadTextureDescriptor {
     uint32_t Level;
-    SOffset3D Offset;
-    SExtent3D Extent;
-    EUploadFormat UploadFormat = EUploadFormat::Auto;
-    EUploadType UploadType = EUploadType::Auto;
+    TOffset3D Offset;
+    TExtent3D Extent;
+    TUploadFormat UploadFormat = TUploadFormat::Auto;
+    TUploadType UploadType = TUploadType::Auto;
     const void* PixelData = nullptr;
 };
 
-struct STexture {
+struct TTexture {
     uint32_t Id;
-    EFormat Format;
-    SExtent3D Extent;
-    ETextureType TextureType;
+    TFormat Format;
+    TExtent3D Extent;
+    TTextureType TextureType;
 };
 
-struct SFramebufferAttachmentClearColor {
-    SFramebufferAttachmentClearColor() = default;
+struct TFramebufferAttachmentClearColor {
+    TFramebufferAttachmentClearColor() = default;
 
     template<typename... Args>
     requires (sizeof...(Args) <= 4)
-    SFramebufferAttachmentClearColor(const Args&... args)
+    TFramebufferAttachmentClearColor(const Args&... args)
       : Data(std::array<std::common_type_t<std::remove_cvref_t<Args>...>, 4>{ args...})
     {
     }
@@ -566,70 +554,70 @@ struct SFramebufferAttachmentClearColor {
     std::variant<std::array<float, 4>, std::array<uint32_t, 4>, std::array<int32_t, 4>> Data;
 };
 
-struct SFramebufferAttachmentClearDepthStencil {
+struct TFramebufferAttachmentClearDepthStencil {
     float Depth = {};
     int32_t Stencil = {};
 };
 
-struct SFramebufferAttachmendDescriptor {
+struct TFramebufferAttachmendDescriptor {
     std::string_view Label;
-    EFormat Format;    
-    SExtent2D Extent;
-    EFramebufferAttachmentLoadOperation LoadOperation;
+    TFormat Format;
+    TExtent2D Extent;
+    TFramebufferAttachmentLoadOperation LoadOperation;
 };
 
-struct SFramebufferColorAttachmentDescriptor {
+struct TFramebufferColorAttachmentDescriptor {
     std::string_view Label;
-    EFormat Format;    
-    SExtent2D Extent;
-    EFramebufferAttachmentLoadOperation LoadOperation;
-    SFramebufferAttachmentClearColor ClearColor;
+    TFormat Format;
+    TExtent2D Extent;
+    TFramebufferAttachmentLoadOperation LoadOperation;
+    TFramebufferAttachmentClearColor ClearColor;
 };
 
-struct SFramebufferDepthStencilAttachmentDescriptor {
+struct TFramebufferDepthStencilAttachmentDescriptor {
     std::string_view Label;
-    EFormat Format;    
-    SExtent2D Extent;
-    EFramebufferAttachmentLoadOperation LoadOperation;
-    SFramebufferAttachmentClearDepthStencil ClearDepthStencil;
+    TFormat Format;
+    TExtent2D Extent;
+    TFramebufferAttachmentLoadOperation LoadOperation;
+    TFramebufferAttachmentClearDepthStencil ClearDepthStencil;
 };
 
-struct SFramebufferDescriptor {
+struct TFramebufferDescriptor {
     std::string_view Label;
-    std::array<std::optional<SFramebufferColorAttachmentDescriptor>, 8> ColorAttachments;
-    std::optional<SFramebufferDepthStencilAttachmentDescriptor> DepthStencilAttachment;
+    std::array<std::optional<TFramebufferColorAttachmentDescriptor>, 8> ColorAttachments;
+    std::optional<TFramebufferDepthStencilAttachmentDescriptor> DepthStencilAttachment;
 };
 
-struct SFramebufferColorAttachment {
-    STexture Texture;
-    SFramebufferAttachmentClearColor ClearColor;
-    EFramebufferAttachmentLoadOperation LoadOperation;
+struct TFramebufferColorAttachment {
+    TTexture Texture;
+    TFramebufferAttachmentClearColor ClearColor;
+    TFramebufferAttachmentLoadOperation LoadOperation;
 };
 
-struct SFramebufferDepthStencilAttachment {
-    STexture Texture;
-    SFramebufferAttachmentClearDepthStencil ClearDepthStencil;
-    EFramebufferAttachmentLoadOperation LoadOperation;
+struct TFramebufferDepthStencilAttachment {
+    TTexture Texture;
+    TFramebufferAttachmentClearDepthStencil ClearDepthStencil;
+    TFramebufferAttachmentLoadOperation LoadOperation;
 };
 
-struct SFramebuffer {
+struct TFramebuffer {
     uint32_t Id;
-    std::array<std::optional<SFramebufferColorAttachment>, 8> ColorAttachments;
-    std::optional<SFramebufferDepthStencilAttachment> DepthStencilAttachment;
+    std::array<std::optional<TFramebufferColorAttachment>, 8> ColorAttachments;
+    std::optional<TFramebufferDepthStencilAttachment> DepthStencilAttachment;
 };
 
-struct SSamplerDescriptor {
+struct TSamplerDescriptor {
     std::string_view Label;
-    ETextureAddressMode AddressModeU = ETextureAddressMode::ClampToEdge;
-    ETextureAddressMode AddressModeV = ETextureAddressMode::ClampToEdge;
-    ETextureAddressMode AddressModeW = ETextureAddressMode::ClampToEdge;
-    ETextureMagFilter MagFilter = ETextureMagFilter::Linear;
-    ETextureMinFilter MinFilter = ETextureMinFilter::Linear;
+    TTextureAddressMode AddressModeU = TTextureAddressMode::ClampToEdge;
+    TTextureAddressMode AddressModeV = TTextureAddressMode::ClampToEdge;
+    TTextureAddressMode AddressModeW = TTextureAddressMode::ClampToEdge;
+    TTextureMagFilter MagFilter = TTextureMagFilter::Linear;
+    TTextureMinFilter MinFilter = TTextureMinFilter::Linear;
     float LodBias = 0;
     float LodMin = -1000;
     float LodMax = 1000;
 
-    bool operator==(const SSamplerDescriptor& rhs) const {
+    bool operator==(const TSamplerDescriptor& rhs) const {
         return Label == rhs.Label &&
             AddressModeU == rhs.AddressModeU &&
             AddressModeV == rhs.AddressModeV &&
@@ -644,8 +632,8 @@ struct SSamplerDescriptor {
 
 namespace std {
     template<>
-    struct hash<SSamplerDescriptor> {
-        size_t operator()(const SSamplerDescriptor& samplerDescriptor) const {
+    struct hash<TSamplerDescriptor> {
+        size_t operator()(const TSamplerDescriptor& samplerDescriptor) const {
             size_t seed = 0;
             hash_combine(seed, samplerDescriptor.Label);
             hash_combine(seed, samplerDescriptor.AddressModeU);
@@ -667,41 +655,41 @@ namespace std {
     };
 }
 
-struct SSampler {
+struct TSampler {
     uint32_t Id;
 };
 
-struct SInputAssemblyDescriptor {
-    EPrimitiveTopology PrimitiveTopology = EPrimitiveTopology::Triangles;
+struct TInputAssemblyDescriptor {
+    TPrimitiveTopology PrimitiveTopology = TPrimitiveTopology::Triangles;
     bool IsPrimitiveRestartEnabled = false;
 };
 
-struct SVertexInputAttributeDescriptor {
+struct TVertexInputAttributeDescriptor {
     uint32_t Location;
     uint32_t Binding;
-    EFormat Format;
+    TFormat Format;
     uint32_t Offset;
 };
 
-struct SVertexInputDescriptor {
-    std::array<std::optional<const SVertexInputAttributeDescriptor>, 8> VertexInputAttributes = {};
+struct TVertexInputDescriptor {
+    std::array<std::optional<const TVertexInputAttributeDescriptor>, 16> VertexInputAttributes = {};
 };
 
-struct SGraphicsPipelineDescriptor {
+struct TGraphicsPipelineDescriptor {
     std::string_view Label;
     std::string_view VertexShaderFilePath;
     std::string_view FragmentShaderFilePath;
 
-    SInputAssemblyDescriptor InputAssembly;
-    std::optional<SVertexInputDescriptor> VertexInput;
+    TInputAssemblyDescriptor InputAssembly;
+    std::optional<TVertexInputDescriptor> VertexInput;
 };
 
-struct SComputePipelineDescriptor {
+struct TComputePipelineDescriptor {
     std::string_view Label;
     std::string_view ComputeShaderFilePath;
 };
 
-struct SPipeline {
+struct TPipeline {
     uint32_t Id;
 
     inline auto virtual Bind() -> void {
@@ -738,7 +726,7 @@ struct SPipeline {
     }
 
     inline auto SetUniform(int32_t location, uint64_t value) -> void {
-        glProgramUniformHandleui64ARB(Id, location, value);
+        glProgramUniformHandleui64ARB(Id, location, value); //TODO(deccer) add check for bindless support
     }
 
     inline auto SetUniform(int32_t location, const glm::vec2& value) -> void {
@@ -766,7 +754,7 @@ struct SPipeline {
     }
 };
 
-struct SGraphicsPipeline : public SPipeline {
+struct TGraphicsPipeline : public TPipeline {
 
     auto Bind() -> void override;
     auto BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void;
@@ -779,7 +767,7 @@ struct SGraphicsPipeline : public SPipeline {
     bool IsPrimitiveRestartEnabled;
 };
 
-struct SComputePipeline : public SPipeline {
+struct TComputePipeline : public TPipeline {
 
 };
 
@@ -826,7 +814,7 @@ inline auto DeleteBuffer(uint32_t buffer) -> void {
     glDeleteBuffers(1, &buffer);
 }
 
-inline auto DeletePipeline(SPipeline pipeline) -> void {
+inline auto DeletePipeline(TPipeline pipeline) -> void {
 
     glDeleteProgram(pipeline.Id);
 }
@@ -834,13 +822,13 @@ inline auto DeletePipeline(SPipeline pipeline) -> void {
 uint32_t g_defaultInputLayout = 0;
 uint32_t g_lastIndexBuffer = 0;
 
-std::vector<SSampler> g_samplers;
-SSamplerId g_samplerCounter = SSamplerId::Invalid;
+std::vector<TSampler> g_samplers;
+TSamplerId g_samplerCounter = TSamplerId::Invalid;
 
-std::vector<STexture> g_textures;
-STextureId g_textureCounter = STextureId::Invalid;
+std::vector<TTexture> g_textures;
+TTextureId g_textureCounter = TTextureId::Invalid;
 
-std::unordered_map<SSamplerDescriptor, SSamplerId> g_samplerDescriptors;
+std::unordered_map<TSamplerDescriptor, TSamplerId> g_samplerDescriptors;
 
 auto InitializeRhi() -> bool {
 
@@ -862,7 +850,7 @@ auto UnloadRhi() -> void {
     glDeleteVertexArrays(1, &g_defaultInputLayout);
 }
 
-auto ReadTextFromFile(const std::filesystem::path& filePath) -> std::expected<std::string, std::string> {
+auto ReadShaderSourceFromFile(const std::filesystem::path& filePath) -> std::expected<std::string, std::string> {
 
     std::string pathStr = filePath.string();
     std::string parentPathStr = filePath.parent_path().string();
@@ -876,205 +864,205 @@ auto ReadTextFromFile(const std::filesystem::path& filePath) -> std::expected<st
     return processedSource.get();
 }
 
-inline auto GetTexture(STextureId id) -> STexture& {
+inline auto GetTexture(TTextureId id) -> TTexture& {
 
-    assert(id != STextureId::Invalid);
+    assert(id != TTextureId::Invalid);
     return g_textures[size_t(id)];
 }
 
 ///// Conversions
 
-constexpr auto PrimitiveTopologyToGL(EPrimitiveTopology primitiveTopology) -> uint32_t {
+constexpr auto PrimitiveTopologyToGL(TPrimitiveTopology primitiveTopology) -> uint32_t {
     switch (primitiveTopology) {
-        case EPrimitiveTopology::Lines: return GL_LINES;
-        case EPrimitiveTopology::TriangleFan: return GL_TRIANGLE_FAN;
-        case EPrimitiveTopology::Triangles: return GL_TRIANGLES;
-        case EPrimitiveTopology::TriangleStip: return GL_TRIANGLE_STRIP;
+        case TPrimitiveTopology::Lines: return GL_LINES;
+        case TPrimitiveTopology::TriangleFan: return GL_TRIANGLE_FAN;
+        case TPrimitiveTopology::Triangles: return GL_TRIANGLES;
+        case TPrimitiveTopology::TriangleStrip: return GL_TRIANGLE_STRIP;
         default: std::unreachable();
     }
 }
 
-constexpr auto TextureAddressModeToGL(ETextureAddressMode textureAddressMode) -> uint32_t {
+constexpr auto TextureAddressModeToGL(TTextureAddressMode textureAddressMode) -> uint32_t {
     switch (textureAddressMode) {
-        case ETextureAddressMode::ClampToBorder : return GL_CLAMP_TO_BORDER;
-        case ETextureAddressMode::ClampToEdge : return GL_CLAMP_TO_EDGE;
-        case ETextureAddressMode::ClampToEdgeMirrored: return GL_MIRROR_CLAMP_TO_EDGE;
-        case ETextureAddressMode::Repeat: return GL_REPEAT;
-        case ETextureAddressMode::RepeatMirrored: return GL_MIRRORED_REPEAT;
+        case TTextureAddressMode::ClampToBorder : return GL_CLAMP_TO_BORDER;
+        case TTextureAddressMode::ClampToEdge : return GL_CLAMP_TO_EDGE;
+        case TTextureAddressMode::ClampToEdgeMirrored: return GL_MIRROR_CLAMP_TO_EDGE;
+        case TTextureAddressMode::Repeat: return GL_REPEAT;
+        case TTextureAddressMode::RepeatMirrored: return GL_MIRRORED_REPEAT;
         default: std::unreachable();
     }
 }
 
-constexpr auto TextureMagFilterToGL(ETextureMagFilter textureMagFilter) -> uint32_t {
+constexpr auto TextureMagFilterToGL(TTextureMagFilter textureMagFilter) -> uint32_t {
     switch (textureMagFilter) {
-        case ETextureMagFilter::Linear: return GL_LINEAR;
-        case ETextureMagFilter::Nearest: return GL_NEAREST;
+        case TTextureMagFilter::Linear: return GL_LINEAR;
+        case TTextureMagFilter::Nearest: return GL_NEAREST;
         default: std::unreachable();
     }
 }
 
-constexpr auto TextureMinFilterToGL(ETextureMinFilter textureMinFilter) -> uint32_t {
+constexpr auto TextureMinFilterToGL(TTextureMinFilter textureMinFilter) -> uint32_t {
     switch (textureMinFilter) {
-        case ETextureMinFilter::Linear: return GL_LINEAR;
-        case ETextureMinFilter::Nearest: return GL_NEAREST;
-        case ETextureMinFilter::LinearMipmapLinear: return GL_LINEAR_MIPMAP_LINEAR;
-        case ETextureMinFilter::LinearMipmapNearest: return GL_LINEAR_MIPMAP_NEAREST;
-        case ETextureMinFilter::NearestMipmapLinear: return GL_NEAREST_MIPMAP_LINEAR;
-        case ETextureMinFilter::NearestMipmapNearest: return GL_NEAREST_MIPMAP_NEAREST;
+        case TTextureMinFilter::Linear: return GL_LINEAR;
+        case TTextureMinFilter::Nearest: return GL_NEAREST;
+        case TTextureMinFilter::LinearMipmapLinear: return GL_LINEAR_MIPMAP_LINEAR;
+        case TTextureMinFilter::LinearMipmapNearest: return GL_LINEAR_MIPMAP_NEAREST;
+        case TTextureMinFilter::NearestMipmapLinear: return GL_NEAREST_MIPMAP_LINEAR;
+        case TTextureMinFilter::NearestMipmapNearest: return GL_NEAREST_MIPMAP_NEAREST;
         default: std::unreachable();
     }
 }
 
-constexpr auto TextureTypeToGL(ETextureType textureType) -> uint32_t {
+constexpr auto TextureTypeToGL(TTextureType textureType) -> uint32_t {
 
     switch (textureType)
     {
-        case ETextureType::Texture1D: return GL_TEXTURE_1D;
-        case ETextureType::Texture2D: return GL_TEXTURE_2D;
-        case ETextureType::Texture3D: return GL_TEXTURE_3D;
-        case ETextureType::Texture1DArray: return GL_TEXTURE_1D_ARRAY;
-        case ETextureType::Texture2DArray: return GL_TEXTURE_2D_ARRAY;
-        case ETextureType::TextureCube: return GL_TEXTURE_CUBE_MAP;
-        case ETextureType::TextureCubeArray: return GL_TEXTURE_CUBE_MAP_ARRAY;
-        case ETextureType::Texture2DMultisample: return GL_TEXTURE_2D_MULTISAMPLE;
-        case ETextureType::Texture2DMultisampleArray: return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+        case TTextureType::Texture1D: return GL_TEXTURE_1D;
+        case TTextureType::Texture2D: return GL_TEXTURE_2D;
+        case TTextureType::Texture3D: return GL_TEXTURE_3D;
+        case TTextureType::Texture1DArray: return GL_TEXTURE_1D_ARRAY;
+        case TTextureType::Texture2DArray: return GL_TEXTURE_2D_ARRAY;
+        case TTextureType::TextureCube: return GL_TEXTURE_CUBE_MAP;
+        case TTextureType::TextureCubeArray: return GL_TEXTURE_CUBE_MAP_ARRAY;
+        case TTextureType::Texture2DMultisample: return GL_TEXTURE_2D_MULTISAMPLE;
+        case TTextureType::Texture2DMultisampleArray: return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
         default: std::unreachable();
     }
 }
 
-constexpr auto UploadFormatToGL(EUploadFormat uploadFormat) -> uint32_t {
+constexpr auto UploadFormatToGL(TUploadFormat uploadFormat) -> uint32_t {
 
     switch (uploadFormat) {
-        case EUploadFormat::R: return GL_RED;
-        case EUploadFormat::Rg: return GL_RG;
-        case EUploadFormat::Rgb: return GL_RGB;
-        case EUploadFormat::Bgr: return GL_BGR;
-        case EUploadFormat::Rgba: return GL_RGBA;
-        case EUploadFormat::Bgra: return GL_BGRA;
-        case EUploadFormat::RInteger: return GL_RED_INTEGER;
-        case EUploadFormat::RgInteger: return GL_RG_INTEGER;
-        case EUploadFormat::RgbInteger: return GL_RGB_INTEGER;
-        case EUploadFormat::BgrInteger: return GL_BGR_INTEGER;
-        case EUploadFormat::RgbaInteger: return GL_RGBA_INTEGER;
-        case EUploadFormat::BgraInteger: return GL_BGRA_INTEGER;
-        case EUploadFormat::Depth: return GL_DEPTH_COMPONENT;
-        case EUploadFormat::StencilIndex: return GL_STENCIL_INDEX;
-        case EUploadFormat::DepthStencilIndex: return GL_DEPTH_STENCIL;
+        case TUploadFormat::R: return GL_RED;
+        case TUploadFormat::Rg: return GL_RG;
+        case TUploadFormat::Rgb: return GL_RGB;
+        case TUploadFormat::Bgr: return GL_BGR;
+        case TUploadFormat::Rgba: return GL_RGBA;
+        case TUploadFormat::Bgra: return GL_BGRA;
+        case TUploadFormat::RInteger: return GL_RED_INTEGER;
+        case TUploadFormat::RgInteger: return GL_RG_INTEGER;
+        case TUploadFormat::RgbInteger: return GL_RGB_INTEGER;
+        case TUploadFormat::BgrInteger: return GL_BGR_INTEGER;
+        case TUploadFormat::RgbaInteger: return GL_RGBA_INTEGER;
+        case TUploadFormat::BgraInteger: return GL_BGRA_INTEGER;
+        case TUploadFormat::Depth: return GL_DEPTH_COMPONENT;
+        case TUploadFormat::StencilIndex: return GL_STENCIL_INDEX;
+        case TUploadFormat::DepthStencilIndex: return GL_DEPTH_STENCIL;
         default: std::unreachable();
     }
 }
 
-constexpr auto UploadTypeToGL(EUploadType uploadType) -> uint32_t {
+constexpr auto UploadTypeToGL(TUploadType uploadType) -> uint32_t {
 
     switch (uploadType) {
-        case EUploadType::UnsignedByte: return GL_UNSIGNED_BYTE;
-        case EUploadType::SignedByte: return GL_BYTE;
-        case EUploadType::UnsignedShort: return GL_UNSIGNED_SHORT;
-        case EUploadType::SignedShort: return GL_SHORT;
-        case EUploadType::UnsignedInteger: return GL_UNSIGNED_INT;
-        case EUploadType::SignedInteger: return GL_INT;
-        case EUploadType::Float: return GL_FLOAT;
-        case EUploadType::UnsignedByte332: return GL_UNSIGNED_BYTE_3_3_2;
-        case EUploadType::UnsignedByte233Reversed: return GL_UNSIGNED_BYTE_2_3_3_REV;
-        case EUploadType::UnsignedShort565: return GL_UNSIGNED_SHORT_5_6_5;
-        case EUploadType::UnsignedShort565Reversed: return GL_UNSIGNED_SHORT_5_6_5_REV;
-        case EUploadType::UnsignedShort4444: return GL_UNSIGNED_SHORT_4_4_4_4;
-        case EUploadType::UnsignedShort4444Reversed: return GL_UNSIGNED_SHORT_4_4_4_4_REV;
-        case EUploadType::UnsignedShort5551: return GL_UNSIGNED_SHORT_5_5_5_1;
-        case EUploadType::UnsignedShort1555Reversed: return GL_UNSIGNED_SHORT_1_5_5_5_REV;
-        case EUploadType::UnsignedInteger8888: return GL_UNSIGNED_INT_8_8_8_8;
-        case EUploadType::UnsignedInteger8888Reversed: return GL_UNSIGNED_INT_8_8_8_8_REV;
-        case EUploadType::UnsignedInteger1010102: return GL_UNSIGNED_INT_10_10_10_2;
-        case EUploadType::UnsignedInteger2101010Reversed: return GL_UNSIGNED_INT_2_10_10_10_REV;
+        case TUploadType::UnsignedByte: return GL_UNSIGNED_BYTE;
+        case TUploadType::SignedByte: return GL_BYTE;
+        case TUploadType::UnsignedShort: return GL_UNSIGNED_SHORT;
+        case TUploadType::SignedShort: return GL_SHORT;
+        case TUploadType::UnsignedInteger: return GL_UNSIGNED_INT;
+        case TUploadType::SignedInteger: return GL_INT;
+        case TUploadType::Float: return GL_FLOAT;
+        case TUploadType::UnsignedByte332: return GL_UNSIGNED_BYTE_3_3_2;
+        case TUploadType::UnsignedByte233Reversed: return GL_UNSIGNED_BYTE_2_3_3_REV;
+        case TUploadType::UnsignedShort565: return GL_UNSIGNED_SHORT_5_6_5;
+        case TUploadType::UnsignedShort565Reversed: return GL_UNSIGNED_SHORT_5_6_5_REV;
+        case TUploadType::UnsignedShort4444: return GL_UNSIGNED_SHORT_4_4_4_4;
+        case TUploadType::UnsignedShort4444Reversed: return GL_UNSIGNED_SHORT_4_4_4_4_REV;
+        case TUploadType::UnsignedShort5551: return GL_UNSIGNED_SHORT_5_5_5_1;
+        case TUploadType::UnsignedShort1555Reversed: return GL_UNSIGNED_SHORT_1_5_5_5_REV;
+        case TUploadType::UnsignedInteger8888: return GL_UNSIGNED_INT_8_8_8_8;
+        case TUploadType::UnsignedInteger8888Reversed: return GL_UNSIGNED_INT_8_8_8_8_REV;
+        case TUploadType::UnsignedInteger1010102: return GL_UNSIGNED_INT_10_10_10_2;
+        case TUploadType::UnsignedInteger2101010Reversed: return GL_UNSIGNED_INT_2_10_10_10_REV;
         default: std::unreachable();
     }
 }
 
-constexpr auto SampleCountToGL(ESampleCount sampleCount) -> uint32_t {
+constexpr auto SampleCountToGL(TSampleCount sampleCount) -> uint32_t {
 
     switch (sampleCount) {
-        case ESampleCount::One: return 1;
-        case ESampleCount::Two: return 2;
-        case ESampleCount::Four: return 4;
-        case ESampleCount::Eight: return 8;
-        case ESampleCount::SixTeen: return 16;
-        case ESampleCount::ThirtyTwo: return 32;
+        case TSampleCount::One: return 1;
+        case TSampleCount::Two: return 2;
+        case TSampleCount::Four: return 4;
+        case TSampleCount::Eight: return 8;
+        case TSampleCount::SixTeen: return 16;
+        case TSampleCount::ThirtyTwo: return 32;
         default: std::unreachable();
     }
 }
 
-auto FormatToGL(EFormat format) -> uint32_t {
+auto FormatToGL(TFormat format) -> uint32_t {
     switch (format) {
-        case EFormat::R8_UNORM: return GL_R8;
-        case EFormat::R8_SNORM: return GL_R8_SNORM;
-        case EFormat::R16_UNORM: return GL_R16;
-        case EFormat::R16_SNORM: return GL_R16_SNORM;
-        case EFormat::R8G8_UNORM: return GL_RG8;
-        case EFormat::R8G8_SNORM: return GL_RG8_SNORM;
-        case EFormat::R16G16_UNORM: return GL_RG16;
-        case EFormat::R16G16_SNORM: return GL_RG16_SNORM;
-        case EFormat::R3G3B2_UNORM: return GL_R3_G3_B2;
-        case EFormat::R4G4B4_UNORM: return GL_RGB4;
-        case EFormat::R5G5B5_UNORM: return GL_RGB5;
-        case EFormat::R8G8B8_UNORM: return GL_RGB8;
-        case EFormat::R8G8B8_SNORM: return GL_RGB8_SNORM;
-        case EFormat::R10G10B10_UNORM: return GL_RGB10;
-        case EFormat::R12G12B12_UNORM: return GL_RGB12;
+        case TFormat::R8_UNORM: return GL_R8;
+        case TFormat::R8_SNORM: return GL_R8_SNORM;
+        case TFormat::R16_UNORM: return GL_R16;
+        case TFormat::R16_SNORM: return GL_R16_SNORM;
+        case TFormat::R8G8_UNORM: return GL_RG8;
+        case TFormat::R8G8_SNORM: return GL_RG8_SNORM;
+        case TFormat::R16G16_UNORM: return GL_RG16;
+        case TFormat::R16G16_SNORM: return GL_RG16_SNORM;
+        case TFormat::R3G3B2_UNORM: return GL_R3_G3_B2;
+        case TFormat::R4G4B4_UNORM: return GL_RGB4;
+        case TFormat::R5G5B5_UNORM: return GL_RGB5;
+        case TFormat::R8G8B8_UNORM: return GL_RGB8;
+        case TFormat::R8G8B8_SNORM: return GL_RGB8_SNORM;
+        case TFormat::R10G10B10_UNORM: return GL_RGB10;
+        case TFormat::R12G12B12_UNORM: return GL_RGB12;
         // GL_RG16?
-        case EFormat::R16G16B16_SNORM: return GL_RGB16_SNORM;
-        case EFormat::R2G2B2A2_UNORM: return GL_RGBA2;
-        case EFormat::R4G4B4A4_UNORM: return GL_RGBA4;
-        case EFormat::R5G5B5A1_UNORM: return GL_RGB5_A1;
-        case EFormat::R8G8B8A8_UNORM: return GL_RGBA8;
-        case EFormat::R8G8B8A8_SNORM: return GL_RGBA8_SNORM;
-        case EFormat::R10G10B10A2_UNORM: return GL_RGB10_A2;
-        case EFormat::R10G10B10A2_UINT: return GL_RGB10_A2UI;
-        case EFormat::R12G12B12A12_UNORM: return GL_RGBA12;
-        case EFormat::R16G16B16A16_UNORM: return GL_RGBA16;
-        case EFormat::R16G16B16A16_SNORM: return GL_RGBA16_SNORM;
-        case EFormat::R8G8B8_SRGB: return GL_SRGB8;
-        case EFormat::R8G8B8A8_SRGB: return GL_SRGB8_ALPHA8;
-        case EFormat::R16_FLOAT: return GL_R16F;
-        case EFormat::R16G16_FLOAT: return GL_RG16F;
-        case EFormat::R16G16B16_FLOAT: return GL_RGB16F;
-        case EFormat::R16G16B16A16_FLOAT: return GL_RGBA16F;
-        case EFormat::R32_FLOAT: return GL_R32F;
-        case EFormat::R32G32_FLOAT: return GL_RG32F;
-        case EFormat::R32G32B32_FLOAT: return GL_RGB32F;
-        case EFormat::R32G32B32A32_FLOAT: return GL_RGBA32F;
-        case EFormat::R11G11B10_FLOAT: return GL_R11F_G11F_B10F;
-        case EFormat::R9G9B9_E5: return GL_RGB9_E5;
-        case EFormat::R8_SINT: return GL_R8I;
-        case EFormat::R8_UINT: return GL_R8UI;
-        case EFormat::R16_SINT: return GL_R16I;
-        case EFormat::R16_UINT: return GL_R16UI;
-        case EFormat::R32_SINT: return GL_R32I;
-        case EFormat::R32_UINT: return GL_R32UI;
-        case EFormat::R8G8_SINT: return GL_RG8I;
-        case EFormat::R8G8_UINT: return GL_RG8UI;
-        case EFormat::R16G16_SINT: return GL_RG16I;
-        case EFormat::R16G16_UINT: return GL_RG16UI;
-        case EFormat::R32G32_SINT: return GL_RG32I;
-        case EFormat::R32G32_UINT: return GL_RG32UI;
-        case EFormat::R8G8B8_SINT: return GL_RGB8I;
-        case EFormat::R8G8B8_UINT: return GL_RGB8UI;
-        case EFormat::R16G16B16_SINT: return GL_RGB16I;
-        case EFormat::R16G16B16_UINT: return GL_RGB16UI;
-        case EFormat::R32G32B32_SINT: return GL_RGB32I;
-        case EFormat::R32G32B32_UINT: return GL_RGB32UI;
-        case EFormat::R8G8B8A8_SINT: return GL_RGBA8I;
-        case EFormat::R8G8B8A8_UINT: return GL_RGBA8UI;
-        case EFormat::R16G16B16A16_SINT: return GL_RGBA16I;
-        case EFormat::R16G16B16A16_UINT: return GL_RGBA16UI;
-        case EFormat::R32G32B32A32_SINT: return GL_RGBA32I;
-        case EFormat::R32G32B32A32_UINT: return GL_RGBA32UI;
-        case EFormat::D32_FLOAT: return GL_DEPTH_COMPONENT32F;
-        case EFormat::D32_UNORM: return GL_DEPTH_COMPONENT32;
-        case EFormat::D24_UNORM: return GL_DEPTH_COMPONENT24;
-        case EFormat::D16_UNORM: return GL_DEPTH_COMPONENT16;
-        case EFormat::D32_FLOAT_S8_UINT: return GL_DEPTH32F_STENCIL8;
-        case EFormat::D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
-        case EFormat::S8_UINT: return GL_STENCIL_INDEX8;
+        case TFormat::R16G16B16_SNORM: return GL_RGB16_SNORM;
+        case TFormat::R2G2B2A2_UNORM: return GL_RGBA2;
+        case TFormat::R4G4B4A4_UNORM: return GL_RGBA4;
+        case TFormat::R5G5B5A1_UNORM: return GL_RGB5_A1;
+        case TFormat::R8G8B8A8_UNORM: return GL_RGBA8;
+        case TFormat::R8G8B8A8_SNORM: return GL_RGBA8_SNORM;
+        case TFormat::R10G10B10A2_UNORM: return GL_RGB10_A2;
+        case TFormat::R10G10B10A2_UINT: return GL_RGB10_A2UI;
+        case TFormat::R12G12B12A12_UNORM: return GL_RGBA12;
+        case TFormat::R16G16B16A16_UNORM: return GL_RGBA16;
+        case TFormat::R16G16B16A16_SNORM: return GL_RGBA16_SNORM;
+        case TFormat::R8G8B8_SRGB: return GL_SRGB8;
+        case TFormat::R8G8B8A8_SRGB: return GL_SRGB8_ALPHA8;
+        case TFormat::R16_FLOAT: return GL_R16F;
+        case TFormat::R16G16_FLOAT: return GL_RG16F;
+        case TFormat::R16G16B16_FLOAT: return GL_RGB16F;
+        case TFormat::R16G16B16A16_FLOAT: return GL_RGBA16F;
+        case TFormat::R32_FLOAT: return GL_R32F;
+        case TFormat::R32G32_FLOAT: return GL_RG32F;
+        case TFormat::R32G32B32_FLOAT: return GL_RGB32F;
+        case TFormat::R32G32B32A32_FLOAT: return GL_RGBA32F;
+        case TFormat::R11G11B10_FLOAT: return GL_R11F_G11F_B10F;
+        case TFormat::R9G9B9_E5: return GL_RGB9_E5;
+        case TFormat::R8_SINT: return GL_R8I;
+        case TFormat::R8_UINT: return GL_R8UI;
+        case TFormat::R16_SINT: return GL_R16I;
+        case TFormat::R16_UINT: return GL_R16UI;
+        case TFormat::R32_SINT: return GL_R32I;
+        case TFormat::R32_UINT: return GL_R32UI;
+        case TFormat::R8G8_SINT: return GL_RG8I;
+        case TFormat::R8G8_UINT: return GL_RG8UI;
+        case TFormat::R16G16_SINT: return GL_RG16I;
+        case TFormat::R16G16_UINT: return GL_RG16UI;
+        case TFormat::R32G32_SINT: return GL_RG32I;
+        case TFormat::R32G32_UINT: return GL_RG32UI;
+        case TFormat::R8G8B8_SINT: return GL_RGB8I;
+        case TFormat::R8G8B8_UINT: return GL_RGB8UI;
+        case TFormat::R16G16B16_SINT: return GL_RGB16I;
+        case TFormat::R16G16B16_UINT: return GL_RGB16UI;
+        case TFormat::R32G32B32_SINT: return GL_RGB32I;
+        case TFormat::R32G32B32_UINT: return GL_RGB32UI;
+        case TFormat::R8G8B8A8_SINT: return GL_RGBA8I;
+        case TFormat::R8G8B8A8_UINT: return GL_RGBA8UI;
+        case TFormat::R16G16B16A16_SINT: return GL_RGBA16I;
+        case TFormat::R16G16B16A16_UINT: return GL_RGBA16UI;
+        case TFormat::R32G32B32A32_SINT: return GL_RGBA32I;
+        case TFormat::R32G32B32A32_UINT: return GL_RGBA32UI;
+        case TFormat::D32_FLOAT: return GL_DEPTH_COMPONENT32F;
+        case TFormat::D32_UNORM: return GL_DEPTH_COMPONENT32;
+        case TFormat::D24_UNORM: return GL_DEPTH_COMPONENT24;
+        case TFormat::D16_UNORM: return GL_DEPTH_COMPONENT16;
+        case TFormat::D32_FLOAT_S8_UINT: return GL_DEPTH32F_STENCIL8;
+        case TFormat::D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
+        case TFormat::S8_UINT: return GL_STENCIL_INDEX8;
         /*
         case EFormat::BC1_RGB_UNORM: return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
         case EFormat::BC1_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
@@ -1085,14 +1073,14 @@ auto FormatToGL(EFormat format) -> uint32_t {
         case EFormat::BC3_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
         case EFormat::BC3_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
         */
-        case EFormat::BC4_R_UNORM: return GL_COMPRESSED_RED_RGTC1;
-        case EFormat::BC4_R_SNORM: return GL_COMPRESSED_SIGNED_RED_RGTC1;
-        case EFormat::BC5_RG_UNORM: return GL_COMPRESSED_RG_RGTC2;
-        case EFormat::BC5_RG_SNORM: return GL_COMPRESSED_SIGNED_RG_RGTC2;
-        case EFormat::BC6H_RGB_UFLOAT: return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
-        case EFormat::BC6H_RGB_SFLOAT: return GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
-        case EFormat::BC7_RGBA_UNORM: return GL_COMPRESSED_RGBA_BPTC_UNORM;
-        case EFormat::BC7_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
+        case TFormat::BC4_R_UNORM: return GL_COMPRESSED_RED_RGTC1;
+        case TFormat::BC4_R_SNORM: return GL_COMPRESSED_SIGNED_RED_RGTC1;
+        case TFormat::BC5_RG_UNORM: return GL_COMPRESSED_RG_RGTC2;
+        case TFormat::BC5_RG_SNORM: return GL_COMPRESSED_SIGNED_RG_RGTC2;
+        case TFormat::BC6H_RGB_UFLOAT: return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+        case TFormat::BC6H_RGB_SFLOAT: return GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
+        case TFormat::BC7_RGBA_UNORM: return GL_COMPRESSED_RGBA_BPTC_UNORM;
+        case TFormat::BC7_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
         default:
             std::string message = "Format not mappable";
             glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
@@ -1100,18 +1088,18 @@ auto FormatToGL(EFormat format) -> uint32_t {
     }
 }
 
-auto AttachmentTypeToGL(EAttachmentType attachmentType) -> uint32_t {
+auto AttachmentTypeToGL(TAttachmentType attachmentType) -> uint32_t {
     switch (attachmentType) {
-        case EAttachmentType::ColorAttachment0: return GL_COLOR_ATTACHMENT0;
-        case EAttachmentType::ColorAttachment1: return GL_COLOR_ATTACHMENT1;
-        case EAttachmentType::ColorAttachment2: return GL_COLOR_ATTACHMENT2;
-        case EAttachmentType::ColorAttachment3: return GL_COLOR_ATTACHMENT3;
-        case EAttachmentType::ColorAttachment4: return GL_COLOR_ATTACHMENT4;
-        case EAttachmentType::ColorAttachment5: return GL_COLOR_ATTACHMENT5;
-        case EAttachmentType::ColorAttachment6: return GL_COLOR_ATTACHMENT6;
-        case EAttachmentType::ColorAttachment7: return GL_COLOR_ATTACHMENT7;
-        case EAttachmentType::DepthAttachment: return GL_DEPTH_ATTACHMENT;
-        case EAttachmentType::StencilAttachment: return GL_STENCIL_ATTACHMENT;
+        case TAttachmentType::ColorAttachment0: return GL_COLOR_ATTACHMENT0;
+        case TAttachmentType::ColorAttachment1: return GL_COLOR_ATTACHMENT1;
+        case TAttachmentType::ColorAttachment2: return GL_COLOR_ATTACHMENT2;
+        case TAttachmentType::ColorAttachment3: return GL_COLOR_ATTACHMENT3;
+        case TAttachmentType::ColorAttachment4: return GL_COLOR_ATTACHMENT4;
+        case TAttachmentType::ColorAttachment5: return GL_COLOR_ATTACHMENT5;
+        case TAttachmentType::ColorAttachment6: return GL_COLOR_ATTACHMENT6;
+        case TAttachmentType::ColorAttachment7: return GL_COLOR_ATTACHMENT7;
+        case TAttachmentType::DepthAttachment: return GL_DEPTH_ATTACHMENT;
+        case TAttachmentType::StencilAttachment: return GL_STENCIL_ATTACHMENT;
         default:
             std::string message = "AttachmentType not mappable";
             glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
@@ -1119,155 +1107,155 @@ auto AttachmentTypeToGL(EAttachmentType attachmentType) -> uint32_t {
     }
 }
 
-auto FormatToUploadFormat(EFormat format) -> EUploadFormat {
+auto FormatToUploadFormat(TFormat format) -> TUploadFormat {
 
     switch (format)
     {
-        case EFormat::R8_UNORM:
-        case EFormat::R8_SNORM:
-        case EFormat::R16_UNORM:
-        case EFormat::R16_SNORM:
-        case EFormat::R16_FLOAT:
-        case EFormat::R32_FLOAT:
-            return EUploadFormat::R;
-        case EFormat::R8_SINT:
-        case EFormat::R8_UINT:
-        case EFormat::R16_SINT:
-        case EFormat::R16_UINT:
-        case EFormat::R32_SINT:
-        case EFormat::R32_UINT:
-            return EUploadFormat::RInteger;
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R32G32_FLOAT:
-            return EUploadFormat::Rg;
-        case EFormat::R8G8_SINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R32G32_UINT:
-            return EUploadFormat::RgInteger;
-        case EFormat::R3G3B2_UNORM:
-        case EFormat::R4G4B4_UNORM:
-        case EFormat::R5G5B5_UNORM:
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R10G10B10_UNORM:
-        case EFormat::R12G12B12_UNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R8G8B8_SRGB:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R9G9B9_E5:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R11G11B10_FLOAT:
-            return EUploadFormat::Rgb;
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R32G32B32_UINT:
-            return EUploadFormat::RgbInteger;
-        case EFormat::R2G2B2A2_UNORM:
-        case EFormat::R4G4B4A4_UNORM:
-        case EFormat::R5G5B5A1_UNORM:
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R10G10B10A2_UNORM:
-        case EFormat::R12G12B12A12_UNORM:
-        case EFormat::R16G16B16A16_UNORM:
-        case EFormat::R16G16B16A16_SNORM:
-        case EFormat::R8G8B8A8_SRGB:
-        case EFormat::R16G16B16A16_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
-            return EUploadFormat::Rgba;
-        case EFormat::R10G10B10A2_UINT:
-        case EFormat::R8G8B8A8_SINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R16G16B16A16_SINT:
-        case EFormat::R16G16B16A16_UINT:
-        case EFormat::R32G32B32A32_SINT:
-        case EFormat::R32G32B32A32_UINT:
-            return EUploadFormat::RgbaInteger;
-        case EFormat::D32_FLOAT:
-        case EFormat::D32_UNORM:
-        case EFormat::D24_UNORM:
-        case EFormat::D16_UNORM:
-            return EUploadFormat::Depth;
-        case EFormat::D32_FLOAT_S8_UINT:
-        case EFormat::D24_UNORM_S8_UINT:
-            return EUploadFormat::DepthStencilIndex;
-        case EFormat::S8_UINT:
-            return EUploadFormat::StencilIndex;
+        case TFormat::R8_UNORM:
+        case TFormat::R8_SNORM:
+        case TFormat::R16_UNORM:
+        case TFormat::R16_SNORM:
+        case TFormat::R16_FLOAT:
+        case TFormat::R32_FLOAT:
+            return TUploadFormat::R;
+        case TFormat::R8_SINT:
+        case TFormat::R8_UINT:
+        case TFormat::R16_SINT:
+        case TFormat::R16_UINT:
+        case TFormat::R32_SINT:
+        case TFormat::R32_UINT:
+            return TUploadFormat::RInteger;
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R32G32_FLOAT:
+            return TUploadFormat::Rg;
+        case TFormat::R8G8_SINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R32G32_UINT:
+            return TUploadFormat::RgInteger;
+        case TFormat::R3G3B2_UNORM:
+        case TFormat::R4G4B4_UNORM:
+        case TFormat::R5G5B5_UNORM:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R10G10B10_UNORM:
+        case TFormat::R12G12B12_UNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R8G8B8_SRGB:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R9G9B9_E5:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R11G11B10_FLOAT:
+            return TUploadFormat::Rgb;
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R32G32B32_UINT:
+            return TUploadFormat::RgbInteger;
+        case TFormat::R2G2B2A2_UNORM:
+        case TFormat::R4G4B4A4_UNORM:
+        case TFormat::R5G5B5A1_UNORM:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R10G10B10A2_UNORM:
+        case TFormat::R12G12B12A12_UNORM:
+        case TFormat::R16G16B16A16_UNORM:
+        case TFormat::R16G16B16A16_SNORM:
+        case TFormat::R8G8B8A8_SRGB:
+        case TFormat::R16G16B16A16_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
+            return TUploadFormat::Rgba;
+        case TFormat::R10G10B10A2_UINT:
+        case TFormat::R8G8B8A8_SINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R16G16B16A16_SINT:
+        case TFormat::R16G16B16A16_UINT:
+        case TFormat::R32G32B32A32_SINT:
+        case TFormat::R32G32B32A32_UINT:
+            return TUploadFormat::RgbaInteger;
+        case TFormat::D32_FLOAT:
+        case TFormat::D32_UNORM:
+        case TFormat::D24_UNORM:
+        case TFormat::D16_UNORM:
+            return TUploadFormat::Depth;
+        case TFormat::D32_FLOAT_S8_UINT:
+        case TFormat::D24_UNORM_S8_UINT:
+            return TUploadFormat::DepthStencilIndex;
+        case TFormat::S8_UINT:
+            return TUploadFormat::StencilIndex;
         default: 
             std::unreachable();
 	}
 }
 
-auto FormatToUnderlyingOpenGLType(EFormat format) -> uint32_t {
+auto FormatToUnderlyingOpenGLType(TFormat format) -> uint32_t {
 
     switch (format)
     {
-        case EFormat::R8_UNORM:
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8_UINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R8G8B8A8_SRGB:
-        case EFormat::R8G8B8_SRGB:
+        case TFormat::R8_UNORM:
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8_UINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R8G8B8A8_SRGB:
+        case TFormat::R8G8B8_SRGB:
             return GL_UNSIGNED_BYTE;
-        case EFormat::R8_SNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R8_SINT:
-        case EFormat::R8G8_SINT:
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R8G8B8A8_SINT:
+        case TFormat::R8_SNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R8_SINT:
+        case TFormat::R8G8_SINT:
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R8G8B8A8_SINT:
             return GL_BYTE;
-        case EFormat::R16_UNORM:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16B16A16_UNORM:
-        case EFormat::R16_UINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R16G16B16A16_UINT:
+        case TFormat::R16_UNORM:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16B16A16_UNORM:
+        case TFormat::R16_UINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R16G16B16A16_UINT:
             return GL_UNSIGNED_SHORT;
-        case EFormat::R16_SNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R16G16B16A16_SNORM:
-        case EFormat::R16_SINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R16G16B16A16_SINT:
+        case TFormat::R16_SNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R16G16B16A16_SNORM:
+        case TFormat::R16_SINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R16G16B16A16_SINT:
             return GL_SHORT;
-        case EFormat::R16_FLOAT:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R16G16B16A16_FLOAT:
+        case TFormat::R16_FLOAT:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R16G16B16A16_FLOAT:
             return GL_HALF_FLOAT;
-        case EFormat::R32_FLOAT:
-        case EFormat::R32G32_FLOAT:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
+        case TFormat::R32_FLOAT:
+        case TFormat::R32G32_FLOAT:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
             return GL_FLOAT;
-        case EFormat::R32_SINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R32G32B32A32_SINT:
+        case TFormat::R32_SINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R32G32B32A32_SINT:
             return GL_INT;
-        case EFormat::R32_UINT:
-        case EFormat::R32G32_UINT:
-        case EFormat::R32G32B32_UINT:
-        case EFormat::R32G32B32A32_UINT:
+        case TFormat::R32_UINT:
+        case TFormat::R32G32_UINT:
+        case TFormat::R32G32B32_UINT:
+        case TFormat::R32G32B32A32_UINT:
             return GL_UNSIGNED_INT;
         default:
             std::string message = "Format not mappable to opengl type";
@@ -1276,283 +1264,283 @@ auto FormatToUnderlyingOpenGLType(EFormat format) -> uint32_t {
     }
 }
 
-constexpr auto TextureTypeToDimension(ETextureType textureType) -> uint32_t {
+constexpr auto TextureTypeToDimension(TTextureType textureType) -> uint32_t {
 
     switch (textureType) {
-        case ETextureType::Texture1D:
+        case TTextureType::Texture1D:
             return 1;
-        case ETextureType::Texture2D: 
-        case ETextureType::Texture2DMultisample:
-        case ETextureType::Texture1DArray:
+        case TTextureType::Texture2D:
+        case TTextureType::Texture2DMultisample:
+        case TTextureType::Texture1DArray:
             return 2;
-        case ETextureType::Texture3D:
-        case ETextureType::Texture2DArray:
-        case ETextureType::Texture2DMultisampleArray:
-        case ETextureType::TextureCube:
-        case ETextureType::TextureCubeArray:
+        case TTextureType::Texture3D:
+        case TTextureType::Texture2DArray:
+        case TTextureType::Texture2DMultisampleArray:
+        case TTextureType::TextureCube:
+        case TTextureType::TextureCubeArray:
             return 3;
         default:
             std::unreachable();
     } 
 }
 
-auto FormatToBaseTypeClass(EFormat format) -> EBaseTypeClass
+auto FormatToBaseTypeClass(TFormat format) -> TBaseTypeClass
 {
     switch (format)
     {
-        case EFormat::R8_UNORM:
-        case EFormat::R8_SNORM:
-        case EFormat::R16_UNORM:
-        case EFormat::R16_SNORM:
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R3G3B2_UNORM:
-        case EFormat::R4G4B4_UNORM:
-        case EFormat::R5G5B5_UNORM:
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R10G10B10_UNORM:
-        case EFormat::R12G12B12_UNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R2G2B2A2_UNORM:
-        case EFormat::R4G4B4A4_UNORM:
-        case EFormat::R5G5B5A1_UNORM:
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R10G10B10A2_UNORM:
-        case EFormat::R12G12B12A12_UNORM:
-        case EFormat::R16G16B16A16_UNORM:
-        case EFormat::R8G8B8_SRGB:
-        case EFormat::R8G8B8A8_SRGB:
-        case EFormat::R16_FLOAT:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R16G16B16A16_FLOAT:
-        case EFormat::R32_FLOAT:
-        case EFormat::R32G32_FLOAT:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
-        case EFormat::R11G11B10_FLOAT:
-        case EFormat::R9G9B9_E5:
-            return EBaseTypeClass::Float;
-        case EFormat::R8_SINT:
-        case EFormat::R16_SINT:
-        case EFormat::R32_SINT:
-        case EFormat::R8G8_SINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R8G8B8A8_SINT:
-        case EFormat::R16G16B16A16_SINT:
-        case EFormat::R32G32B32A32_SINT:
-            return EBaseTypeClass::Integer;
-        case EFormat::R10G10B10A2_UINT:
-        case EFormat::R8_UINT:
-        case EFormat::R16_UINT:
-        case EFormat::R32_UINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R32G32_UINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R32G32B32_UINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R16G16B16A16_UINT:
-        case EFormat::R32G32B32A32_UINT:
-            return EBaseTypeClass::UnsignedInteger;
+        case TFormat::R8_UNORM:
+        case TFormat::R8_SNORM:
+        case TFormat::R16_UNORM:
+        case TFormat::R16_SNORM:
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R3G3B2_UNORM:
+        case TFormat::R4G4B4_UNORM:
+        case TFormat::R5G5B5_UNORM:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R10G10B10_UNORM:
+        case TFormat::R12G12B12_UNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R2G2B2A2_UNORM:
+        case TFormat::R4G4B4A4_UNORM:
+        case TFormat::R5G5B5A1_UNORM:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R10G10B10A2_UNORM:
+        case TFormat::R12G12B12A12_UNORM:
+        case TFormat::R16G16B16A16_UNORM:
+        case TFormat::R8G8B8_SRGB:
+        case TFormat::R8G8B8A8_SRGB:
+        case TFormat::R16_FLOAT:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R16G16B16A16_FLOAT:
+        case TFormat::R32_FLOAT:
+        case TFormat::R32G32_FLOAT:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
+        case TFormat::R11G11B10_FLOAT:
+        case TFormat::R9G9B9_E5:
+            return TBaseTypeClass::Float;
+        case TFormat::R8_SINT:
+        case TFormat::R16_SINT:
+        case TFormat::R32_SINT:
+        case TFormat::R8G8_SINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R8G8B8A8_SINT:
+        case TFormat::R16G16B16A16_SINT:
+        case TFormat::R32G32B32A32_SINT:
+            return TBaseTypeClass::Integer;
+        case TFormat::R10G10B10A2_UINT:
+        case TFormat::R8_UINT:
+        case TFormat::R16_UINT:
+        case TFormat::R32_UINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R32G32_UINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R32G32B32_UINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R16G16B16A16_UINT:
+        case TFormat::R32G32B32A32_UINT:
+            return TBaseTypeClass::UnsignedInteger;
         default:
             std::unreachable();
     }
 }
 
-constexpr auto FormatToAttachmentType(EFormat attachmentFormat, size_t colorAttachmentIndex) -> EAttachmentType {
+constexpr auto FormatToAttachmentType(TFormat attachmentFormat, size_t colorAttachmentIndex) -> TAttachmentType {
 
     switch (attachmentFormat) {
-        case EFormat::D24_UNORM:
-        case EFormat::D24_UNORM_S8_UINT:
-        case EFormat::D32_FLOAT:
-        case EFormat::D32_FLOAT_S8_UINT:
-        case EFormat::D32_UNORM:
-            return EAttachmentType::DepthAttachment;
+        case TFormat::D24_UNORM:
+        case TFormat::D24_UNORM_S8_UINT:
+        case TFormat::D32_FLOAT:
+        case TFormat::D32_FLOAT_S8_UINT:
+        case TFormat::D32_UNORM:
+            return TAttachmentType::DepthAttachment;
         default:
-            return static_cast<EAttachmentType>(static_cast<std::underlying_type<EAttachmentType>::type>(EAttachmentType::ColorAttachment0) + colorAttachmentIndex);
+            return static_cast<TAttachmentType>(static_cast<std::underlying_type<TAttachmentType>::type>(TAttachmentType::ColorAttachment0) + colorAttachmentIndex);
     }
 }
 
-auto FormatToComponentCount(EFormat format) -> int32_t {
+auto FormatToComponentCount(TFormat format) -> int32_t {
     switch (format) {
-        case EFormat::R8_UNORM:
-        case EFormat::R8_SNORM:
-        case EFormat::R16_UNORM:
-        case EFormat::R16_SNORM:
-        case EFormat::R16_FLOAT:
-        case EFormat::R32_FLOAT:
-        case EFormat::R8_SINT:
-        case EFormat::R16_SINT:
-        case EFormat::R32_SINT:
-        case EFormat::R8_UINT:
-        case EFormat::R16_UINT:
-        case EFormat::R32_UINT:
+        case TFormat::R8_UNORM:
+        case TFormat::R8_SNORM:
+        case TFormat::R16_UNORM:
+        case TFormat::R16_SNORM:
+        case TFormat::R16_FLOAT:
+        case TFormat::R32_FLOAT:
+        case TFormat::R8_SINT:
+        case TFormat::R16_SINT:
+        case TFormat::R32_SINT:
+        case TFormat::R8_UINT:
+        case TFormat::R16_UINT:
+        case TFormat::R32_UINT:
             return 1;
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R32G32_FLOAT:
-        case EFormat::R8G8_SINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R32G32_UINT:
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R32G32_FLOAT:
+        case TFormat::R8G8_SINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R32G32_UINT:
             return 2;
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R32G32B32_UINT:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R32G32B32_UINT:
             return 3;
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R16G16B16A16_UNORM:
-        case EFormat::R16G16B16A16_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
-        case EFormat::R8G8B8A8_SINT:
-        case EFormat::R16G16B16A16_SINT:
-        case EFormat::R32G32B32A32_SINT:
-        case EFormat::R10G10B10A2_UINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R16G16B16A16_UINT:
-        case EFormat::R32G32B32A32_UINT:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R16G16B16A16_UNORM:
+        case TFormat::R16G16B16A16_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
+        case TFormat::R8G8B8A8_SINT:
+        case TFormat::R16G16B16A16_SINT:
+        case TFormat::R32G32B32A32_SINT:
+        case TFormat::R10G10B10A2_UINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R16G16B16A16_UINT:
+        case TFormat::R32G32B32A32_UINT:
             return 4;
         default:
             std::unreachable();
     }
 }
 
-auto IsFormatNormalized(EFormat format) -> int32_t {
+auto IsFormatNormalized(TFormat format) -> int32_t {
 
     switch (format) {
-        case EFormat::R8_UNORM:
-        case EFormat::R8_SNORM:
-        case EFormat::R16_UNORM:
-        case EFormat::R16_SNORM:
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R16G16B16A16_UNORM:
+        case TFormat::R8_UNORM:
+        case TFormat::R8_SNORM:
+        case TFormat::R16_UNORM:
+        case TFormat::R16_SNORM:
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R16G16B16A16_UNORM:
             return GL_TRUE;
-        case EFormat::R16_FLOAT:
-        case EFormat::R32_FLOAT:
-        case EFormat::R8_SINT:
-        case EFormat::R16_SINT:
-        case EFormat::R32_SINT:
-        case EFormat::R8_UINT:
-        case EFormat::R16_UINT:
-        case EFormat::R32_UINT:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R32G32_FLOAT:
-        case EFormat::R8G8_SINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R32G32_UINT:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R32G32B32_UINT:
-        case EFormat::R16G16B16A16_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
-        case EFormat::R8G8B8A8_SINT:
-        case EFormat::R16G16B16A16_SINT:
-        case EFormat::R32G32B32A32_SINT:
-        case EFormat::R10G10B10A2_UINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R16G16B16A16_UINT:
-        case EFormat::R32G32B32A32_UINT:
+        case TFormat::R16_FLOAT:
+        case TFormat::R32_FLOAT:
+        case TFormat::R8_SINT:
+        case TFormat::R16_SINT:
+        case TFormat::R32_SINT:
+        case TFormat::R8_UINT:
+        case TFormat::R16_UINT:
+        case TFormat::R32_UINT:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R32G32_FLOAT:
+        case TFormat::R8G8_SINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R32G32_UINT:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R32G32B32_UINT:
+        case TFormat::R16G16B16A16_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
+        case TFormat::R8G8B8A8_SINT:
+        case TFormat::R16G16B16A16_SINT:
+        case TFormat::R32G32B32A32_SINT:
+        case TFormat::R10G10B10A2_UINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R16G16B16A16_UINT:
+        case TFormat::R32G32B32A32_UINT:
             return GL_FALSE;
         default:
             std::unreachable();
     }
 }
 
-auto FormatToFormatClass(EFormat format) -> EFormatClass
+auto FormatToFormatClass(TFormat format) -> TFormatClass
   {
     switch (format)
     {
-        case EFormat::R8_UNORM:
-        case EFormat::R8_SNORM:
-        case EFormat::R16_UNORM:
-        case EFormat::R16_SNORM:
-        case EFormat::R8G8_UNORM:
-        case EFormat::R8G8_SNORM:
-        case EFormat::R16G16_UNORM:
-        case EFormat::R16G16_SNORM:
-        case EFormat::R8G8B8_UNORM:
-        case EFormat::R8G8B8_SNORM:
-        case EFormat::R16G16B16_SNORM:
-        case EFormat::R8G8B8A8_UNORM:
-        case EFormat::R8G8B8A8_SNORM:
-        case EFormat::R16G16B16A16_UNORM:
-        case EFormat::R16_FLOAT:
-        case EFormat::R16G16_FLOAT:
-        case EFormat::R16G16B16_FLOAT:
-        case EFormat::R16G16B16A16_FLOAT:
-        case EFormat::R32_FLOAT:
-        case EFormat::R32G32_FLOAT:
-        case EFormat::R32G32B32_FLOAT:
-        case EFormat::R32G32B32A32_FLOAT:
-            return EFormatClass::Float;
-        case EFormat::R8_SINT:
-        case EFormat::R16_SINT:
-        case EFormat::R32_SINT:
-        case EFormat::R8G8_SINT:
-        case EFormat::R16G16_SINT:
-        case EFormat::R32G32_SINT:
-        case EFormat::R8G8B8_SINT:
-        case EFormat::R16G16B16_SINT:
-        case EFormat::R32G32B32_SINT:
-        case EFormat::R8G8B8A8_SINT:
-        case EFormat::R16G16B16A16_SINT:
-        case EFormat::R32G32B32A32_SINT:
-        case EFormat::R10G10B10A2_UINT:
-        case EFormat::R8_UINT:
-        case EFormat::R16_UINT:
-        case EFormat::R32_UINT:
-        case EFormat::R8G8_UINT:
-        case EFormat::R16G16_UINT:
-        case EFormat::R32G32_UINT:
-        case EFormat::R8G8B8_UINT:
-        case EFormat::R16G16B16_UINT:
-        case EFormat::R32G32B32_UINT:
-        case EFormat::R8G8B8A8_UINT:
-        case EFormat::R16G16B16A16_UINT:
-        case EFormat::R32G32B32A32_UINT:
-            return EFormatClass::Integer;
+        case TFormat::R8_UNORM:
+        case TFormat::R8_SNORM:
+        case TFormat::R16_UNORM:
+        case TFormat::R16_SNORM:
+        case TFormat::R8G8_UNORM:
+        case TFormat::R8G8_SNORM:
+        case TFormat::R16G16_UNORM:
+        case TFormat::R16G16_SNORM:
+        case TFormat::R8G8B8_UNORM:
+        case TFormat::R8G8B8_SNORM:
+        case TFormat::R16G16B16_SNORM:
+        case TFormat::R8G8B8A8_UNORM:
+        case TFormat::R8G8B8A8_SNORM:
+        case TFormat::R16G16B16A16_UNORM:
+        case TFormat::R16_FLOAT:
+        case TFormat::R16G16_FLOAT:
+        case TFormat::R16G16B16_FLOAT:
+        case TFormat::R16G16B16A16_FLOAT:
+        case TFormat::R32_FLOAT:
+        case TFormat::R32G32_FLOAT:
+        case TFormat::R32G32B32_FLOAT:
+        case TFormat::R32G32B32A32_FLOAT:
+            return TFormatClass::Float;
+        case TFormat::R8_SINT:
+        case TFormat::R16_SINT:
+        case TFormat::R32_SINT:
+        case TFormat::R8G8_SINT:
+        case TFormat::R16G16_SINT:
+        case TFormat::R32G32_SINT:
+        case TFormat::R8G8B8_SINT:
+        case TFormat::R16G16B16_SINT:
+        case TFormat::R32G32B32_SINT:
+        case TFormat::R8G8B8A8_SINT:
+        case TFormat::R16G16B16A16_SINT:
+        case TFormat::R32G32B32A32_SINT:
+        case TFormat::R10G10B10A2_UINT:
+        case TFormat::R8_UINT:
+        case TFormat::R16_UINT:
+        case TFormat::R32_UINT:
+        case TFormat::R8G8_UINT:
+        case TFormat::R16G16_UINT:
+        case TFormat::R32G32_UINT:
+        case TFormat::R8G8B8_UINT:
+        case TFormat::R16G16B16_UINT:
+        case TFormat::R32G32B32_UINT:
+        case TFormat::R8G8B8A8_UINT:
+        case TFormat::R16G16B16A16_UINT:
+        case TFormat::R32G32B32A32_UINT:
+            return TFormatClass::Integer;
         default: 
-            return EFormatClass::Long;
+            return TFormatClass::Long;
     }
 }
 
@@ -1596,10 +1584,10 @@ auto LoadImageFromFile(
     }
 }
 
-auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> STextureId {
+auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
 
     ZoneScopedN("CreateTexture");
-    STexture texture = {};
+    TTexture texture = {};
 
     glCreateTextures(TextureTypeToGL(createTextureDescriptor.TextureType), 1, &texture.Id);
     if (!createTextureDescriptor.Label.empty()) {
@@ -1612,20 +1600,20 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
 
     switch (createTextureDescriptor.TextureType)
     {
-        case ETextureType::Texture1D:
+        case TTextureType::Texture1D:
             glTextureStorage1D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
                                createTextureDescriptor.Extent.Width);
             break;
-        case ETextureType::Texture2D:
+        case TTextureType::Texture2D:
             glTextureStorage2D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
                                createTextureDescriptor.Extent.Width,
                                createTextureDescriptor.Extent.Height);
             break;
-        case ETextureType::Texture3D:
+        case TTextureType::Texture3D:
             glTextureStorage3D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
@@ -1633,14 +1621,14 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
                                createTextureDescriptor.Extent.Height,
                                createTextureDescriptor.Extent.Depth);
             break;
-        case ETextureType::Texture1DArray:
+        case TTextureType::Texture1DArray:
             glTextureStorage2D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
                                createTextureDescriptor.Extent.Width,
                                createTextureDescriptor.Layers);
             break;
-        case ETextureType::Texture2DArray:
+        case TTextureType::Texture2DArray:
             glTextureStorage3D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
@@ -1648,14 +1636,14 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
                                createTextureDescriptor.Extent.Height,
                                createTextureDescriptor.Layers);
             break;
-        case ETextureType::TextureCube:
+        case TTextureType::TextureCube:
             glTextureStorage2D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
                                createTextureDescriptor.Extent.Width,
                                createTextureDescriptor.Extent.Height);
             break;
-        case ETextureType::TextureCubeArray:
+        case TTextureType::TextureCubeArray:
             glTextureStorage3D(texture.Id,
                                createTextureDescriptor.MipMapLevels,
                                FormatToGL(createTextureDescriptor.Format),
@@ -1663,7 +1651,7 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
                                createTextureDescriptor.Extent.Height,
                                createTextureDescriptor.Layers);
             break;
-        case ETextureType::Texture2DMultisample:
+        case TTextureType::Texture2DMultisample:
             glTextureStorage2DMultisample(texture.Id,
                                           SampleCountToGL(createTextureDescriptor.SampleCount),
                                           FormatToGL(createTextureDescriptor.Format),
@@ -1671,7 +1659,7 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
                                           createTextureDescriptor.Extent.Height,
                                           GL_TRUE);
             break;
-        case ETextureType::Texture2DMultisampleArray:
+        case TTextureType::Texture2DMultisampleArray:
             glTextureStorage3DMultisample(texture.Id,
                                           SampleCountToGL(createTextureDescriptor.SampleCount),
                                           FormatToGL(createTextureDescriptor.Format),
@@ -1684,19 +1672,19 @@ auto CreateTexture(const SCreateTextureDescriptor& createTextureDescriptor) -> S
             std::unreachable();
     }
 
-    const auto textureId = STextureId(g_textures.size());
+    const auto textureId = TTextureId(g_textures.size());
     g_textures.emplace_back(texture);    
 
     return textureId;
 }
 
-auto UploadTexture(const STextureId& textureId, const SUploadTextureDescriptor& updateTextureDescriptor) -> void {
+auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& updateTextureDescriptor) -> void {
 
     ZoneScopedN("UploadTexture");
     auto& texture = GetTexture(textureId);
 
     uint32_t format = 0;
-    if (updateTextureDescriptor.UploadFormat == EUploadFormat::Auto)
+    if (updateTextureDescriptor.UploadFormat == TUploadFormat::Auto)
     {
         format = UploadFormatToGL(FormatToUploadFormat(texture.Format));
     }
@@ -1706,7 +1694,7 @@ auto UploadTexture(const STextureId& textureId, const SUploadTextureDescriptor& 
     }
 
     uint32_t type = 0;
-    if (updateTextureDescriptor.UploadType == EUploadType::Auto)
+    if (updateTextureDescriptor.UploadType == TUploadType::Auto)
     {
         type = FormatToUnderlyingOpenGLType(texture.Format);
     }
@@ -1753,7 +1741,7 @@ auto UploadTexture(const STextureId& textureId, const SUploadTextureDescriptor& 
     }
 }
 
-auto MakeTextureResident(const STextureId& textureId) -> uint64_t {
+auto MakeTextureResident(const TTextureId& textureId) -> uint64_t {
     
     auto& texture = GetTexture(textureId);
 
@@ -1763,7 +1751,7 @@ auto MakeTextureResident(const STextureId& textureId) -> uint64_t {
     return textureHandle;
 }
 
-auto GenerateMipmaps(const STextureId textureId) -> void {
+auto GenerateMipmaps(const TTextureId textureId) -> void {
 
     auto& texture = GetTexture(textureId);
     glGenerateTextureMipmap(texture.Id);
@@ -1775,13 +1763,13 @@ auto DeleteTextures() -> void {
     }
 }
 
-auto GetOrCreateSampler(const SSamplerDescriptor& samplerDescriptor) -> SSamplerId {
+auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSamplerId {
 
     if (auto existingSamplerDescriptor = g_samplerDescriptors.find(samplerDescriptor); existingSamplerDescriptor != g_samplerDescriptors.end()) {
         return existingSamplerDescriptor->second;
     }
 
-    SSampler sampler = {};
+    TSampler sampler = {};
     glCreateSamplers(1, &sampler.Id);
     SetDebugLabel(sampler.Id, GL_SAMPLER, samplerDescriptor.Label);
     glSamplerParameteri(sampler.Id, GL_TEXTURE_WRAP_S, TextureAddressModeToGL(samplerDescriptor.AddressModeU));
@@ -1793,16 +1781,16 @@ auto GetOrCreateSampler(const SSamplerDescriptor& samplerDescriptor) -> SSampler
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MIN_LOD, samplerDescriptor.LodMin);
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MAX_LOD, samplerDescriptor.LodMax);
 
-    const auto samplerId = SSamplerId(g_samplers.size());
+    const auto samplerId = TSamplerId(g_samplers.size());
     g_samplerDescriptors.insert({samplerDescriptor, samplerId});
     g_samplers.emplace_back(sampler);
 
     return samplerId;
 };
 
-auto CreateFramebuffer(const SFramebufferDescriptor& framebufferDescriptor) -> SFramebuffer {
+auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> TFramebuffer {
 
-    SFramebuffer framebuffer = {};
+    TFramebuffer framebuffer = {};
     glCreateFramebuffers(1, &framebuffer.Id);
     if (!framebufferDescriptor.Label.empty()) {
         SetDebugLabel(framebuffer.Id, GL_FRAMEBUFFER, framebufferDescriptor.Label);
@@ -1814,12 +1802,12 @@ auto CreateFramebuffer(const SFramebufferDescriptor& framebufferDescriptor) -> S
         if (colorAttachmentDescriptorValue.has_value()) {
             auto& colorAttachmentDescriptor = *colorAttachmentDescriptorValue;
             auto colorAttachmentTextureId = CreateTexture({
-                .TextureType = ETextureType::Texture2D,
+                .TextureType = TTextureType::Texture2D,
                 .Format = colorAttachmentDescriptor.Format,
-                .Extent = SExtent3D(colorAttachmentDescriptor.Extent.Width, colorAttachmentDescriptor.Extent.Height, 1),
+                .Extent = TExtent3D(colorAttachmentDescriptor.Extent.Width, colorAttachmentDescriptor.Extent.Height, 1),
                 .MipMapLevels = 1,
                 .Layers = 0,
-                .SampleCount = ESampleCount::One,
+                .SampleCount = TSampleCount::One,
                 .Label = std::format("{}_{}x{}", colorAttachmentDescriptor.Label, colorAttachmentDescriptor.Extent.Width, colorAttachmentDescriptor.Extent.Height)
             });
             auto& colorAttachmentTexture = GetTexture(colorAttachmentTextureId);
@@ -1848,12 +1836,12 @@ auto CreateFramebuffer(const SFramebufferDescriptor& framebufferDescriptor) -> S
     if (framebufferDescriptor.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebufferDescriptor.DepthStencilAttachment;
         auto depthTextureId = CreateTexture({
-            .TextureType = ETextureType::Texture2D,
+            .TextureType = TTextureType::Texture2D,
             .Format = depthStencilAttachment.Format,
-            .Extent = SExtent3D(depthStencilAttachment.Extent.Width, depthStencilAttachment.Extent.Height, 1),
+            .Extent = TExtent3D(depthStencilAttachment.Extent.Width, depthStencilAttachment.Extent.Height, 1),
             .MipMapLevels = 1,
             .Layers = 0,
-            .SampleCount = ESampleCount::One,
+            .SampleCount = TSampleCount::One,
             .Label = std::format("{}_{}x{}", depthStencilAttachment.Label, depthStencilAttachment.Extent.Width, depthStencilAttachment.Extent.Height)
         });
         auto& depthTexture = g_textures[size_t(depthTextureId)];
@@ -1879,23 +1867,23 @@ auto CreateFramebuffer(const SFramebufferDescriptor& framebufferDescriptor) -> S
     return framebuffer;
 }
 
-auto BindFramebuffer(const SFramebuffer& framebuffer) -> void {
+auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.Id);
 
     for (auto colorAttachmentIndex = 0; auto colorAttachmentValue : framebuffer.ColorAttachments) {
         if (colorAttachmentValue.has_value()) {
             auto& colorAttachment = *colorAttachmentValue;
-            if (colorAttachment.LoadOperation == EFramebufferAttachmentLoadOperation::Clear) {
+            if (colorAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
                 auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
                 switch (baseTypeClass) {
-                    case EBaseTypeClass::Float:
+                    case TBaseTypeClass::Float:
                         glClearNamedFramebufferfv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<float, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
-                    case EBaseTypeClass::Integer:
+                    case TBaseTypeClass::Integer:
                         glClearNamedFramebufferiv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<int32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
-                    case EBaseTypeClass::UnsignedInteger:
+                    case TBaseTypeClass::UnsignedInteger:
                         glClearNamedFramebufferuiv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<uint32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
                     default:
@@ -1908,13 +1896,13 @@ auto BindFramebuffer(const SFramebuffer& framebuffer) -> void {
 
     if (framebuffer.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebuffer.DepthStencilAttachment;
-        if (depthStencilAttachment.LoadOperation == EFramebufferAttachmentLoadOperation::Clear) {
+        if (depthStencilAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
             glClearNamedFramebufferfi(framebuffer.Id, GL_DEPTH_STENCIL, 0, depthStencilAttachment.ClearDepthStencil.Depth, depthStencilAttachment.ClearDepthStencil.Stencil);
         }
     }
 }
 
-auto DeleteFramebuffer(const SFramebuffer& framebuffer) -> void {
+auto DeleteFramebuffer(const TFramebuffer& framebuffer) -> void {
 
     assert(framebuffer.Id != 0);
 
@@ -1936,12 +1924,12 @@ auto CreateGraphicsProgram(
     std::string_view vertexShaderFilePath,
     std::string_view fragmentShaderFilePath) -> std::expected<uint32_t, std::string> {
 
-    auto vertexShaderSourceResult = ReadTextFromFile(vertexShaderFilePath);
+    auto vertexShaderSourceResult = ReadShaderSourceFromFile(vertexShaderFilePath);
     if (!vertexShaderSourceResult) {
         return std::unexpected(vertexShaderSourceResult.error());
     }
 
-    auto fragmentShaderSourceResult = ReadTextFromFile(fragmentShaderFilePath);
+    auto fragmentShaderSourceResult = ReadShaderSourceFromFile(fragmentShaderFilePath);
     if (!fragmentShaderSourceResult) {
         return std::unexpected(fragmentShaderSourceResult.error());
     }
@@ -2009,7 +1997,7 @@ auto CreateComputeProgram(
     std::string_view label,
     std::string_view computeShaderFilePath) -> std::expected<uint32_t, std::string> {
 
-    auto computeShaderSourceResult = ReadTextFromFile(computeShaderFilePath);
+    auto computeShaderSourceResult = ReadShaderSourceFromFile(computeShaderFilePath);
     if (!computeShaderSourceResult) {
         return std::unexpected(computeShaderSourceResult.error());
     }
@@ -2052,9 +2040,9 @@ auto CreateComputeProgram(
     return program;
 }
 
-auto CreateGraphicsPipeline(const SGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<SGraphicsPipeline, std::string> {
+auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<TGraphicsPipeline, std::string> {
 
-    SGraphicsPipeline pipeline = {};
+    TGraphicsPipeline pipeline = {};
 
     auto graphicsProgramResult = CreateGraphicsProgram(graphicsPipelineDescriptor.Label,
                                                        graphicsPipelineDescriptor.VertexShaderFilePath,
@@ -2084,13 +2072,13 @@ auto CreateGraphicsPipeline(const SGraphicsPipelineDescriptor& graphicsPipelineD
                 auto formatClass = FormatToFormatClass(inputAttributeValue.Format);
                 switch (formatClass)
                 {
-                    case EFormatClass::Float:
+                    case TFormatClass::Float:
                         glVertexArrayAttribFormat(inputLayout, inputAttributeValue.Location, componentCount, type, isFormatNormalized, inputAttributeValue.Offset);
                         break;
-                    case EFormatClass::Integer:
+                    case TFormatClass::Integer:
                         glVertexArrayAttribIFormat(inputLayout, inputAttributeValue.Location, componentCount, type, inputAttributeValue.Offset);
                         break;
-                    case EFormatClass::Long:
+                    case TFormatClass::Long:
                         glVertexArrayAttribLFormat(inputLayout, inputAttributeValue.Location, componentCount, type, inputAttributeValue.Offset);
                         break;
                     default: 
@@ -2116,9 +2104,9 @@ auto CreateGraphicsPipeline(const SGraphicsPipelineDescriptor& graphicsPipelineD
     return pipeline;
 }
 
-auto CreateComputePipeline(const SComputePipelineDescriptor& computePipelineDescriptor) -> std::expected<SComputePipeline, std::string> {
+auto CreateComputePipeline(const TComputePipelineDescriptor& computePipelineDescriptor) -> std::expected<TComputePipeline, std::string> {
 
-    SComputePipeline pipeline = {};
+    TComputePipeline pipeline = {};
 
     auto computeProgramResult = CreateComputeProgram(computePipelineDescriptor.Label,
                                                      computePipelineDescriptor.ComputeShaderFilePath);
@@ -2131,24 +2119,24 @@ auto CreateComputePipeline(const SComputePipelineDescriptor& computePipelineDesc
     return pipeline;
 }
 
-auto SGraphicsPipeline::Bind() -> void {
-    SPipeline::Bind();
+auto TGraphicsPipeline::Bind() -> void {
+    TPipeline::Bind();
     glBindVertexArray(InputLayout.has_value() ? *InputLayout : g_defaultInputLayout);
 }
 
-auto SGraphicsPipeline::BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void {
+auto TGraphicsPipeline::BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void {
 
     if (InputLayout.has_value()) {
         glVertexArrayVertexBuffer(*InputLayout, bindingIndex, buffer, offset, stride);
     }
 }
 
-auto SGraphicsPipeline::DrawArrays(int32_t vertexOffset, size_t vertexCount) -> void {
+auto TGraphicsPipeline::DrawArrays(int32_t vertexOffset, size_t vertexCount) -> void {
 
     glDrawArrays(PrimitiveTopology, vertexOffset, vertexCount);
 }
 
-auto SGraphicsPipeline::DrawElements(uint32_t indexBuffer, size_t elementCount) -> void {
+auto TGraphicsPipeline::DrawElements(uint32_t indexBuffer, size_t elementCount) -> void {
 
     if (g_lastIndexBuffer != indexBuffer) {
         glVertexArrayElementBuffer(InputLayout.has_value() ? InputLayout.value() : g_defaultInputLayout, indexBuffer);
@@ -2158,7 +2146,7 @@ auto SGraphicsPipeline::DrawElements(uint32_t indexBuffer, size_t elementCount) 
     glDrawElements(PrimitiveTopology, elementCount, GL_UNSIGNED_INT, nullptr);
 }
 
-auto SGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t elementCount, size_t instanceCount) -> void {
+auto TGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t elementCount, size_t instanceCount) -> void {
 
     if (g_lastIndexBuffer != indexBuffer) {
         glVertexArrayElementBuffer(InputLayout.has_value() ? InputLayout.value() : g_defaultInputLayout, indexBuffer);
@@ -2281,11 +2269,11 @@ auto ReadBinaryFromFile(const std::filesystem::path& filePath) -> std::pair<std:
 
 // - Assets -------------------------------------------------------------------
 
-using SAssetMeshId = SId<struct TAssetMeshId>;
-using SAssetImageId = SId<struct TAssetImageId>;
-using SAssetTextureId = SId<struct TAssetTextureId>;
-using SAssetSamplerId = SId<struct TAssetSamplerId>;
-using SAssetMaterialId = SId<struct TAssetMaterialId>;
+using SAssetMeshId = TId<struct TAssetMeshId>;
+using SAssetImageId = TId<struct TAssetImageId>;
+using SAssetTextureId = TId<struct TAssetTextureId>;
+using SAssetSamplerId = TId<struct TAssetSamplerId>;
+using SAssetMaterialId = TId<struct TAssetMaterialId>;
 
 enum class EMaterialChannelUsage {
     SRgb, // use sRGB Format
@@ -2303,10 +2291,10 @@ struct SAssetMesh {
 };
 
 struct SAssetSampler {
-    ETextureAddressMode AddressModeU = ETextureAddressMode::ClampToEdge;
-    ETextureAddressMode AddressModeV = ETextureAddressMode::ClampToEdge;
-    ETextureMagFilter MagFilter = ETextureMagFilter::Linear;
-    ETextureMinFilter MinFilter = ETextureMinFilter::Linear;
+    TTextureAddressMode AddressModeU = TTextureAddressMode::ClampToEdge;
+    TTextureAddressMode AddressModeV = TTextureAddressMode::ClampToEdge;
+    TTextureMagFilter MagFilter = TTextureMagFilter::Linear;
+    TTextureMinFilter MinFilter = TTextureMinFilter::Linear;
 };
 
 struct SAssetImage {
@@ -2457,7 +2445,7 @@ auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler& {
 }
 
 /*
-auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> SSamplerDescriptor {
+auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> TSamplerDescriptor {
 
     ZoneScopedN("GetAssetSampler");
     for (const auto& [key, value] : g_assetSamplers) {
@@ -2467,7 +2455,7 @@ auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> SSamplerDescripto
     }
 
     spdlog::error("Unable to find Asset Sampler");
-    return SSamplerDescriptor {};
+    return TSamplerDescriptor {};
 }
 */
 
@@ -2691,6 +2679,7 @@ auto CreateAssetMaterial(
     }
     
     auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", assetMaterialIndex);
+
     return AddAssetMaterial(materialName, assetMaterial);
 }
 
@@ -2698,7 +2687,7 @@ auto LoadModelFromFile(
     std::string modelName,
     std::filesystem::path filePath) -> void {
 
-    fastgltf::Parser parser(fastgltf::Extensions::KHR_mesh_quantization);
+    fastgltf::Parser parser(fastgltf::Extensions::KHR_mesh_quantization | fastgltf::Extensions::EXT_mesh_gpu_instancing);
 
     constexpr auto gltfOptions =
         fastgltf::Options::DontRequireValidAssetMember |
@@ -2766,7 +2755,7 @@ auto LoadModelFromFile(
             return SAssetImage{};
         }();
 
-        auto assetImageId = g_assetImages.size() + imageIndex;
+        auto assetImageId = imageIndex;
 
         int32_t width = 0;
         int32_t height = 0;
@@ -2799,31 +2788,31 @@ auto LoadModelFromFile(
 
         const auto getAddressMode = [](const fastgltf::Wrap& wrap) {
             switch (wrap) {
-                case fastgltf::Wrap::ClampToEdge: return ETextureAddressMode::ClampToEdge;
-                case fastgltf::Wrap::MirroredRepeat: return ETextureAddressMode::RepeatMirrored;
-                case fastgltf::Wrap::Repeat: return ETextureAddressMode::Repeat;
+                case fastgltf::Wrap::ClampToEdge: return TTextureAddressMode::ClampToEdge;
+                case fastgltf::Wrap::MirroredRepeat: return TTextureAddressMode::RepeatMirrored;
+                case fastgltf::Wrap::Repeat: return TTextureAddressMode::Repeat;
                 default:
-                    return ETextureAddressMode::ClampToEdge;
+                    return TTextureAddressMode::ClampToEdge;
             }
         };
 
         //TODO(deccer) reinvent min/mag filterisms, this sucks here
         const auto getMinFilter = [](const fastgltf::Filter& minFilter) {
             switch (minFilter) {
-                case fastgltf::Filter::Linear: return ETextureMinFilter::Linear;
-                case fastgltf::Filter::LinearMipMapLinear: return ETextureMinFilter::LinearMipmapLinear;
-                case fastgltf::Filter::LinearMipMapNearest: return ETextureMinFilter::LinearMipmapNearest;
-                case fastgltf::Filter::Nearest: return ETextureMinFilter::Nearest;
-                case fastgltf::Filter::NearestMipMapLinear: return ETextureMinFilter::NearestMipmapLinear;
-                case fastgltf::Filter::NearestMipMapNearest: return ETextureMinFilter::NearestMipmapNearest;
+                case fastgltf::Filter::Linear: return TTextureMinFilter::Linear;
+                case fastgltf::Filter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;
+                case fastgltf::Filter::LinearMipMapNearest: return TTextureMinFilter::LinearMipmapNearest;
+                case fastgltf::Filter::Nearest: return TTextureMinFilter::Nearest;
+                case fastgltf::Filter::NearestMipMapLinear: return TTextureMinFilter::NearestMipmapLinear;
+                case fastgltf::Filter::NearestMipMapNearest: return TTextureMinFilter::NearestMipmapNearest;
                 default: std::unreachable();
             }
         };
 
         const auto getMagFilter = [](const fastgltf::Filter& magFilter) {
             switch (magFilter) {
-                case fastgltf::Filter::Linear: return ETextureMagFilter::Linear;
-                case fastgltf::Filter::Nearest: return ETextureMagFilter::Nearest;
+                case fastgltf::Filter::Linear: return TTextureMagFilter::Linear;
+                case fastgltf::Filter::Nearest: return TTextureMagFilter::Nearest;
                 default: std::unreachable();
             }
         };
@@ -2908,7 +2897,7 @@ auto LoadModelFromFile(
 
             auto materialIndex = fgPrimitive.materialIndex.value_or(0);
             auto& fgMaterial = fgAsset.materials[materialIndex];
-            auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", g_assetMaterials.size() + materialIndex);
+            auto materialName = GetSafeResourceName(modelName.data(), fgMaterial.name.data(), "material", materialIndex);
 
             auto assetMesh = CreateAssetMesh(meshName, globalTransform, std::move(vertices), std::move(indices), materialName);
             AddAssetMesh(meshName, assetMesh);
@@ -2921,30 +2910,30 @@ auto LoadModelFromFile(
 
 // - Renderer -----------------------------------------------------------------
 
-using SGpuMeshId = SId<struct TGpuMeshId>;
-using SGpuSamplerId = SId<struct TGpuSamplerId>;
-using SGpuMaterialId = SId<struct TGpuMaterialId>;
+using SGpuMeshId = TId<struct TGpuMeshId>;
+using SGpuSamplerId = TId<struct TGpuSamplerId>;
+using SGpuMaterialId = TId<struct TGpuMaterialId>;
 
 SIdGenerator<SGpuMeshId> g_gpuMeshCounter = {};
 
-SFramebuffer g_geometryFramebuffer = {};
-SGraphicsPipeline g_geometryGraphicsPipeline = {};
+TFramebuffer g_geometryFramebuffer = {};
+TGraphicsPipeline g_geometryGraphicsPipeline = {};
 std::vector<SGpuGlobalLight> g_gpuGlobalLights;
 
 bool g_drawDebugLines = true;
 std::vector<SDebugLine> g_debugLines;
 uint32_t g_debugInputLayout = 0;
 uint32_t g_debugLinesVertexBuffer = 0;
-SGraphicsPipeline g_debugLinesGraphicsPipeline = {};
+TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 
-SGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
-SSampler g_fullscreenSamplerNearestClampToEdge = {};
+TGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
+TSampler g_fullscreenSamplerNearestClampToEdge = {};
 
 std::unordered_map<std::string, SGpuMesh> g_gpuMeshes = {};
-std::unordered_map<std::string, SSampler> g_gpuSamplers = {};
+std::unordered_map<std::string, TSampler> g_gpuSamplers = {};
 std::unordered_map<std::string, SGpuMaterial> g_gpuMaterials = {};
 
-auto DrawFullscreenTriangleWithTexture(const STexture& texture) -> void {
+auto DrawFullscreenTriangleWithTexture(const TTexture& texture) -> void {
     
     g_fullscreenTriangleGraphicsPipeline.Bind();
     g_fullscreenTriangleGraphicsPipeline.BindTextureAndSampler(0, texture.Id, g_fullscreenSamplerNearestClampToEdge.Id);
@@ -3003,22 +2992,22 @@ auto CreateTextureForMaterialChannel(SAssetMaterialChannel& assetMaterialChannel
 
     auto& image = GetAssetImage(assetMaterialChannel.Image);
 
-    auto textureId = CreateTexture(SCreateTextureDescriptor{
-        .TextureType = ETextureType::Texture2D,
-        .Format = EFormat::R8G8B8A8_UNORM,                
-        .Extent = SExtent3D{static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+    auto textureId = CreateTexture(TCreateTextureDescriptor{
+        .TextureType = TTextureType::Texture2D,
+        .Format = TFormat::R8G8B8A8_UNORM,
+        .Extent = TExtent3D{ static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
         .MipMapLevels = static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(image.Width), static_cast<float>(image.Height))))),
         .Layers = 1,
-        .SampleCount = ESampleCount::One,
+        .SampleCount = TSampleCount::One,
         .Label = image.Name,
     });
     
-    UploadTexture(textureId, SUploadTextureDescriptor{
+    UploadTexture(textureId, TUploadTextureDescriptor{
         .Level = 0,
-        .Offset = SOffset3D{0, 0, 0},
-        .Extent = SExtent3D{static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
-        .UploadFormat = EUploadFormat::Auto,
-        .UploadType = EUploadType::Auto,
+        .Offset = TOffset3D{ 0, 0, 0},
+        .Extent = TExtent3D{ static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+        .UploadFormat = TUploadFormat::Auto,
+        .UploadType = TUploadType::Auto,
         .PixelData = image.DecodedData.get()
     });
 
@@ -3306,26 +3295,26 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     g_geometryFramebuffer = CreateFramebuffer({
         .Label = "Geometry",
         .ColorAttachments = {
-            SFramebufferColorAttachmentDescriptor{
+            TFramebufferColorAttachmentDescriptor{
                 .Label = "GeometryAlbedo",
-                .Format = EFormat::R8G8B8A8_SRGB,
-                .Extent = SExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                .LoadOperation = EFramebufferAttachmentLoadOperation::Clear,
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
-            SFramebufferColorAttachmentDescriptor{
+            TFramebufferColorAttachmentDescriptor{
                 .Label = "GeometryNormals",
-                .Format = EFormat::R32G32B32A32_FLOAT,
-                .Extent = SExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                .LoadOperation = EFramebufferAttachmentLoadOperation::Clear,
+                .Format = TFormat::R32G32B32A32_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },                        
             },
         },
-        .DepthStencilAttachment = SFramebufferDepthStencilAttachmentDescriptor{
+        .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
             .Label = "GeometryDepth",
-            .Format = EFormat::D24_UNORM_S8_UINT,
-            .Extent = SExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-            .LoadOperation = EFramebufferAttachmentLoadOperation::Clear,
+            .Format = TFormat::D24_UNORM_S8_UINT,
+            .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+            .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
             .ClearDepthStencil = { 1.0f, 0 },
         }
     });
@@ -3335,11 +3324,11 @@ auto main(
     [[maybe_unused]] int32_t argc,
     [[maybe_unused]] char* argv[]) -> int32_t {
 
-    SWindowSettings windowSettings = {
+    TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
         .ResolutionHeight = 1080,
         .ResolutionScale = 1.0f,
-        .WindowStyle = EWindowStyle::Windowed,
+        .WindowStyle = TWindowStyle::Windowed,
         .IsDebug = true,
         .IsVSyncEnabled = true,
     };
@@ -3349,7 +3338,7 @@ auto main(
         return 0;
     }
 
-    const auto isWindowWindowed = windowSettings.WindowStyle == EWindowStyle::Windowed;
+    const auto isWindowWindowed = windowSettings.WindowStyle == TWindowStyle::Windowed;
     glfwWindowHint(GLFW_DECORATED, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
@@ -3374,7 +3363,7 @@ auto main(
     const auto windowWidth = windowSettings.ResolutionWidth;
     const auto windowHeight = windowSettings.ResolutionHeight;
 
-    auto monitor = windowSettings.WindowStyle == EWindowStyle::FullscreenExclusive
+    auto monitor = windowSettings.WindowStyle == TWindowStyle::FullscreenExclusive
         ? primaryMonitor
         : nullptr;
 
@@ -3462,7 +3451,7 @@ auto main(
         .VertexShaderFilePath = "data/shaders/Simple.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/Simple.fs.glsl",
         .InputAssembly = {
-            .PrimitiveTopology = EPrimitiveTopology::Triangles
+            .PrimitiveTopology = TPrimitiveTopology::Triangles
         },
     });
     if (!geometryGraphicsPipelineResult) {
@@ -3476,7 +3465,7 @@ auto main(
         .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/FST.GammaCorrected.fs.glsl",
         .InputAssembly = {
-            .PrimitiveTopology = EPrimitiveTopology::Triangles
+            .PrimitiveTopology = TPrimitiveTopology::Triangles
         },
     });
 
@@ -3491,21 +3480,21 @@ auto main(
         .VertexShaderFilePath = "data/shaders/DebugLines.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/DebugLines.fs.glsl",
         .InputAssembly = {
-            .PrimitiveTopology = EPrimitiveTopology::Lines,
+            .PrimitiveTopology = TPrimitiveTopology::Lines,
             .IsPrimitiveRestartEnabled = false,
         },
-        .VertexInput = SVertexInputDescriptor{
+        .VertexInput = TVertexInputDescriptor{
             .VertexInputAttributes = {
-                SVertexInputAttributeDescriptor{
+                TVertexInputAttributeDescriptor{
                     .Location = 0,
                     .Binding = 0,
-                    .Format = EFormat::R32G32B32_FLOAT,
+                    .Format = TFormat::R32G32B32_FLOAT,
                     .Offset = offsetof(SDebugLine, StartPosition),
                 },
-                SVertexInputAttributeDescriptor{
+                TVertexInputAttributeDescriptor{
                     .Location = 1,
                     .Binding = 0,
-                    .Format = EFormat::R32G32B32A32_FLOAT,
+                    .Format = TFormat::R32G32B32A32_FLOAT,
                     .Offset = offsetof(SDebugLine, StartColor),
                 },
             }
@@ -3534,7 +3523,10 @@ auto main(
 
     // - Load Assets ////////////
 
-    LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured.glb");
+    LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
+    //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
+    //LoadModelFromFile("Test", "/home/deccer/Downloads/modular_ruins_c/modular_ruins_c.glb");
+    //LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
     //LoadModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
     
     //LoadModelFromFile("SM_DeccerCube", "data/scenes/stylized_low-poly_sand_block.glb");
