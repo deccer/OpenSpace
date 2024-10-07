@@ -3158,13 +3158,13 @@ glm::dvec2 g_cursorFrameOffset = {};
 
 glm::ivec2 g_windowFramebufferSize = {};
 glm::ivec2 g_windowFramebufferScaledSize = {};
-glm::ivec2 g_sceneViewerSize = {};
-glm::ivec2 g_sceneViewerScaledSize = {};
+glm::ivec2 g_previousSceneViewerSize = {};
+glm::ivec2 g_previousSceneViewerScaledSize = {};
 
 // - Implementation -----------------------------------------------------------
 
 auto OnWindowKey(
-    GLFWwindow* window,
+    [[maybe_unused]] GLFWwindow* window,
     const int32_t key,
     [[maybe_unused]] int32_t scancode,
     const int32_t action,
@@ -3348,7 +3348,9 @@ auto main(
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    if (windowSettings.IsDebug) {
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    }
 
     const auto primaryMonitor = glfwGetPrimaryMonitor();
     if (primaryMonitor == nullptr) {
@@ -3439,8 +3441,8 @@ auto main(
     auto isSrgbDisabled = false;
     auto isCullfaceDisabled = false;
 
-    g_sceneViewerSize = g_windowFramebufferSize;
-    auto scaledFramebufferSize = glm::vec2(g_sceneViewerSize) * windowSettings.ResolutionScale;
+    g_previousSceneViewerSize = g_windowFramebufferSize;
+    auto scaledFramebufferSize = glm::vec2(g_previousSceneViewerSize) * windowSettings.ResolutionScale;
 
     // - Initialize Renderer ///////////// 
 
@@ -3451,7 +3453,7 @@ auto main(
         .VertexShaderFilePath = "data/shaders/Simple.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/Simple.fs.glsl",
         .InputAssembly = {
-            .PrimitiveTopology = TPrimitiveTopology::Triangles
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
     });
     if (!geometryGraphicsPipelineResult) {
@@ -3520,6 +3522,15 @@ auto main(
     auto globalUniformsBuffer = CreateBuffer("SGpuGlobalUniforms", sizeof(SGpuGlobalUniforms), &globalUniforms, GL_DYNAMIC_STORAGE_BIT);
 
     auto objectsBuffer = CreateBuffer("SGpuObjects", sizeof(SGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+
+    g_gpuGlobalLights.push_back(SGpuGlobalLight{
+        .ProjectionMatrix = glm::mat4(1.0f),
+        .ViewMatrix = glm::mat4(1.0f),
+        .Direction = glm::vec4(10.0f, 20.0f, 10.0f, 0.0f),
+        .Strength = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)
+    });
+
+    auto globalLightsBuffer = CreateBuffer("SGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(SGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
     // - Load Assets ////////////
 
@@ -3618,10 +3629,10 @@ auto main(
         if (g_windowFramebufferResized || g_sceneViewerResized) {
 
             g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * windowSettings.ResolutionScale, g_windowFramebufferSize.y * windowSettings.ResolutionScale};
-            g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * windowSettings.ResolutionScale, g_sceneViewerSize.y * windowSettings.ResolutionScale};
+            g_previousSceneViewerScaledSize = glm::ivec2{ g_previousSceneViewerSize.x * windowSettings.ResolutionScale, g_previousSceneViewerSize.y * windowSettings.ResolutionScale};
 
             if (g_isEditor) {
-                scaledFramebufferSize = g_sceneViewerScaledSize;
+                scaledFramebufferSize = g_previousSceneViewerScaledSize;
             } else {
                 scaledFramebufferSize = g_windowFramebufferScaledSize;
             }
@@ -3630,7 +3641,7 @@ auto main(
             CreateRendererFramebuffers(scaledFramebufferSize);
 
             if (g_isEditor) {
-                glViewport(0, 0, g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y);
+                glViewport(0, 0, g_previousSceneViewerScaledSize.x, g_previousSceneViewerScaledSize.y);
             } else {
                 glViewport(0, 0, g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y);
             }
@@ -3656,6 +3667,7 @@ auto main(
         BindFramebuffer(g_geometryFramebuffer);
 
         g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
+        g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
 
         auto renderablesView = g_gameRegistry.view<SComponentGpuMesh, SComponentGpuMaterial, SComponentWorldMatrix>();
         renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
@@ -3759,15 +3771,15 @@ auto main(
             // Scene Viewer
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             if (ImGui::Begin("Scene")) {
-                auto availableSceneWindowSize = ImGui::GetContentRegionAvail();
-                if (availableSceneWindowSize.x != g_sceneViewerSize.x || availableSceneWindowSize.y != g_sceneViewerSize.y) {
-                    g_sceneViewerSize = glm::ivec2(availableSceneWindowSize.x, availableSceneWindowSize.y);
+                auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
+                if (currentSceneWindowSize.x != g_previousSceneViewerSize.x || currentSceneWindowSize.y != g_previousSceneViewerSize.y) {
+                    g_previousSceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                     g_sceneViewerResized = true;
                 }
 
                 auto texture = g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
                 auto imagePosition = ImGui::GetCursorPos();
-                ImGui::Image(reinterpret_cast<ImTextureID>(texture), availableSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
+                ImGui::Image(reinterpret_cast<ImTextureID>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(imagePosition);
                 if (ImGui::BeginChild(1, ImVec2{192, -1})) {
                     if (ImGui::CollapsingHeader("Statistics")) {
@@ -3812,6 +3824,9 @@ auto main(
     }
 
     /// Cleanup Resources //////
+
+    DeleteBuffer(globalLightsBuffer);
+    DeleteBuffer(globalUniformsBuffer);
 
     DeleteFramebuffer(g_geometryFramebuffer);
     DeletePipeline(g_geometryGraphicsPipeline);
