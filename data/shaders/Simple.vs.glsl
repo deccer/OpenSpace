@@ -8,8 +8,8 @@ layout (location = 0) out gl_PerVertex
 };
 layout (location = 0) out vec3 v_normal;
 layout (location = 1) out vec2 v_uv;
-layout (location = 2) out vec4 v_tangent;
-layout (location = 3) flat out uint v_material_id;
+layout (location = 2) out mat3 v_tbn;
+layout (location = 6) flat out uint v_material_id;
 
 layout (location = 0, std140) uniform SGpuGlobalUniformBuffer
 {
@@ -45,11 +45,17 @@ void main()
     vec3 tangent = DecodeNormal(unpackSnorm2x16(vertex_normal_uv_tangent.Tangent));
     vec3 uv_and_tangent_sign = PackedToVec3(vertex_normal_uv_tangent.UvAndTangentSign);
     v_uv = uv_and_tangent_sign.xy;
-    v_tangent = vec4(tangent, uv_and_tangent_sign.z);
+    vec4 t = vec4(tangent, uv_and_tangent_sign.z);
     //v_material_id = object.InstanceParameter.x;
     v_material_id = u_object_parameters.x;
 
-    v_normal = normalize(inverse(transpose(mat3(u_object_world_matrix))) * v_normal);
+    vec3 normal = normalize(vec3(u_object_world_matrix * vec4(v_normal, 0.0)));
+    tangent = normalize(vec3(u_object_world_matrix * vec4(t.xyz, 0.0)));
+    vec3 bitangent = normalize(cross(normal, tangent)) * t.w;
+
+    v_tbn = mat3(tangent, bitangent, normal);
+
+    //v_normal = normalize(inverse(transpose(mat3(u_object_world_matrix))) * v_normal);
 
     gl_Position = u_camera_information.ProjectionMatrix *
                   u_camera_information.ViewMatrix *
