@@ -15,6 +15,10 @@ target_compile_definitions(HowToScript
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
+target_compile_definitions(HowToScript
+    PRIVATE USE_PROFILER
+)
+
 target_link_libraries(HowToScript
     PRIVATE glfw
     PRIVATE glad

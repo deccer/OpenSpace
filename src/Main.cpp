@@ -49,6 +49,12 @@
 
 #include <entt/entt.hpp>
 
+#ifdef USE_PROFILER
+#define PROFILER_ZONESCOPEDN(x) ZoneScopedN(x)
+#else
+#define PROFILER_ZONESCOPEDN(x)
+#endif
+
 // - Core Types ---------------------------------------------------------------
 
 template<class TTag>
@@ -1574,6 +1580,8 @@ auto LoadImageFromFile(
     int32_t* height,
     int32_t* components) -> unsigned char* {
 
+    PROFILER_ZONESCOPEDN("LoadImageFromFile");
+
     auto imageFile = fopen(filePath.c_str(), "rb");
     if (imageFile != nullptr) {
         auto* pixels = stbi_load_from_file(imageFile, width, height, components, 4);
@@ -1586,7 +1594,7 @@ auto LoadImageFromFile(
 
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
 
-    ZoneScopedN("CreateTexture");
+    PROFILER_ZONESCOPEDN("CreateTexture");
     TTexture texture = {};
 
     glCreateTextures(TextureTypeToGL(createTextureDescriptor.TextureType), 1, &texture.Id);
@@ -1680,7 +1688,7 @@ auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> T
 
 auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& updateTextureDescriptor) -> void {
 
-    ZoneScopedN("UploadTexture");
+    PROFILER_ZONESCOPEDN("UploadTexture");
     auto& texture = GetTexture(textureId);
 
     uint32_t format = 0;
@@ -1789,6 +1797,8 @@ auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSampler
 };
 
 auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> TFramebuffer {
+
+    PROFILER_ZONESCOPEDN("CreateFramebuffer");
 
     TFramebuffer framebuffer = {};
     glCreateFramebuffers(1, &framebuffer.Id);
@@ -1924,6 +1934,8 @@ auto CreateGraphicsProgram(
     std::string_view vertexShaderFilePath,
     std::string_view fragmentShaderFilePath) -> std::expected<uint32_t, std::string> {
 
+    PROFILER_ZONESCOPEDN("CreateGraphicsProgram");
+
     auto vertexShaderSourceResult = ReadShaderSourceFromFile(vertexShaderFilePath);
     if (!vertexShaderSourceResult) {
         return std::unexpected(vertexShaderSourceResult.error());
@@ -1997,6 +2009,8 @@ auto CreateComputeProgram(
     std::string_view label,
     std::string_view computeShaderFilePath) -> std::expected<uint32_t, std::string> {
 
+    PROFILER_ZONESCOPEDN("CreateComputeProgram");
+
     auto computeShaderSourceResult = ReadShaderSourceFromFile(computeShaderFilePath);
     if (!computeShaderSourceResult) {
         return std::unexpected(computeShaderSourceResult.error());
@@ -2041,6 +2055,8 @@ auto CreateComputeProgram(
 }
 
 auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<TGraphicsPipeline, std::string> {
+
+    PROFILER_ZONESCOPEDN("CreateGraphicsPipeline");
 
     TGraphicsPipeline pipeline = {};
 
@@ -2105,6 +2121,8 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
 }
 
 auto CreateComputePipeline(const TComputePipelineDescriptor& computePipelineDescriptor) -> std::expected<TComputePipeline, std::string> {
+
+    PROFILER_ZONESCOPEDN("CreateComputePipeline");
 
     TComputePipeline pipeline = {};
 
@@ -2359,7 +2377,7 @@ auto AddAssetMesh(
     const SAssetMesh& assetMesh) -> void {
 
     assert(!assetMeshName.empty());
-    ZoneScopedN("AddAssetMesh");
+    PROFILER_ZONESCOPEDN("AddAssetMesh");
 
     g_assetMeshes[assetMeshName] = assetMesh;
 }
@@ -2369,7 +2387,7 @@ auto AddAssetImage(
     SAssetImage&& assetImage) -> void {
 
     assert(!assetImageName.empty());
-    ZoneScopedN("AddAssetImage");
+    PROFILER_ZONESCOPEDN("AddAssetImage");
 
     g_assetImages[assetImageName] = std::move(assetImage);
 }
@@ -2379,7 +2397,7 @@ auto AddAssetMaterial(
     const SAssetMaterial& assetMaterial) -> void {
 
     assert(!assetMaterialName.empty());
-    ZoneScopedN("AddAssetMaterial");
+    PROFILER_ZONESCOPEDN("AddAssetMaterial");
 
     g_assetMaterials[assetMaterialName] = assetMaterial;
 }
@@ -2389,7 +2407,7 @@ auto AddAssetTexture(
     const SAssetTexture& assetTexture) -> void {
 
     assert(!assetTextureName.empty());
-    ZoneScopedN("AddAssetTexture");
+    PROFILER_ZONESCOPEDN("AddAssetTexture");
 
     g_assetTextures[assetTextureName] = assetTexture;
 }
@@ -2399,7 +2417,7 @@ auto AddAssetSampler(
     const SAssetSampler& assetSampler) -> void {
 
     assert(!assetSamplerName.empty());
-    ZoneScopedN("AddAssetSampler");
+    PROFILER_ZONESCOPEDN("AddAssetSampler");
 
     g_assetSamplers[assetSamplerName] = assetSampler;
 }
@@ -2407,7 +2425,7 @@ auto AddAssetSampler(
 auto GetAssetImage(const std::string& assetImageName) -> SAssetImage& {
 
     assert(!assetImageName.empty() || g_assetImages.contains(assetImageName));
-    ZoneScopedN("GetAssetImage");
+    PROFILER_ZONESCOPEDN("GetAssetImage");
 
     return g_assetImages.at(assetImageName);
 }
@@ -2415,7 +2433,7 @@ auto GetAssetImage(const std::string& assetImageName) -> SAssetImage& {
 auto GetAssetMesh(const std::string& assetMeshName) -> SAssetMesh& {
 
     assert(!assetMeshName.empty() || g_assetMeshes.contains(assetMeshName));
-    ZoneScopedN("GetAssetMesh");
+    PROFILER_ZONESCOPEDN("GetAssetMesh");
 
     return g_assetMeshes.at(assetMeshName);
 }
@@ -2423,7 +2441,7 @@ auto GetAssetMesh(const std::string& assetMeshName) -> SAssetMesh& {
 auto GetAssetMaterial(const std::string& assetMaterialName) -> SAssetMaterial& {
 
     assert(!assetMaterialName.empty() || g_assetMaterials.contains(assetMaterialName));
-    ZoneScopedN("GetAssetMaterial");
+    PROFILER_ZONESCOPEDN("GetAssetMaterial");
 
     return g_assetMaterials.at(assetMaterialName);
 }
@@ -2431,7 +2449,7 @@ auto GetAssetMaterial(const std::string& assetMaterialName) -> SAssetMaterial& {
 auto GetAssetModelMeshNames(const std::string& modelName) -> std::vector<std::string>& {
 
     assert(!modelName.empty() || g_assetModelMeshes.contains(modelName));
-    ZoneScopedN("GetAssetModelMeshNames");
+    PROFILER_ZONESCOPEDN("GetAssetModelMeshNames");
 
     return g_assetModelMeshes.at(modelName);
 }
@@ -2439,7 +2457,7 @@ auto GetAssetModelMeshNames(const std::string& modelName) -> std::vector<std::st
 auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler& {
 
     assert(!assetSamplerName.empty() || g_assetSamplers.contains(assetSamplerName));
-    ZoneScopedN("GetAssetSampler");
+    PROFILER_ZONESCOPEDN("GetAssetSampler");
 
     return g_assetSamplers.at(assetSamplerName);
 }
@@ -2447,7 +2465,7 @@ auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler& {
 /*
 auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> TSamplerDescriptor {
 
-    ZoneScopedN("GetAssetSampler");
+    PROFILER_ZONESCOPEDN("GetAssetSampler");
     for (const auto& [key, value] : g_assetSamplers) {
         if (value == assetSamplerId) {
             return key;
@@ -2461,7 +2479,7 @@ auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> TSamplerDescripto
 
 auto GetAssetTexture(const std::string& assetTextureName) -> SAssetTexture& {
 
-    ZoneScopedN("GetAssetTexture");
+    PROFILER_ZONESCOPEDN("GetAssetTexture");
     assert(!assetTextureName.empty());
 
     return g_assetTextures[assetTextureName];
@@ -2507,6 +2525,7 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
 auto GetVertices(
     const fastgltf::Asset& asset, 
     const fastgltf::Primitive& primitive) -> std::pair<std::vector<SGpuVertexPosition>, std::vector<SGpuVertexNormalUvTangent>> {
+    PROFILER_ZONESCOPEDN("GetVertices");
 
     std::vector<glm::vec3> positions;
     auto& positionAccessor = asset.accessors[primitive.findAttribute("POSITION")->second];
@@ -2567,6 +2586,8 @@ auto GetIndices(
     const fastgltf::Asset& asset,
     const fastgltf::Primitive& primitive) -> std::vector<uint32_t> {
 
+    PROFILER_ZONESCOPEDN("GetIndices");
+
     auto indices = std::vector<uint32_t>();
     auto& accessor = asset.accessors[primitive.indicesAccessor.value()];
     indices.resize(accessor.count);
@@ -2585,6 +2606,7 @@ auto CreateAssetMesh(
     const std::string& materialName) -> SAssetMesh {
 
     return SAssetMesh{
+    PROFILER_ZONESCOPEDN("CreateAssetMesh");
         .Name = name,
         .InitialTransform = initialTransform,
         .VertexPositions = std::move(vertices.first),
@@ -2599,6 +2621,7 @@ auto CreateAssetImage(
     std::size_t dataSize, 
     fastgltf::MimeType mimeType,
     std::string_view name) -> SAssetImage {
+    PROFILER_ZONESCOPEDN("CreateAssetImage");
 
     auto dataCopy = std::make_unique<std::byte[]>(dataSize);
     std::copy_n(static_cast<const std::byte*>(data), dataSize, dataCopy.get());
@@ -2617,6 +2640,7 @@ auto CreateAssetMaterial(
     size_t assetMaterialIndex) -> void {
 
     SAssetMaterial assetMaterial = {};
+    PROFILER_ZONESCOPEDN("CreateAssetMaterial");
     assetMaterial.BaseColorFactor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
     assetMaterial.MetallicFactor = fgMaterial.pbrData.metallicFactor;
     assetMaterial.EmissiveFactor = glm::make_vec3(fgMaterial.emissiveFactor.data());
@@ -2687,6 +2711,8 @@ auto LoadModelFromFile(
     std::string modelName,
     std::filesystem::path filePath) -> void {
 
+    PROFILER_ZONESCOPEDN("LoadModelFromFile");
+
     fastgltf::Parser parser(fastgltf::Extensions::KHR_mesh_quantization | fastgltf::Extensions::EXT_mesh_gpu_instancing);
 
     constexpr auto gltfOptions =
@@ -2720,7 +2746,7 @@ auto LoadModelFromFile(
         assetImageIds.begin(),
         [&](size_t imageIndex) {
 
-        ZoneScopedN("LoadModelFromFile - Load Image");
+        PROFILER_ZONESCOPEDN("Create Image");
         const auto& fgImage = fgAsset.images[imageIndex];
 
         auto imageData = [&] {
@@ -2783,7 +2809,7 @@ auto LoadModelFromFile(
     const auto samplerIndices = std::ranges::iota_view{(size_t)0, fgAsset.samplers.size()};
     std::transform(poolstl::execution::par, samplerIndices.begin(), samplerIndices.end(), samplerIds.begin(), [&](size_t samplerIndex) {
 
-        ZoneScopedN("LoadModelFromFile - Load Sampler");
+        PROFILER_ZONESCOPEDN("Load Sampler");
         const fastgltf::Sampler& fgSampler = fgAsset.samplers[samplerIndex];
 
         const auto getAddressMode = [](const fastgltf::Wrap& wrap) {
@@ -2865,7 +2891,7 @@ auto LoadModelFromFile(
    
     while (!nodeStack.empty())
     {
-        ZoneScopedN("LoadModelFromFile - Load Primitive");
+        PROFILER_ZONESCOPEDN("Load Primitive");
 
         decltype(nodeStack)::value_type top = nodeStack.top();
         const auto& [fgNode, parentGlobalTransform] = top;
@@ -2946,7 +2972,8 @@ auto CreateGpuMesh(const std::string& assetMeshName) -> void {
 
     uint32_t buffers[3] = {};
     {
-        ZoneScopedN("Create GL Buffers + Upload Data");
+        PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
+
         glCreateBuffers(3, buffers);
 
         glNamedBufferStorage(buffers[0], sizeof(SGpuVertexPosition) * assetMesh.VertexPositions.size(),
@@ -2969,7 +2996,7 @@ auto CreateGpuMesh(const std::string& assetMeshName) -> void {
     };
 
     {
-        ZoneScopedN("Add gpu mesh");
+        PROFILER_ZONESCOPEDN("Add gpu mesh");
         g_gpuMeshes[assetMeshName] = gpuMesh;
     }
 }
@@ -2988,7 +3015,7 @@ auto GetGpuMaterial(const std::string& assetMaterialName) -> SGpuMaterial& {
 
 auto CreateTextureForMaterialChannel(SAssetMaterialChannel& assetMaterialChannel) -> int64_t {
 
-    ZoneScopedN("CreateTextureForMaterialChannel");
+    PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
     auto& image = GetAssetImage(assetMaterialChannel.Image);
 
@@ -3019,6 +3046,8 @@ auto CreateTextureForMaterialChannel(SAssetMaterialChannel& assetMaterialChannel
 }
 
 auto CreateGpuMaterial(const std::string& assetMaterialName) -> void {
+
+    PROFILER_ZONESCOPEDN("CreateGpuMaterial");
 
     auto& assetMaterial = GetAssetMaterial(assetMaterialName);
     uint64_t baseColorTexture = assetMaterial.BaseColorChannel.has_value()
@@ -3092,6 +3121,8 @@ auto AddEntity(
     const std::string& assetMaterialName,
     glm::mat4x4 initialTransform) -> entt::entity {
 
+    PROFILER_ZONESCOPEDN("AddEntity");
+
     auto entityId = g_gameRegistry.create();
     if (parent.has_value()) {
         auto parentComponent = g_gameRegistry.get_or_emplace<SComponentParent>(parent.value());
@@ -3110,6 +3141,8 @@ auto AddEntity(
     std::optional<entt::entity> parent,
     const std::string& modelName,
     glm::mat4 initialTransform) -> entt::entity {
+
+    PROFILER_ZONESCOPEDN("AddEntity");
 
     auto entityId = g_gameRegistry.create();
     if (parent.has_value()) {
@@ -3292,6 +3325,8 @@ auto DeleteRendererFramebuffers() -> void {
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
 
+    PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
+
     g_geometryFramebuffer = CreateFramebuffer({
         .Label = "Geometry",
         .ColorAttachments = {
@@ -3323,6 +3358,8 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
 auto main(
     [[maybe_unused]] int32_t argc,
     [[maybe_unused]] char* argv[]) -> int32_t {
+
+    PROFILER_ZONESCOPEDN("main");
 
     TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
@@ -3407,7 +3444,9 @@ auto main(
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     }
 
+#ifdef USE_PROFILER
     TracyGpuContext;
+#endif
 
     g_imguiContext = ImGui::CreateContext();
     auto& io = ImGui::GetIO();
@@ -3585,7 +3624,7 @@ auto main(
     auto accumulatedTimeInSeconds = 0.0;
     while (!glfwWindowShouldClose(g_window)) {
 
-        ZoneScopedN("Frame");
+        PROFILER_ZONESCOPEDN("Frame");
 
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
         accumulatedTimeInSeconds += deltaTimeInSeconds;
@@ -3604,6 +3643,7 @@ auto main(
             ZoneScopedN("In RenderLoop: Create Gpu Resources");
             auto& meshComponent = g_gameRegistry.get<SComponentMesh>(entity);
             auto& materialComponent = g_gameRegistry.get<SComponentMaterial>(entity);
+            PROFILER_ZONESCOPEDN("Create Gpu Resources");
 
             CreateGpuMesh(meshComponent.Mesh);
             CreateGpuMaterial(materialComponent.Material);
@@ -3627,6 +3667,8 @@ auto main(
 
         // Resize if necessary
         if (g_windowFramebufferResized || g_sceneViewerResized) {
+
+            PROFILER_ZONESCOPEDN("Resized");
 
             g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * windowSettings.ResolutionScale, g_windowFramebufferSize.y * windowSettings.ResolutionScale};
             g_previousSceneViewerScaledSize = glm::ivec2{ g_previousSceneViewerSize.x * windowSettings.ResolutionScale, g_previousSceneViewerSize.y * windowSettings.ResolutionScale};
@@ -3672,7 +3714,7 @@ auto main(
         auto renderablesView = g_gameRegistry.view<SComponentGpuMesh, SComponentGpuMaterial, SComponentWorldMatrix>();
         renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
 
-            ZoneScopedN("In RenderLoop: Draw");
+            PROFILER_ZONESCOPEDN("Draw");
 
             auto& gpuMaterial = GetGpuMaterial(materialComponent.GpuMaterial);
             auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
@@ -3701,6 +3743,8 @@ auto main(
         /////////////// Debug Lines // move out to some LineRenderer
 
         if (g_drawDebugLines && !g_debugLines.empty()) {
+
+            PROFILER_ZONESCOPEDN("Draw DebugLines");
 
             PushDebugGroup("Debug Lines");
             glDisable(GL_CULL_FACE);
@@ -3793,7 +3837,7 @@ auto main(
         }        
 
         {
-            ZoneScopedN("UI");
+            PROFILER_ZONESCOPEDN("Draw UI");
 
             ImGui::Render();
             auto* imGuiDrawData = ImGui::GetDrawData();
@@ -3807,12 +3851,14 @@ auto main(
             }
         }
         {
-            ZoneScopedN("SwapBuffers");
+            PROFILER_ZONESCOPEDN("SwapBuffers");
             glfwSwapBuffers(g_window);
         }
 
+#ifdef USE_PROFILER
         TracyGpuCollect;
         FrameMark;
+#endif
 
         glfwPollEvents();
 
