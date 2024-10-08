@@ -2524,7 +2524,8 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
 
 auto GetVertices(
     const fastgltf::Asset& asset, 
-    const fastgltf::Primitive& primitive) -> std::pair<std::vector<SGpuVertexPosition>, std::vector<SGpuVertexNormalUvTangent>> {
+    const fastgltf::Primitive& primitive) -> std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuVertexNormalUvTangent>> {
+
     PROFILER_ZONESCOPEDN("GetVertices");
 
     std::vector<glm::vec3> positions;
@@ -2605,8 +2606,9 @@ auto CreateAssetMesh(
     const std::vector<uint32_t> indices,
     const std::string& materialName) -> SAssetMesh {
 
-    return SAssetMesh{
     PROFILER_ZONESCOPEDN("CreateAssetMesh");
+
+    return TAssetMesh{
         .Name = name,
         .InitialTransform = initialTransform,
         .VertexPositions = std::move(vertices.first),
@@ -2620,7 +2622,8 @@ auto CreateAssetImage(
     const void* data, 
     std::size_t dataSize, 
     fastgltf::MimeType mimeType,
-    std::string_view name) -> SAssetImage {
+    std::string_view name) -> TAssetImage {
+
     PROFILER_ZONESCOPEDN("CreateAssetImage");
 
     auto dataCopy = std::make_unique<std::byte[]>(dataSize);
@@ -2639,8 +2642,9 @@ auto CreateAssetMaterial(
     const fastgltf::Material& fgMaterial,
     size_t assetMaterialIndex) -> void {
 
-    SAssetMaterial assetMaterial = {};
     PROFILER_ZONESCOPEDN("CreateAssetMaterial");
+
+    TAssetMaterial assetMaterial = {};
     assetMaterial.BaseColorFactor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
     assetMaterial.MetallicFactor = fgMaterial.pbrData.metallicFactor;
     assetMaterial.EmissiveFactor = glm::make_vec3(fgMaterial.emissiveFactor.data());
@@ -3640,10 +3644,9 @@ auto main(
         auto createGpuResourcesNecessaryView = g_gameRegistry.view<SComponentCreateGpuResourcesNecessary>();
         for (auto& entity : createGpuResourcesNecessaryView) {
 
-            ZoneScopedN("In RenderLoop: Create Gpu Resources");
-            auto& meshComponent = g_gameRegistry.get<SComponentMesh>(entity);
-            auto& materialComponent = g_gameRegistry.get<SComponentMaterial>(entity);
             PROFILER_ZONESCOPEDN("Create Gpu Resources");
+            auto& meshComponent = g_gameRegistry.get<TComponentMesh>(entity);
+            auto& materialComponent = g_gameRegistry.get<TComponentMaterial>(entity);
 
             CreateGpuMesh(meshComponent.Mesh);
             CreateGpuMaterial(materialComponent.Material);
