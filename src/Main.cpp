@@ -68,7 +68,7 @@ template<class TTag>
 using TId = typename TIdImpl<TTag>::Id;
 
 template<class TTag>
-struct SIdGenerator {
+struct TIdGenerator {
 public:
     auto Next() -> TId<TTag> {
         _counter += 1;
@@ -698,7 +698,7 @@ struct TComputePipelineDescriptor {
 struct TPipeline {
     uint32_t Id;
 
-    inline auto virtual Bind() -> void {
+    virtual auto Bind() -> void {
         glUseProgram(Id);
     }
 
@@ -786,7 +786,7 @@ inline auto SetDebugLabel(
 }
 
 inline auto PushDebugGroup(const std::string_view label) -> void {
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, label.size(), label.data());
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(label.size()), label.data());
 }
 
 inline auto PopDebugGroup() -> void {
@@ -2138,6 +2138,7 @@ auto CreateComputePipeline(const TComputePipelineDescriptor& computePipelineDesc
 }
 
 auto TGraphicsPipeline::Bind() -> void {
+
     TPipeline::Bind();
     glBindVertexArray(InputLayout.has_value() ? *InputLayout : g_defaultInputLayout);
 }
@@ -2176,43 +2177,43 @@ auto TGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t eleme
 
 // - Engine -------------------------------------------------------------------
 
-struct SGpuVertexPosition {
+struct TGpuVertexPosition {
     glm::vec3 Position;
 };
 
-struct SGpuVertexNormalUvTangent {
+struct TGpuVertexNormalUvTangent {
     uint32_t Normal;
     uint32_t Tangent;
     glm::vec3 UvAndTangentSign;
 };
 
-struct SGpuVertexPositionColor {
+struct TGpuVertexPositionColor {
     glm::vec3 Position;
     glm::vec4 Color;
 };
 
-struct SGpuGlobalUniforms {
+struct TGpuGlobalUniforms {
 
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
     glm::vec4 CameraPosition;
 };
 
-struct SGpuGlobalLight {
+struct TGpuGlobalLight {
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
     glm::vec4 Direction;
     glm::vec4 Strength;
 };
 
-struct SDebugLine {
+struct TGpuDebugLine {
     glm::vec3 StartPosition;
     glm::vec4 StartColor;
     glm::vec3 EndPosition;
     glm::vec4 EndColor;
 };
 
-struct SGpuMesh {
+struct TGpuMesh {
     std::string_view Name;
     uint32_t VertexPositionBuffer;
     uint32_t VertexNormalUvTangentBuffer;
@@ -2224,7 +2225,7 @@ struct SGpuMesh {
     glm::mat4 InitialTransform;
 };
 
-struct SGpuMaterial {
+struct TGpuMaterial {
     glm::vec4 BaseColor;
     glm::vec4 Factors; // use .x = basecolor factor .y = normal strength, .z = metalness, .w = roughness
 
@@ -2235,7 +2236,7 @@ struct SGpuMaterial {
     uint64_t EmissiveTexture;
 };
 
-struct SGlobalLight {
+struct TCpuGlobalLight {
 
     float Azimuth;
     float Elevation;
@@ -2249,20 +2250,20 @@ struct SGlobalLight {
     bool ShowFrustum;
 };
 
-struct SGpuObject {
+struct TGpuObject {
     glm::mat4x4 WorldMatrix;
     glm::ivec4 InstanceParameter;
 };
 
-struct SMeshInstance {
+struct TMeshInstance {
     glm::mat4 WorldMatrix;
 };
 
-struct SCamera {
+struct TCamera {
 
     glm::vec3 Position = {0.0f, 0.0f, 5.0f};
     float Pitch = {};
-    float Yaw = {glm::radians(-90.0f)};
+    float Yaw = {glm::radians(-90.0f)}; // look at 0, 0, -1
 
     auto GetForwardDirection() -> const glm::vec3
     {
@@ -2287,35 +2288,35 @@ auto ReadBinaryFromFile(const std::filesystem::path& filePath) -> std::pair<std:
 
 // - Assets -------------------------------------------------------------------
 
-using SAssetMeshId = TId<struct TAssetMeshId>;
-using SAssetImageId = TId<struct TAssetImageId>;
-using SAssetTextureId = TId<struct TAssetTextureId>;
-using SAssetSamplerId = TId<struct TAssetSamplerId>;
-using SAssetMaterialId = TId<struct TAssetMaterialId>;
+using TAssetMeshId = TId<struct AssetMeshIdMarker>;
+using TAssetImageId = TId<struct AssetImageIdMarker>;
+using TAssetTextureId = TId<struct AssetTextureIdMarker>;
+using TAssetSamplerId = TId<struct AssetSamplerIdMarker>;
+using TAssetMaterialId = TId<struct AssetMaterialIdMarker>;
 
-enum class EMaterialChannelUsage {
+enum class TMaterialChannelUsage {
     SRgb, // use sRGB Format
     Normal, // use RG-format or bc7 when compressed
     MetalnessRoughness // single channelism or also RG?
 };
 
-struct SAssetMesh {
+struct TAssetMesh {
     std::string_view Name;
     glm::mat4 InitialTransform;
-    std::vector<SGpuVertexPosition> VertexPositions;
-    std::vector<SGpuVertexNormalUvTangent> VertexNormalUvTangents;
+    std::vector<TGpuVertexPosition> VertexPositions;
+    std::vector<TGpuVertexNormalUvTangent> VertexNormalUvTangents;
     std::vector<uint32_t> Indices;
     std::string MaterialName;
 };
 
-struct SAssetSampler {
+struct TAssetSampler {
     TTextureAddressMode AddressModeU = TTextureAddressMode::ClampToEdge;
     TTextureAddressMode AddressModeV = TTextureAddressMode::ClampToEdge;
     TTextureMagFilter MagFilter = TTextureMagFilter::Linear;
     TTextureMinFilter MinFilter = TTextureMinFilter::Linear;
 };
 
-struct SAssetImage {
+struct TAssetImage {
 
     int32_t Width = 0;
     int32_t Height = 0;
@@ -2332,33 +2333,34 @@ struct SAssetImage {
     size_t Index = 0;
 };
 
-struct SAssetTexture {
+struct TAssetTexture {
     std::string ImageName;
     std::string SamplerName;
 };
 
-struct SAssetMaterialChannel {
-    EMaterialChannelUsage Usage;
+struct TAssetMaterialChannel {
+    TMaterialChannelUsage Usage;
     std::string Image;
     std::string Sampler; 
 };
 
-struct SAssetMaterial {
+struct TAssetMaterial {
     glm::vec4 BaseColorFactor;
     float MetallicFactor;
     glm::vec3 EmissiveFactor;
     float EmissiveStrength;
-    std::optional<SAssetMaterialChannel> BaseColorChannel;
-    std::optional<SAssetMaterialChannel> NormalsChannel;
-    std::optional<SAssetMaterialChannel> OcclusionRoughnessMetallnessChannel;
-    std::optional<SAssetMaterialChannel> EmissiveChannel;
+    float NormalStrength;
+    std::optional<TAssetMaterialChannel> BaseColorChannel;
+    std::optional<TAssetMaterialChannel> NormalsChannel;
+    std::optional<TAssetMaterialChannel> OcclusionRoughnessMetallnessChannel;
+    std::optional<TAssetMaterialChannel> EmissiveChannel;
 };
 
-std::unordered_map<std::string, SAssetImage> g_assetImages = {};
-std::unordered_map<std::string, SAssetSampler> g_assetSamplers = {};
-std::unordered_map<std::string, SAssetTexture> g_assetTextures = {};
-std::unordered_map<std::string, SAssetMaterial> g_assetMaterials = {};
-std::unordered_map<std::string, SAssetMesh> g_assetMeshes = {};
+std::unordered_map<std::string, TAssetImage> g_assetImages = {};
+std::unordered_map<std::string, TAssetSampler> g_assetSamplers = {};
+std::unordered_map<std::string, TAssetTexture> g_assetTextures = {};
+std::unordered_map<std::string, TAssetMaterial> g_assetMaterials = {};
+std::unordered_map<std::string, TAssetMesh> g_assetMeshes = {};
 std::unordered_map<std::string, std::vector<std::string>> g_assetModelMeshes = {};
 
 auto GetSafeResourceName(
@@ -2374,7 +2376,7 @@ auto GetSafeResourceName(
 
 auto AddAssetMesh(
     const std::string& assetMeshName,
-    const SAssetMesh& assetMesh) -> void {
+    const TAssetMesh& assetMesh) -> void {
 
     assert(!assetMeshName.empty());
     PROFILER_ZONESCOPEDN("AddAssetMesh");
@@ -2384,7 +2386,7 @@ auto AddAssetMesh(
 
 auto AddAssetImage(
     const std::string& assetImageName,
-    SAssetImage&& assetImage) -> void {
+    TAssetImage&& assetImage) -> void {
 
     assert(!assetImageName.empty());
     PROFILER_ZONESCOPEDN("AddAssetImage");
@@ -2394,7 +2396,7 @@ auto AddAssetImage(
 
 auto AddAssetMaterial(
     const std::string& assetMaterialName,
-    const SAssetMaterial& assetMaterial) -> void {
+    const TAssetMaterial& assetMaterial) -> void {
 
     assert(!assetMaterialName.empty());
     PROFILER_ZONESCOPEDN("AddAssetMaterial");
@@ -2404,7 +2406,7 @@ auto AddAssetMaterial(
 
 auto AddAssetTexture(
     const std::string& assetTextureName,
-    const SAssetTexture& assetTexture) -> void {
+    const TAssetTexture& assetTexture) -> void {
 
     assert(!assetTextureName.empty());
     PROFILER_ZONESCOPEDN("AddAssetTexture");
@@ -2414,7 +2416,7 @@ auto AddAssetTexture(
 
 auto AddAssetSampler(
     const std::string& assetSamplerName,
-    const SAssetSampler& assetSampler) -> void {
+    const TAssetSampler& assetSampler) -> void {
 
     assert(!assetSamplerName.empty());
     PROFILER_ZONESCOPEDN("AddAssetSampler");
@@ -2422,7 +2424,7 @@ auto AddAssetSampler(
     g_assetSamplers[assetSamplerName] = assetSampler;
 }
 
-auto GetAssetImage(const std::string& assetImageName) -> SAssetImage& {
+auto GetAssetImage(const std::string& assetImageName) -> TAssetImage& {
 
     assert(!assetImageName.empty() || g_assetImages.contains(assetImageName));
     PROFILER_ZONESCOPEDN("GetAssetImage");
@@ -2430,7 +2432,7 @@ auto GetAssetImage(const std::string& assetImageName) -> SAssetImage& {
     return g_assetImages.at(assetImageName);
 }
 
-auto GetAssetMesh(const std::string& assetMeshName) -> SAssetMesh& {
+auto GetAssetMesh(const std::string& assetMeshName) -> TAssetMesh& {
 
     assert(!assetMeshName.empty() || g_assetMeshes.contains(assetMeshName));
     PROFILER_ZONESCOPEDN("GetAssetMesh");
@@ -2438,7 +2440,7 @@ auto GetAssetMesh(const std::string& assetMeshName) -> SAssetMesh& {
     return g_assetMeshes.at(assetMeshName);
 }
 
-auto GetAssetMaterial(const std::string& assetMaterialName) -> SAssetMaterial& {
+auto GetAssetMaterial(const std::string& assetMaterialName) -> TAssetMaterial& {
 
     assert(!assetMaterialName.empty() || g_assetMaterials.contains(assetMaterialName));
     PROFILER_ZONESCOPEDN("GetAssetMaterial");
@@ -2454,7 +2456,7 @@ auto GetAssetModelMeshNames(const std::string& modelName) -> std::vector<std::st
     return g_assetModelMeshes.at(modelName);
 }
 
-auto GetAssetSampler(const std::string& assetSamplerName) -> SAssetSampler& {
+auto GetAssetSampler(const std::string& assetSamplerName) -> TAssetSampler& {
 
     assert(!assetSamplerName.empty() || g_assetSamplers.contains(assetSamplerName));
     PROFILER_ZONESCOPEDN("GetAssetSampler");
@@ -2477,7 +2479,7 @@ auto GetAssetSampler(const SAssetSamplerId& assetSamplerId) -> TSamplerDescripto
 }
 */
 
-auto GetAssetTexture(const std::string& assetTextureName) -> SAssetTexture& {
+auto GetAssetTexture(const std::string& assetTextureName) -> TAssetTexture& {
 
     PROFILER_ZONESCOPEDN("GetAssetTexture");
     assert(!assetTextureName.empty());
@@ -2563,8 +2565,8 @@ auto GetVertices(
         uvs.resize(positions.size(), {});
     }
 
-    std::vector<SGpuVertexPosition> verticesPosition;
-    std::vector<SGpuVertexNormalUvTangent> verticesNormalUvTangent;
+    std::vector<TGpuVertexPosition> verticesPosition;
+    std::vector<TGpuVertexNormalUvTangent> verticesNormalUvTangent;
     verticesPosition.resize(positions.size());
     verticesNormalUvTangent.resize(positions.size());
 
@@ -2602,9 +2604,9 @@ auto GetIndices(
 auto CreateAssetMesh(
     std::string_view name,
     glm::mat4 initialTransform,
-    const std::pair<std::vector<SGpuVertexPosition>, std::vector<SGpuVertexNormalUvTangent>>& vertices,
+    const std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuVertexNormalUvTangent>>& vertices,
     const std::vector<uint32_t> indices,
-    const std::string& materialName) -> SAssetMesh {
+    const std::string& materialName) -> TAssetMesh {
 
     PROFILER_ZONESCOPEDN("CreateAssetMesh");
 
@@ -2629,7 +2631,7 @@ auto CreateAssetImage(
     auto dataCopy = std::make_unique<std::byte[]>(dataSize);
     std::copy_n(static_cast<const std::byte*>(data), dataSize, dataCopy.get());
 
-    return SAssetImage {
+    return TAssetImage {
         .Name = std::string(name),
         .EncodedData = std::move(dataCopy),
         .EncodedDataSize = dataSize,
@@ -2657,8 +2659,8 @@ auto CreateAssetMaterial(
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
         auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
-        assetMaterial.BaseColorChannel = SAssetMaterialChannel{
-            .Usage = EMaterialChannelUsage::SRgb,
+        assetMaterial.BaseColorChannel = TAssetMaterialChannel{
+            .Usage = TMaterialChannelUsage::SRgb,
             .Image = fgTextureImageName,
             .Sampler = fgTextureSamplerName,
         };
@@ -2671,8 +2673,8 @@ auto CreateAssetMaterial(
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
         auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
-        assetMaterial.BaseColorChannel = SAssetMaterialChannel{
-            .Usage = EMaterialChannelUsage::Normal,
+        assetMaterial.BaseColorChannel = TAssetMaterialChannel{
+            .Usage = TMaterialChannelUsage::Normal,
             .Image = fgTextureImageName,
             .Sampler = fgTextureSamplerName,
         };
@@ -2685,8 +2687,8 @@ auto CreateAssetMaterial(
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
         auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
-        assetMaterial.OcclusionRoughnessMetallnessChannel = SAssetMaterialChannel{
-            .Usage = EMaterialChannelUsage::MetalnessRoughness,
+        assetMaterial.OcclusionRoughnessMetallnessChannel = TAssetMaterialChannel{
+            .Usage = TMaterialChannelUsage::MetalnessRoughness,
             .Image = fgTextureImageName,
             .Sampler = fgTextureSamplerName,
         };
@@ -2699,8 +2701,8 @@ auto CreateAssetMaterial(
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
         auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
 
-        assetMaterial.BaseColorChannel = SAssetMaterialChannel{
-            .Usage = EMaterialChannelUsage::SRgb,
+        assetMaterial.BaseColorChannel = TAssetMaterialChannel{
+            .Usage = TMaterialChannelUsage::SRgb,
             .Image = fgTextureImageName,
             .Sampler = fgTextureSamplerName,
         };
@@ -2740,7 +2742,7 @@ auto LoadModelFromFile(
 
     // images
 
-    auto assetImageIds = std::vector<SAssetImageId>(fgAsset.images.size());
+    auto assetImageIds = std::vector<TAssetImageId>(fgAsset.images.size());
     const auto assetImageIndices = std::ranges::iota_view{(size_t)0, fgAsset.images.size()};
 
     std::transform(
@@ -2752,37 +2754,35 @@ auto LoadModelFromFile(
 
         PROFILER_ZONESCOPEDN("Create Image");
         const auto& fgImage = fgAsset.images[imageIndex];
-
         auto imageData = [&] {
-
-        if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
-            auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
-            auto filePathParent = filePath.parent_path();
-            if (filePathFixed.is_relative()) {
-                filePathFixed = filePath.parent_path() / filePathFixed;
+            if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
+                auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
+                auto filePathParent = filePath.parent_path();
+                if (filePathFixed.is_relative()) {
+                    filePathFixed = filePath.parent_path() / filePathFixed;
+                }
+                auto fileData = ReadBinaryFromFile(filePathFixed);
+                return CreateAssetImage(fileData.first.get(), fileData.second, filePathUri->mimeType, fgImage.name);
             }
-            auto fileData = ReadBinaryFromFile(filePathFixed);
-            return CreateAssetImage(fileData.first.get(), fileData.second, filePathUri->mimeType, fgImage.name);
-        }
-        if (const auto* array = std::get_if<fastgltf::sources::Array>(&fgImage.data)) {
-            return CreateAssetImage(array->bytes.data(), array->bytes.size(), array->mimeType, fgImage.name);
-        }
-        if (const auto* vector = std::get_if<fastgltf::sources::Vector>(&fgImage.data)) {
-            return CreateAssetImage(vector->bytes.data(), vector->bytes.size(), vector->mimeType, fgImage.name);
-        }
-        if (const auto* view = std::get_if<fastgltf::sources::BufferView>(&fgImage.data)) {
-            auto& bufferView = fgAsset.bufferViews[view->bufferViewIndex];
-            auto& buffer = fgAsset.buffers[bufferView.bufferIndex];
-            if (const auto* array = std::get_if<fastgltf::sources::Array>(&buffer.data)) {
-                return CreateAssetImage(
-                    array->bytes.data() + bufferView.byteOffset,
-                    bufferView.byteLength,
-                    view->mimeType,
-                    fgImage.name);
+            if (const auto* array = std::get_if<fastgltf::sources::Array>(&fgImage.data)) {
+                return CreateAssetImage(array->bytes.data(), array->bytes.size(), array->mimeType, fgImage.name);
             }
-        }
+            if (const auto* vector = std::get_if<fastgltf::sources::Vector>(&fgImage.data)) {
+                return CreateAssetImage(vector->bytes.data(), vector->bytes.size(), vector->mimeType, fgImage.name);
+            }
+            if (const auto* view = std::get_if<fastgltf::sources::BufferView>(&fgImage.data)) {
+                auto& bufferView = fgAsset.bufferViews[view->bufferViewIndex];
+                auto& buffer = fgAsset.buffers[bufferView.bufferIndex];
+                if (const auto* array = std::get_if<fastgltf::sources::Array>(&buffer.data)) {
+                    return CreateAssetImage(
+                        array->bytes.data() + bufferView.byteOffset,
+                        bufferView.byteLength,
+                        view->mimeType,
+                        fgImage.name);
+                }
+            }
             
-            return SAssetImage{};
+            return TAssetImage{};
         }();
 
         auto assetImageId = imageIndex;
@@ -2804,12 +2804,12 @@ auto LoadModelFromFile(
         imageData.Index = assetImageId;
 
         AddAssetImage(GetSafeResourceName(modelName.data(), imageData.Name.data(), "image", imageIndex), std::move(imageData));
-        return static_cast<SAssetImageId>(assetImageId);
+        return static_cast<TAssetImageId>(assetImageId);
     });
 
     // samplers
 
-    auto samplerIds = std::vector<SAssetSamplerId>(fgAsset.samplers.size());
+    auto samplerIds = std::vector<TAssetSamplerId>(fgAsset.samplers.size());
     const auto samplerIndices = std::ranges::iota_view{(size_t)0, fgAsset.samplers.size()};
     std::transform(poolstl::execution::par, samplerIndices.begin(), samplerIndices.end(), samplerIds.begin(), [&](size_t samplerIndex) {
 
@@ -2847,7 +2847,7 @@ auto LoadModelFromFile(
             }
         };
 
-        auto assetSampler = SAssetSampler {
+        auto assetSampler = TAssetSampler {
             .AddressModeU = getAddressMode(fgSampler.wrapS),
             .AddressModeV = getAddressMode(fgSampler.wrapT),
             .MagFilter = getMagFilter(fgSampler.magFilter.has_value() ? *fgSampler.magFilter : fastgltf::Filter::Nearest),
@@ -2856,19 +2856,19 @@ auto LoadModelFromFile(
 
         auto assetSamplerId = g_assetSamplers.size() + samplerIndex;
         AddAssetSampler(GetSafeResourceName(modelName.data(), fgSampler.name.data(), "sampler", assetSamplerId), assetSampler);
-        return static_cast<SAssetSamplerId>(assetSamplerId);
+        return static_cast<TAssetSamplerId>(assetSamplerId);
     });
 
     // textures
 
-    auto assetTextures = std::vector<SAssetTextureId>(fgAsset.textures.size());
+    auto assetTextures = std::vector<TAssetTextureId>(fgAsset.textures.size());
     const auto assetTextureIndices = std::ranges::iota_view{(size_t)0, fgAsset.textures.size()};
     for (auto assetTextureIndex : assetTextureIndices) {
 
         auto& fgTexture = fgAsset.textures[assetTextureIndex];
         auto textureName = GetSafeResourceName(modelName.data(), fgTexture.name.data(), "texture", assetTextureIndex);
 
-        AddAssetTexture(textureName, SAssetTexture{
+        AddAssetTexture(textureName, TAssetTexture{
             .ImageName = GetSafeResourceName(modelName.data(), nullptr, "image", fgTexture.imageIndex.value_or(0)),
             .SamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0))
         });
@@ -2876,7 +2876,7 @@ auto LoadModelFromFile(
 
     // materials
 
-    auto assetMaterialIds = std::vector<SAssetMaterialId>(fgAsset.materials.size());
+    auto assetMaterialIds = std::vector<TAssetMaterialId>(fgAsset.materials.size());
     const auto assetMaterialIndices = std::ranges::iota_view{(size_t)0, fgAsset.materials.size()};
     for (auto assetMaterialIndex : assetMaterialIndices) {
 
@@ -2940,18 +2940,18 @@ auto LoadModelFromFile(
 
 // - Renderer -----------------------------------------------------------------
 
-using SGpuMeshId = TId<struct TGpuMeshId>;
-using SGpuSamplerId = TId<struct TGpuSamplerId>;
-using SGpuMaterialId = TId<struct TGpuMaterialId>;
+using TGpuMeshId = TId<struct GpuMeshId>;
+using TGpuSamplerId = TId<struct GpuSamplerId>;
+using TGpuMaterialId = TId<struct GpuMaterialId>;
 
-SIdGenerator<SGpuMeshId> g_gpuMeshCounter = {};
+TIdGenerator<TGpuMeshId> g_gpuMeshCounter = {};
 
 TFramebuffer g_geometryFramebuffer = {};
 TGraphicsPipeline g_geometryGraphicsPipeline = {};
-std::vector<SGpuGlobalLight> g_gpuGlobalLights;
+std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 
 bool g_drawDebugLines = true;
-std::vector<SDebugLine> g_debugLines;
+std::vector<TGpuDebugLine> g_debugLines;
 uint32_t g_debugInputLayout = 0;
 uint32_t g_debugLinesVertexBuffer = 0;
 TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
@@ -2959,9 +2959,9 @@ TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 TGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
 TSampler g_fullscreenSamplerNearestClampToEdge = {};
 
-std::unordered_map<std::string, SGpuMesh> g_gpuMeshes = {};
+std::unordered_map<std::string, TGpuMesh> g_gpuMeshes = {};
 std::unordered_map<std::string, TSampler> g_gpuSamplers = {};
-std::unordered_map<std::string, SGpuMaterial> g_gpuMaterials = {};
+std::unordered_map<std::string, TGpuMaterial> g_gpuMaterials = {};
 
 auto DrawFullscreenTriangleWithTexture(const TTexture& texture) -> void {
     
@@ -2979,15 +2979,14 @@ auto CreateGpuMesh(const std::string& assetMeshName) -> void {
         PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
 
         glCreateBuffers(3, buffers);
-
-        glNamedBufferStorage(buffers[0], sizeof(SGpuVertexPosition) * assetMesh.VertexPositions.size(),
+        glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * assetMesh.VertexPositions.size(),
                              assetMesh.VertexPositions.data(), 0);
-        glNamedBufferStorage(buffers[1], sizeof(SGpuVertexNormalUvTangent) * assetMesh.VertexNormalUvTangents.size(),
+        glNamedBufferStorage(buffers[1], sizeof(TGpuVertexNormalUvTangent) * assetMesh.VertexNormalUvTangents.size(),
                              assetMesh.VertexNormalUvTangents.data(), 0);
         glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMesh.Indices.size(), assetMesh.Indices.data(), 0);
     }
 
-    auto gpuMesh = SGpuMesh{
+    auto gpuMesh = TGpuMesh{
         .Name = assetMesh.Name,
         .VertexPositionBuffer = buffers[0],
         .VertexNormalUvTangentBuffer = buffers[1],
@@ -3005,19 +3004,19 @@ auto CreateGpuMesh(const std::string& assetMeshName) -> void {
     }
 }
 
-auto GetGpuMesh(const std::string& assetMeshName) -> SGpuMesh& {
+auto GetGpuMesh(const std::string& assetMeshName) -> TGpuMesh& {
     assert(!assetMeshName.empty() && g_gpuMeshes.contains(assetMeshName));
 
     return g_gpuMeshes[assetMeshName];
 }
 
-auto GetGpuMaterial(const std::string& assetMaterialName) -> SGpuMaterial& {
+auto GetGpuMaterial(const std::string& assetMaterialName) -> TGpuMaterial& {
     assert(!assetMaterialName.empty() && g_gpuMaterials.contains(assetMaterialName));
 
     return g_gpuMaterials[assetMaterialName];
 }
 
-auto CreateTextureForMaterialChannel(SAssetMaterialChannel& assetMaterialChannel) -> int64_t {
+auto CreateTextureForMaterialChannel(TAssetMaterialChannel& assetMaterialChannel) -> int64_t {
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
@@ -3062,7 +3061,7 @@ auto CreateGpuMaterial(const std::string& assetMaterialName) -> void {
         ? CreateTextureForMaterialChannel(assetMaterial.NormalsChannel.value())
         : 0;
 
-    auto gpuMaterial = SGpuMaterial{
+    auto gpuMaterial = TGpuMaterial{
         .BaseColor = assetMaterial.BaseColorFactor,
         .BaseColorTexture = baseColorTexture,
         .NormalTexture = normalTexture,
@@ -3073,49 +3072,49 @@ auto CreateGpuMaterial(const std::string& assetMaterialName) -> void {
 
 // - Game ---------------------------------------------------------------------
 
-SCamera g_mainCamera = {};
+TCamera g_mainCamera = {};
 float g_cameraSpeed = 4.0f;
 
-std::vector<SGlobalLight> g_globalLights;
+std::vector<TCpuGlobalLight> g_globalLights;
 bool g_globalLightsWasModified = true;
 
 entt::registry g_gameRegistry = {};
 
 // - Scene --------------------------------------------------------------------
 
-struct SComponentWorldMatrix : public glm::mat4x4
+struct TComponentTransform : public glm::mat4x4
 {
     using glm::mat4x4::mat4x4;
     using glm::mat4x4::operator=;
-    SComponentWorldMatrix() = default;
-    SComponentWorldMatrix(glm::mat4x4 const& g) : glm::mat4x4(g) {}
-    SComponentWorldMatrix(glm::mat4x4&& g) : glm::mat4x4(std::move(g)) {}
+    TComponentTransform() = default;
+    TComponentTransform(glm::mat4x4 const& g) : glm::mat4x4(g) {}
+    TComponentTransform(glm::mat4x4&& g) : glm::mat4x4(std::move(g)) {}
 };
 
-struct SComponentParent {
+struct TComponentParent {
     std::vector<entt::entity> Children;
 };
 
-struct SComponentChildOf {
+struct TComponentChildOf {
     entt::entity Parent;
 };
 
-struct SComponentMesh {
+struct TComponentMesh {
     std::string Mesh;
 };
 
-struct SComponentMaterial {
+struct TComponentMaterial {
     std::string Material;
 };
 
-struct SComponentCreateGpuResourcesNecessary {
+struct TComponentCreateGpuResourcesNecessary {
 };
 
-struct SComponentGpuMesh {
+struct TComponentGpuMesh {
     std::string GpuMesh;
 };
 
-struct SComponentGpuMaterial {
+struct TComponentGpuMaterial {
     std::string GpuMaterial;
 };
 
@@ -3129,14 +3128,14 @@ auto AddEntity(
 
     auto entityId = g_gameRegistry.create();
     if (parent.has_value()) {
-        auto parentComponent = g_gameRegistry.get_or_emplace<SComponentParent>(parent.value());
+        auto parentComponent = g_gameRegistry.get_or_emplace<TComponentParent>(parent.value());
         parentComponent.Children.push_back(entityId);
-        g_gameRegistry.emplace<SComponentChildOf>(entityId, parent.value());
+        g_gameRegistry.emplace<TComponentChildOf>(entityId, parent.value());
     }
-    g_gameRegistry.emplace<SComponentMesh>(entityId, assetMeshName);
-    g_gameRegistry.emplace<SComponentMaterial>(entityId, assetMaterialName);    
-    g_gameRegistry.emplace<SComponentWorldMatrix>(entityId, initialTransform);
-    g_gameRegistry.emplace<SComponentCreateGpuResourcesNecessary>(entityId);
+    g_gameRegistry.emplace<TComponentMesh>(entityId, assetMeshName);
+    g_gameRegistry.emplace<TComponentMaterial>(entityId, assetMaterialName);
+    g_gameRegistry.emplace<TComponentTransform>(entityId, initialTransform);
+    g_gameRegistry.emplace<TComponentCreateGpuResourcesNecessary>(entityId);
 
     return entityId;
 }
@@ -3150,10 +3149,10 @@ auto AddEntity(
 
     auto entityId = g_gameRegistry.create();
     if (parent.has_value()) {
-        auto& parentComponent = g_gameRegistry.get_or_emplace<SComponentParent>(parent.value());
+        auto& parentComponent = g_gameRegistry.get_or_emplace<TComponentParent>(parent.value());
         parentComponent.Children.push_back(entityId);
 
-        g_gameRegistry.emplace<SComponentChildOf>(entityId, parent.value());
+        g_gameRegistry.emplace<TComponentChildOf>(entityId, parent.value());
     }
 
     if (g_assetModelMeshes.contains(modelName)) {
@@ -3534,13 +3533,13 @@ auto main(
                     .Location = 0,
                     .Binding = 0,
                     .Format = TFormat::R32G32B32_FLOAT,
-                    .Offset = offsetof(SDebugLine, StartPosition),
+                    .Offset = offsetof(TGpuDebugLine, StartPosition),
                 },
                 TVertexInputAttributeDescriptor{
                     .Location = 1,
                     .Binding = 0,
                     .Format = TFormat::R32G32B32A32_FLOAT,
-                    .Offset = offsetof(SDebugLine, StartColor),
+                    .Offset = offsetof(TGpuDebugLine, StartColor),
                 },
             }
         }
@@ -3552,28 +3551,28 @@ auto main(
     }
 
     g_debugLinesGraphicsPipeline = *debugLinesGraphicsPipelineResult;
-    g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(SDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     auto cameraPosition = glm::vec3{0.0f, 0.0f, 20.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
-    SGpuGlobalUniforms globalUniforms = {
+    TGpuGlobalUniforms globalUniforms = {
         .ProjectionMatrix = glm::infinitePerspective(glm::radians(70.0f), scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y), 0.1f),
         .ViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp),
         .CameraPosition = glm::vec4{cameraPosition, 0.0f}
     };
-    auto globalUniformsBuffer = CreateBuffer("SGpuGlobalUniforms", sizeof(SGpuGlobalUniforms), &globalUniforms, GL_DYNAMIC_STORAGE_BIT);
+    auto globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &globalUniforms, GL_DYNAMIC_STORAGE_BIT);
 
-    auto objectsBuffer = CreateBuffer("SGpuObjects", sizeof(SGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    auto objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    g_gpuGlobalLights.push_back(SGpuGlobalLight{
+    g_gpuGlobalLights.push_back(TGpuGlobalLight{
         .ProjectionMatrix = glm::mat4(1.0f),
         .ViewMatrix = glm::mat4(1.0f),
         .Direction = glm::vec4(10.0f, 20.0f, 10.0f, 0.0f),
         .Strength = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)
     });
 
-    auto globalLightsBuffer = CreateBuffer("SGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(SGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
+    auto globalLightsBuffer = CreateBuffer("SGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
     // - Load Assets ////////////
 
@@ -3641,7 +3640,7 @@ auto main(
         ///////////////////////
         // Create Gpu Resources if necessary
         ///////////////////////
-        auto createGpuResourcesNecessaryView = g_gameRegistry.view<SComponentCreateGpuResourcesNecessary>();
+        auto createGpuResourcesNecessaryView = g_gameRegistry.view<TComponentCreateGpuResourcesNecessary>();
         for (auto& entity : createGpuResourcesNecessaryView) {
 
             PROFILER_ZONESCOPEDN("Create Gpu Resources");
@@ -3651,10 +3650,10 @@ auto main(
             CreateGpuMesh(meshComponent.Mesh);
             CreateGpuMaterial(materialComponent.Material);
 
-            g_gameRegistry.emplace<SComponentGpuMesh>(entity, meshComponent.Mesh);
-            g_gameRegistry.emplace<SComponentGpuMaterial>(entity, materialComponent.Material);
+            g_gameRegistry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
+            g_gameRegistry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
 
-            g_gameRegistry.remove<SComponentCreateGpuResourcesNecessary>(entity);
+            g_gameRegistry.remove<TComponentCreateGpuResourcesNecessary>(entity);
         }
 
         // Update Per Frame Uniforms
@@ -3662,7 +3661,7 @@ auto main(
         globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(60.0f), (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y, 0.1f);
         globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
         globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, 0.0f);
-        UpdateBuffer(globalUniformsBuffer, 0, sizeof(SGpuGlobalUniforms), &globalUniforms);
+        UpdateBuffer(globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &globalUniforms);
 
         ///////
 
@@ -3690,12 +3689,15 @@ auto main(
             } else {
                 glViewport(0, 0, g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y);
             }
+
+            g_windowFramebufferResized = false;
+            g_sceneViewerResized = false;
         }
 
         if (g_drawDebugLines) {
             g_debugLines.clear();
 
-            g_debugLines.push_back(SDebugLine{
+            g_debugLines.push_back(TGpuDebugLine{
                 .StartPosition = glm::vec3{-150, 30, 4},
                 .StartColor = glm::vec4{0.3f, 0.95f, 0.1f, 1.0f},
                 .EndPosition = glm::vec3{150, -40, -4},
@@ -3714,7 +3716,7 @@ auto main(
         g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
         g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
 
-        auto renderablesView = g_gameRegistry.view<SComponentGpuMesh, SComponentGpuMaterial, SComponentWorldMatrix>();
+        auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
         renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
 
             PROFILER_ZONESCOPEDN("Draw");
@@ -3752,10 +3754,10 @@ auto main(
             PushDebugGroup("Debug Lines");
             glDisable(GL_CULL_FACE);
 
-            UpdateBuffer(g_debugLinesVertexBuffer, 0, sizeof(SDebugLine) * g_debugLines.size(), g_debugLines.data());
+            UpdateBuffer(g_debugLinesVertexBuffer, 0, sizeof(TGpuDebugLine) * g_debugLines.size(), g_debugLines.data());
 
             g_debugLinesGraphicsPipeline.Bind();
-            g_debugLinesGraphicsPipeline.BindBufferAsVertexBuffer(g_debugLinesVertexBuffer, 0, 0, sizeof(SDebugLine) / 2);
+            g_debugLinesGraphicsPipeline.BindBufferAsVertexBuffer(g_debugLinesVertexBuffer, 0, 0, sizeof(TGpuDebugLine) / 2);
             g_debugLinesGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
             g_debugLinesGraphicsPipeline.DrawArrays(0, g_debugLines.size() * 2);
             
