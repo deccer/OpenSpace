@@ -18,7 +18,7 @@ layout(binding = 1) uniform sampler2D u_sampler_grid;
 layout(location = 8) uniform uint64_t u_texture_base_color;
 layout(location = 9) uniform uint64_t u_texture_normal;
 
-struct SGpuMaterial
+struct TGpuMaterial
 {
     vec4 base_color;
 
@@ -31,12 +31,12 @@ struct SGpuMaterial
     uint64_t _padding1;
 };
 
-layout (binding = 4, std430) readonly buffer GpuMaterialBuffer
+layout (binding = 4, std430) readonly buffer TGpuMaterialBuffer
 {
-    SGpuMaterial GpuMaterials[];
+    TGpuMaterial GpuMaterials[];
 };
 
-layout (binding = 2, std140) uniform GlobalLights {
+layout (binding = 2, std140) uniform TGlobalLights {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
     vec4 Direction;
@@ -53,7 +53,7 @@ void main()
     vec3 b = normalize(v_tbn[1]);
     vec3 n = normalize(v_tbn[2]);
 
-    SGpuMaterial material = GpuMaterials[v_material_id];
+    TGpuMaterial material = GpuMaterials[v_material_id];
     
     const float sun_n_dot_l = clamp(dot(n, -u_global_lights[0].Direction.xyz), 0.0, 1.0);
 

@@ -11,7 +11,7 @@ layout (location = 2) flat in uint v_material_id;
 layout (location = 0) out vec4 o_color;
 layout (location = 1) out vec4 o_normal;
 
-struct SGpuMaterial
+struct TGpuMaterial
 {
     vec4 base_color;
 
@@ -24,9 +24,9 @@ struct SGpuMaterial
     uint64_t _padding1;
 };
 
-layout (binding = 3, std430) readonly buffer GpuMaterialBuffer
+layout (binding = 3, std430) readonly buffer TGpuMaterialBuffer
 {
-    SGpuMaterial GpuMaterials[];
+    TGpuMaterial GpuMaterials[];
 };
 
 vec3 HsvToRgb(in vec3 hsv)
@@ -51,7 +51,7 @@ void main()
 {
     const float GOLDEN_CONJ = 0.6180339887498948482045868343656;
 
-    SGpuMaterial material = GpuMaterials[v_material_id];
+    TGpuMaterial material = GpuMaterials[v_material_id];
     o_color = vec4(k_colors[v_material_id], 1.0);
 
     int colorIndex = int(material.base_texture_handle - 0x1000009FFul);//bitfieldExtract(int(material.base_texture >> 32), 0, 8);

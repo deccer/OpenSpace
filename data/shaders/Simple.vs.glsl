@@ -11,21 +11,21 @@ layout (location = 1) out vec2 v_uv;
 layout (location = 2) out mat3 v_tbn;
 layout (location = 6) flat out uint v_material_id;
 
-layout (location = 0, std140) uniform SGpuGlobalUniformBuffer
+layout (location = 0, std140) uniform TGpuGlobalUniformBuffer
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
     vec4 CameraPosition;
 } u_camera_information;
 
-layout(binding = 1, std430) restrict readonly buffer SGpuVertexPositionBuffer
+layout(binding = 1, std430) restrict readonly buffer TGpuVertexPositionBuffer
 {
-    SVertexPosition VertexPositions[];
+    TVertexPosition VertexPositions[];
 };
 
-layout(binding = 2, std430) restrict readonly buffer SGpuVertexNormalUvTangentBuffer
+layout(binding = 2, std430) restrict readonly buffer TGpuVertexNormalUvTangentBuffer
 {
-    SVertexNormalUvTangent VertexNormalUvTangents[];
+    TVertexNormalUvTangent VertexNormalUvTangents[];
 };
 
 //#include "ObjectBuffer.include.glsl"
@@ -37,8 +37,8 @@ layout(location = 4) uniform ivec4 u_object_parameters;
 
 void main()
 {
-    SVertexPosition vertex_position = VertexPositions[gl_VertexID];
-    SVertexNormalUvTangent vertex_normal_uv_tangent = VertexNormalUvTangents[gl_VertexID];
+    TVertexPosition vertex_position = VertexPositions[gl_VertexID];
+    TVertexNormalUvTangent vertex_normal_uv_tangent = VertexNormalUvTangents[gl_VertexID];
     //SObject object = Objects[gl_InstanceID];
 
     v_normal = DecodeNormal(unpackSnorm2x16(vertex_normal_uv_tangent.Normal));

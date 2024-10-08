@@ -1,15 +1,15 @@
 #ifndef OBJECTTYPES_INCLUDE_GLSL
 #define OBJECTTYPES_INCLUDE_GLSL
 
-struct SObject
+struct TObject
 {
     mat4 WorldMatrix;
     ivec4 InstanceParameter;
 };
 
-layout (binding = 3, std430) restrict readonly buffer ObjectsBuffer
+layout (binding = 3, std430) restrict readonly buffer TObjectsBuffer
 {
-    SObject Objects[];
+    TObject Objects[];
 };
 
 #endif // OBJECTTYPES_INCLUDE_GLSL

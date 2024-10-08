@@ -9,19 +9,19 @@ layout (location = 0) out gl_PerVertex
     vec4 gl_Position;
 };
 
-layout(binding = 1, std430) restrict readonly buffer VertexPositionBuffer
+layout(binding = 1, std430) restrict readonly buffer TVertexPositionBuffer
 {
-    SVertexPosition VertexPositions[];
+    TVertexPosition VertexPositions[];
 };
 
-struct SGpuGlobalLight {
+struct TGpuGlobalLight {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
     vec4 Direction;
     vec4 Strength;
 };
 
-layout (binding = 2, std140) uniform GlobalLights {
+layout (binding = 2, std140) uniform TGlobalLights {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
     vec4 Direction;
@@ -32,7 +32,7 @@ layout (binding = 2, std140) uniform GlobalLights {
 
 void main()
 {
-    SVertexPosition vertex_position = VertexPositions[gl_VertexID];
+    TVertexPosition vertex_position = VertexPositions[gl_VertexID];
     //SGpuGlobalLight global_light = u_global_lights[0];
     gl_Position = (u_global_lights[0].ProjectionMatrix *
                   (u_global_lights[0].ViewMatrix *

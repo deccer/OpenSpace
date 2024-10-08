@@ -3,16 +3,16 @@
 
 #include "BasicTypes.include.glsl"
 
-struct SVertexPosition
+struct TVertexPosition
 {
-    SPackedVec3 Position;
+    TPackedVec3 Position;
 };
 
-struct SVertexNormalUvTangent
+struct TVertexNormalUvTangent
 {
     uint Normal;
     uint Tangent;
-    SPackedVec3 UvAndTangentSign;
+    TPackedVec3 UvAndTangentSign;
 };
 
 #endif // VERTEXTYPES_INCLUDE_GLSL
