@@ -32,7 +32,7 @@ TPackedVec2 Vec2ToPacked(in vec2 v)
     return TPackedVec2(v.x, v.y);
 }
 
-vec3 PackedToVec3(in SPackedVec3 v)
+vec3 PackedToVec3(in TPackedVec3 v)
 {
     return vec3(v.x, v.y, v.z);
 }
@@ -42,7 +42,7 @@ TPackedVec3 Vec3ToPacked(in vec3 v)
     return TPackedVec3(v.x, v.y, v.z);
 }
 
-vec4 PackedToVec4(in SPackedVec4 v)
+vec4 PackedToVec4(in TPackedVec4 v)
 {
     return vec4(v.x, v.y, v.z, v.w);
 }

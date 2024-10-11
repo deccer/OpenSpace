@@ -8,11 +8,11 @@ struct TVertexPosition
     TPackedVec3 Position;
 };
 
-struct TVertexNormalUvTangent
+struct TVertexNormalTangentUvSign
 {
     uint Normal;
     uint Tangent;
-    TPackedVec3 UvAndTangentSign;
+    TPackedVec4 UvAndTangentSign;
 };
 
 #endif // VERTEXTYPES_INCLUDE_GLSL

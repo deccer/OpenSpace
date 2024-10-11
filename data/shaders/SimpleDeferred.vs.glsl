@@ -25,7 +25,7 @@ layout(binding = 1, std430) restrict readonly buffer TGpuVertexPositionBuffer
 
 layout(binding = 2, std430) restrict readonly buffer TGpuVertexNormalUvTangentBuffer
 {
-    TVertexNormalUvTangent VertexNormalUvTangents[];
+    TVertexNormalTangentUvSign VertexNormalUvTangents[];
 };
 
 //#include "ObjectBuffer.include.glsl"
@@ -38,12 +38,12 @@ layout(location = 4) uniform ivec4 u_object_parameters;
 void main()
 {
     TVertexPosition vertex_position = VertexPositions[gl_VertexID];
-    TVertexNormalUvTangent vertex_normal_uv_tangent = VertexNormalUvTangents[gl_VertexID];
+    TVertexNormalTangentUvSign vertex_normal_uv_tangent = VertexNormalUvTangents[gl_VertexID];
     //SObject object = Objects[gl_InstanceID];
 
     v_normal = DecodeNormal(unpackSnorm2x16(vertex_normal_uv_tangent.Normal));
     vec3 tangent = DecodeNormal(unpackSnorm2x16(vertex_normal_uv_tangent.Tangent));
-    vec3 uv_and_tangent_sign = PackedToVec3(vertex_normal_uv_tangent.UvAndTangentSign);
+    vec4 uv_and_tangent_sign = PackedToVec4(vertex_normal_uv_tangent.UvAndTangentSign);
     v_uv = uv_and_tangent_sign.xy;
     vec4 t = vec4(tangent, uv_and_tangent_sign.z);
     //v_material_id = object.InstanceParameter.x;

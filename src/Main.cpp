@@ -1,3 +1,4 @@
+#include <mimalloc.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -45,11 +46,10 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <tracy/TracyOpenGL.hpp>
-
 #include <entt/entt.hpp>
 
 #ifdef USE_PROFILER
+#include <tracy/TracyOpenGL.hpp>
 #define PROFILER_ZONESCOPEDN(x) ZoneScopedN(x)
 #else
 #define PROFILER_ZONESCOPEDN(x)
@@ -78,7 +78,7 @@ private:
     size_t _counter = 0;
 };
 
-constexpr auto HashString(std::string_view str) {
+constexpr auto HashString(std::string_view str) -> uint32_t {
     auto hash = 2166136261u;
     for (auto ch: str) {
         hash ^= ch;
@@ -588,10 +588,14 @@ struct TFramebufferDepthStencilAttachmentDescriptor {
     TFramebufferAttachmentClearDepthStencil ClearDepthStencil;
 };
 
+struct TFramebufferExistingDepthStencilAttachmentDescriptor {
+    TTexture& ExistingDepthTexture;
+};
+
 struct TFramebufferDescriptor {
     std::string_view Label;
     std::array<std::optional<TFramebufferColorAttachmentDescriptor>, 8> ColorAttachments;
-    std::optional<TFramebufferDepthStencilAttachmentDescriptor> DepthStencilAttachment;
+    std::optional<std::variant<TFramebufferDepthStencilAttachmentDescriptor, TFramebufferExistingDepthStencilAttachmentDescriptor>> DepthStencilAttachment;
 };
 
 struct TFramebufferColorAttachment {
@@ -1794,7 +1798,7 @@ auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSampler
     g_samplers.emplace_back(sampler);
 
     return samplerId;
-};
+}
 
 auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> TFramebuffer {
 
@@ -1845,25 +1849,37 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
 
     if (framebufferDescriptor.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebufferDescriptor.DepthStencilAttachment;
-        auto depthTextureId = CreateTexture({
-            .TextureType = TTextureType::Texture2D,
-            .Format = depthStencilAttachment.Format,
-            .Extent = TExtent3D(depthStencilAttachment.Extent.Width, depthStencilAttachment.Extent.Height, 1),
-            .MipMapLevels = 1,
-            .Layers = 0,
-            .SampleCount = TSampleCount::One,
-            .Label = std::format("{}_{}x{}", depthStencilAttachment.Label, depthStencilAttachment.Extent.Width, depthStencilAttachment.Extent.Height)
-        });
-        auto& depthTexture = g_textures[size_t(depthTextureId)];
+        if (auto* createDepthStencilAttachment = std::get_if<TFramebufferDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
+            auto depthTextureId = CreateTexture({
+                .TextureType = TTextureType::Texture2D,
+                .Format = createDepthStencilAttachment->Format,
+                .Extent = TExtent3D(createDepthStencilAttachment->Extent.Width,
+                                    createDepthStencilAttachment->Extent.Height, 1),
+                .MipMapLevels = 1,
+                .Layers = 0,
+                .SampleCount = TSampleCount::One,
+                .Label = std::format("{}_{}x{}", createDepthStencilAttachment->Label,
+                                     createDepthStencilAttachment->Extent.Width,
+                                     createDepthStencilAttachment->Extent.Height)
+            });
+            auto& depthTexture = g_textures[size_t(depthTextureId)];
 
-        auto attachmentType = FormatToAttachmentType(depthStencilAttachment.Format, 0);
-        glNamedFramebufferTexture(framebuffer.Id, AttachmentTypeToGL(attachmentType), depthTexture.Id, 0);
+            auto attachmentType = FormatToAttachmentType(createDepthStencilAttachment->Format, 0);
+            glNamedFramebufferTexture(framebuffer.Id, AttachmentTypeToGL(attachmentType), depthTexture.Id, 0);
 
-        framebuffer.DepthStencilAttachment = {
-            .Texture = depthTexture,
-            .ClearDepthStencil = depthStencilAttachment.ClearDepthStencil,
-            .LoadOperation = depthStencilAttachment.LoadOperation,
-        };
+            framebuffer.DepthStencilAttachment = {
+                .Texture = depthTexture,
+                .ClearDepthStencil = createDepthStencilAttachment->ClearDepthStencil,
+                .LoadOperation = createDepthStencilAttachment->LoadOperation,
+            };
+        } else if (auto* existingDepthStencilAttachment = std::get_if<TFramebufferExistingDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
+            auto& depthTexture = existingDepthStencilAttachment->ExistingDepthTexture;
+            glNamedFramebufferTexture(framebuffer.Id, GL_DEPTH_ATTACHMENT, depthTexture.Id, 0);
+            framebuffer.DepthStencilAttachment = {
+                .Texture = depthTexture,
+                .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
+            };
+        }
     } else {
         framebuffer.DepthStencilAttachment = std::nullopt;
     }
@@ -1888,13 +1904,13 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
                 auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
                 switch (baseTypeClass) {
                     case TBaseTypeClass::Float:
-                        glClearNamedFramebufferfv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<float, 4>>(&colorAttachment.ClearColor.Data)->data());
+                        glClearNamedFramebufferfv(framebuffer.Id, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<float, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
                     case TBaseTypeClass::Integer:
-                        glClearNamedFramebufferiv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<int32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
+                        glClearNamedFramebufferiv(framebuffer.Id, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<int32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
                     case TBaseTypeClass::UnsignedInteger:
-                        glClearNamedFramebufferuiv(0, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<uint32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
+                        glClearNamedFramebufferuiv(framebuffer.Id, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<uint32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
                     default:
                         std::unreachable_sentinel;
@@ -2181,10 +2197,10 @@ struct TGpuVertexPosition {
     glm::vec3 Position;
 };
 
-struct TGpuVertexNormalUvTangent {
+struct TGpuPackedVertexNormalTangentUvTangentSign {
     uint32_t Normal;
     uint32_t Tangent;
-    glm::vec3 UvAndTangentSign;
+    glm::vec4 UvAndTangentSign;
 };
 
 struct TGpuVertexPositionColor {
@@ -2225,6 +2241,21 @@ struct TGpuMesh {
     glm::mat4 InitialTransform;
 };
 
+struct TCpuMaterial {
+    glm::vec4 BaseColor;
+    glm::vec4 Factors; // use .x = basecolor factor .y = normal strength, .z = metalness, .w = roughness
+
+    uint32_t BaseColorTextureId;
+    uint32_t BaseColorTextureSamplerId;
+    uint32_t NormalTextureId;
+    uint32_t NormalTextureSamplerId;
+
+    uint32_t ArmTextureId;
+    uint32_t ArmTextureSamplerId;
+    uint32_t EmissiveTextureId;
+    uint32_t EmissiveTextureSamplerId;
+};
+
 struct TGpuMaterial {
     glm::vec4 BaseColor;
     glm::vec4 Factors; // use .x = basecolor factor .y = normal strength, .z = metalness, .w = roughness
@@ -2234,6 +2265,9 @@ struct TGpuMaterial {
 
     uint64_t ArmTexture;
     uint64_t EmissiveTexture;
+
+    uint32_t BaseColorTextureId;
+    uint32_t NormalTextureId;
 };
 
 struct TCpuGlobalLight {
@@ -2304,7 +2338,7 @@ struct TAssetMesh {
     std::string_view Name;
     glm::mat4 InitialTransform;
     std::vector<TGpuVertexPosition> VertexPositions;
-    std::vector<TGpuVertexNormalUvTangent> VertexNormalUvTangents;
+    std::vector<TGpuPackedVertexNormalTangentUvTangentSign> VertexNormalUvTangents;
     std::vector<uint32_t> Indices;
     std::string MaterialName;
 };
@@ -2526,7 +2560,7 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
 
 auto GetVertices(
     const fastgltf::Asset& asset, 
-    const fastgltf::Primitive& primitive) -> std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuVertexNormalUvTangent>> {
+    const fastgltf::Primitive& primitive) -> std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuPackedVertexNormalTangentUvTangentSign>> {
 
     PROFILER_ZONESCOPEDN("GetVertices");
 
@@ -2566,7 +2600,7 @@ auto GetVertices(
     }
 
     std::vector<TGpuVertexPosition> verticesPosition;
-    std::vector<TGpuVertexNormalUvTangent> verticesNormalUvTangent;
+    std::vector<TGpuPackedVertexNormalTangentUvTangentSign> verticesNormalUvTangent;
     verticesPosition.resize(positions.size());
     verticesNormalUvTangent.resize(positions.size());
 
@@ -2578,7 +2612,7 @@ auto GetVertices(
         verticesNormalUvTangent[i] = {
             glm::packSnorm2x16(EncodeNormal(normals[i])),
             glm::packSnorm2x16(EncodeNormal(tangents[i].xyz())),
-            uvs[i]
+            glm::vec4(uvs[i], 0.0f),
         };
     }
 
@@ -2602,9 +2636,9 @@ auto GetIndices(
 }
 
 auto CreateAssetMesh(
-    std::string_view name,
+    const std::string& name,
     glm::mat4 initialTransform,
-    const std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuVertexNormalUvTangent>>& vertices,
+    const std::pair<std::vector<TGpuVertexPosition>, std::vector<TGpuPackedVertexNormalTangentUvTangentSign>>& vertices,
     const std::vector<uint32_t> indices,
     const std::string& materialName) -> TAssetMesh {
 
@@ -2657,7 +2691,7 @@ auto CreateAssetMaterial(
         auto& fgTexture = asset.textures[fgBaseColorTexture.textureIndex];
         auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = TAssetMaterialChannel{
             .Usage = TMaterialChannelUsage::SRgb,
@@ -2671,7 +2705,7 @@ auto CreateAssetMaterial(
         auto& fgTexture = asset.textures[fgNormalTexture.textureIndex];
         auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = TAssetMaterialChannel{
             .Usage = TMaterialChannelUsage::Normal,
@@ -2685,7 +2719,7 @@ auto CreateAssetMaterial(
         auto& fgTexture = asset.textures[fgMetallicRoughnessTexture.textureIndex];
         auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.OcclusionRoughnessMetallnessChannel = TAssetMaterialChannel{
             .Usage = TMaterialChannelUsage::MetalnessRoughness,
@@ -2699,7 +2733,7 @@ auto CreateAssetMaterial(
         auto& fgTexture = asset.textures[fgEmissiveTexture.textureIndex];
         auto textureName = asset.images[fgTexture.imageIndex.value_or(0)].name.data();
         auto fgTextureImageName = GetSafeResourceName(modelName.data(), textureName, "image", fgTexture.imageIndex.value_or(0));
-        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), textureName, "sampler", fgTexture.samplerIndex.value_or(0));
+        auto fgTextureSamplerName = GetSafeResourceName(modelName.data(), nullptr, "sampler", fgTexture.samplerIndex.value_or(0));
 
         assetMaterial.BaseColorChannel = TAssetMaterialChannel{
             .Usage = TMaterialChannelUsage::SRgb,
@@ -2946,8 +2980,15 @@ using TGpuMaterialId = TId<struct GpuMaterialId>;
 
 TIdGenerator<TGpuMeshId> g_gpuMeshCounter = {};
 
+TFramebuffer g_depthPrePassFramebuffer = {};
+TGraphicsPipeline g_depthPrePassGraphicsPipeline = {};
+
 TFramebuffer g_geometryFramebuffer = {};
 TGraphicsPipeline g_geometryGraphicsPipeline = {};
+
+TFramebuffer g_resolveGeometryFramebuffer = {};
+TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
+
 std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 
 bool g_drawDebugLines = true;
@@ -2956,18 +2997,20 @@ uint32_t g_debugInputLayout = 0;
 uint32_t g_debugLinesVertexBuffer = 0;
 TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 
-TGraphicsPipeline g_fullscreenTriangleGraphicsPipeline = {};
-TSampler g_fullscreenSamplerNearestClampToEdge = {};
+TGraphicsPipeline g_fstGraphicsPipeline = {};
+TSamplerId g_fstSamplerNearestClampToEdge = {};
 
 std::unordered_map<std::string, TGpuMesh> g_gpuMeshes = {};
 std::unordered_map<std::string, TSampler> g_gpuSamplers = {};
+std::unordered_map<std::string, TCpuMaterial> g_cpuMaterials = {};
 std::unordered_map<std::string, TGpuMaterial> g_gpuMaterials = {};
 
 auto DrawFullscreenTriangleWithTexture(const TTexture& texture) -> void {
-    
-    g_fullscreenTriangleGraphicsPipeline.Bind();
-    g_fullscreenTriangleGraphicsPipeline.BindTextureAndSampler(0, texture.Id, g_fullscreenSamplerNearestClampToEdge.Id);
-    g_fullscreenTriangleGraphicsPipeline.DrawArrays(0, 3);
+
+    g_fstGraphicsPipeline.Bind();
+    auto& sampler = g_samplers[size_t(g_fstSamplerNearestClampToEdge)];
+    g_fstGraphicsPipeline.BindTextureAndSampler(0, texture.Id, sampler.Id);
+    g_fstGraphicsPipeline.DrawArrays(0, 3);
 }
 
 auto CreateGpuMesh(const std::string& assetMeshName) -> void {
@@ -2979,15 +3022,18 @@ auto CreateGpuMesh(const std::string& assetMeshName) -> void {
         PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
 
         glCreateBuffers(3, buffers);
+        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", assetMeshName));
+        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", assetMeshName));
+        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", assetMeshName));
         glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * assetMesh.VertexPositions.size(),
                              assetMesh.VertexPositions.data(), 0);
-        glNamedBufferStorage(buffers[1], sizeof(TGpuVertexNormalUvTangent) * assetMesh.VertexNormalUvTangents.size(),
+        glNamedBufferStorage(buffers[1], sizeof(TGpuPackedVertexNormalTangentUvTangentSign) * assetMesh.VertexNormalUvTangents.size(),
                              assetMesh.VertexNormalUvTangents.data(), 0);
         glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMesh.Indices.size(), assetMesh.Indices.data(), 0);
     }
 
     auto gpuMesh = TGpuMesh{
-        .Name = assetMesh.Name,
+        .Name = assetMeshName,
         .VertexPositionBuffer = buffers[0],
         .VertexNormalUvTangentBuffer = buffers[1],
         .IndexBuffer = buffers[2],
@@ -3010,15 +3056,21 @@ auto GetGpuMesh(const std::string& assetMeshName) -> TGpuMesh& {
     return g_gpuMeshes[assetMeshName];
 }
 
+auto GetCpuMaterial(const std::string& assetMaterialName) -> TCpuMaterial& {
+    assert(!assetMaterialName.empty() && g_cpuMaterials.contains(assetMaterialName));
+
+    return g_cpuMaterials[assetMaterialName];
+}
+
 auto GetGpuMaterial(const std::string& assetMaterialName) -> TGpuMaterial& {
     assert(!assetMaterialName.empty() && g_gpuMaterials.contains(assetMaterialName));
 
     return g_gpuMaterials[assetMaterialName];
 }
 
-auto CreateTextureForMaterialChannel(TAssetMaterialChannel& assetMaterialChannel) -> int64_t {
+auto CreateResidentTextureForMaterialChannel(TAssetMaterialChannel& assetMaterialChannel) -> int64_t {
 
-    PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
+    PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
     auto& image = GetAssetImage(assetMaterialChannel.Image);
 
@@ -3048,26 +3100,104 @@ auto CreateTextureForMaterialChannel(TAssetMaterialChannel& assetMaterialChannel
     return MakeTextureResident(textureId);
 }
 
+auto CreateTextureForMaterialChannel(TAssetMaterialChannel& assetMaterialChannel) -> uint32_t {
+
+    PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
+
+    auto& image = GetAssetImage(assetMaterialChannel.Image);
+
+    auto textureId = CreateTexture(TCreateTextureDescriptor{
+        .TextureType = TTextureType::Texture2D,
+        .Format = TFormat::R8G8B8A8_UNORM,
+        .Extent = TExtent3D{ static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+        .MipMapLevels = static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(image.Width), static_cast<float>(image.Height))))),
+        .Layers = 1,
+        .SampleCount = TSampleCount::One,
+        .Label = image.Name,
+    });
+
+    UploadTexture(textureId, TUploadTextureDescriptor{
+        .Level = 0,
+        .Offset = TOffset3D{ 0, 0, 0},
+        .Extent = TExtent3D{ static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1u},
+        .UploadFormat = TUploadFormat::Auto,
+        .UploadType = TUploadType::Auto,
+        .PixelData = image.DecodedData.get()
+    });
+
+    GenerateMipmaps(textureId);
+
+    //auto& sampler = GetAssetSampler(assetMaterialChannel.Sampler);
+
+    return GetTexture(textureId).Id;
+}
+
 auto CreateGpuMaterial(const std::string& assetMaterialName) -> void {
 
     PROFILER_ZONESCOPEDN("CreateGpuMaterial");
 
     auto& assetMaterial = GetAssetMaterial(assetMaterialName);
-    uint64_t baseColorTexture = assetMaterial.BaseColorChannel.has_value()
-        ? CreateTextureForMaterialChannel(assetMaterial.BaseColorChannel.value())
+
+    uint64_t baseColorTextureHandle = assetMaterial.BaseColorChannel.has_value()
+        ? CreateResidentTextureForMaterialChannel(assetMaterial.BaseColorChannel.value())
         : 0;
 
-    uint64_t normalTexture = assetMaterial.NormalsChannel.has_value()
-        ? CreateTextureForMaterialChannel(assetMaterial.NormalsChannel.value())
+    uint64_t normalTextureHandle = assetMaterial.NormalsChannel.has_value()
+        ? CreateResidentTextureForMaterialChannel(assetMaterial.NormalsChannel.value())
         : 0;
 
     auto gpuMaterial = TGpuMaterial{
         .BaseColor = assetMaterial.BaseColorFactor,
-        .BaseColorTexture = baseColorTexture,
-        .NormalTexture = normalTexture,
+        .BaseColorTexture = baseColorTextureHandle,
+        .NormalTexture = normalTextureHandle
     };
 
     g_gpuMaterials[assetMaterialName] = gpuMaterial;
+}
+
+auto CreateSamplerDescriptor(const TAssetSampler& assetSampler) -> TSamplerDescriptor {
+
+    return TSamplerDescriptor{
+        .AddressModeU = assetSampler.AddressModeU,
+        .AddressModeV = assetSampler.AddressModeV,
+        .MagFilter = assetSampler.MagFilter,
+        .MinFilter = assetSampler.MinFilter,
+    };
+}
+
+auto CreateCpuMaterial(const std::string& assetMaterialName) -> void {
+
+    PROFILER_ZONESCOPEDN("CreateCpuMaterial");
+
+    auto& assetMaterial = GetAssetMaterial(assetMaterialName);
+
+    auto cpuMaterial = TCpuMaterial{
+        .BaseColor = assetMaterial.BaseColorFactor,
+    };
+
+    auto& baseColorChannel = assetMaterial.BaseColorChannel;
+    if (baseColorChannel.has_value()) {
+        auto& baseColor = *baseColorChannel;
+        auto& baseColorSampler = GetAssetSampler(baseColor.Sampler);
+
+        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor);
+        auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
+        auto& sampler = g_samplers[size_t(samplerId)];
+        cpuMaterial.BaseColorTextureSamplerId = sampler.Id;
+    }
+
+    auto& normalTextureChannel = assetMaterial.NormalsChannel;
+    if (normalTextureChannel.has_value()) {
+        auto& normalTexture = *normalTextureChannel;
+        auto& normalTextureSampler = GetAssetSampler(normalTexture.Sampler);
+
+        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture);
+        auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
+        auto& sampler = g_samplers[size_t(samplerId)];
+        cpuMaterial.NormalTextureSamplerId = sampler.Id;
+    }
+
+    g_cpuMaterials[assetMaterialName] = cpuMaterial;
 }
 
 // - Game ---------------------------------------------------------------------
@@ -3324,11 +3454,23 @@ auto HandleCamera(float deltaTime) -> void {
 auto DeleteRendererFramebuffers() -> void {
 
     DeleteFramebuffer(g_geometryFramebuffer);
+    DeleteFramebuffer(g_resolveGeometryFramebuffer);
 }
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
+
+    g_depthPrePassFramebuffer = CreateFramebuffer({
+        .Label = "Depth PrePass",
+        .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
+            .Label = "Depth",
+            .Format = TFormat::D24_UNORM_S8_UINT,
+            .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+            .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+            .ClearDepthStencil = { 1.0f, 0 },
+        }
+    });
 
     g_geometryFramebuffer = CreateFramebuffer({
         .Label = "Geometry",
@@ -3345,16 +3487,25 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
                 .Format = TFormat::R32G32B32A32_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },                        
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
         },
-        .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
-            .Label = "GeometryDepth",
-            .Format = TFormat::D24_UNORM_S8_UINT,
-            .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-            .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-            .ClearDepthStencil = { 1.0f, 0 },
+        .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
+            .ExistingDepthTexture = g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture,
         }
+    });
+
+    g_resolveGeometryFramebuffer = CreateFramebuffer({
+        .Label = "ResolveGeometry",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "ResolvedGeometry",
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            },
+        },
     });
 }
 
@@ -3370,7 +3521,7 @@ auto main(
         .ResolutionScale = 1.0f,
         .WindowStyle = TWindowStyle::Windowed,
         .IsDebug = true,
-        .IsVSyncEnabled = true,
+        .IsVSyncEnabled = false,
     };
 
     if (glfwInit() == GLFW_FALSE) {
@@ -3378,6 +3529,9 @@ auto main(
         return 0;
     }
 
+    /*
+     * Setup Application
+     */
     const auto isWindowWindowed = windowSettings.WindowStyle == TWindowStyle::Windowed;
     glfwWindowHint(GLFW_DECORATED, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
@@ -3486,14 +3640,28 @@ auto main(
     g_previousSceneViewerSize = g_windowFramebufferSize;
     auto scaledFramebufferSize = glm::vec2(g_previousSceneViewerSize) * windowSettings.ResolutionScale;
 
-    // - Initialize Renderer ///////////// 
-
+    /*
+     * Renderer - Initialize Framebuffers
+     */
     CreateRendererFramebuffers(scaledFramebufferSize);
+
+    /*
+     * Renderer - Initialize Pipelines
+     */
+    auto depthPrePassGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "Depth PrePass",
+        .VertexShaderFilePath = "data/shaders/DepthPrePass.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/Depth.fs.glsl",
+        .InputAssembly = {
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        }
+    });
+    g_depthPrePassGraphicsPipeline = *depthPrePassGraphicsPipelineResult;
 
     auto geometryGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "GeometryPipeline",
-        .VertexShaderFilePath = "data/shaders/Simple.vs.glsl",
-        .FragmentShaderFilePath = "data/shaders/Simple.fs.glsl",
+        .VertexShaderFilePath = "data/shaders/SimpleDeferred.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/SimpleDeferred.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
@@ -3504,8 +3672,22 @@ auto main(
     }
     g_geometryGraphicsPipeline = *geometryGraphicsPipelineResult;
 
-    auto fullscreenTriangleGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "FullscreenTrianglePipeline",
+    auto resolveGeometryGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "ResolveGeometryPipeline",
+        .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/ResolveDeferred.fs.glsl",
+        .InputAssembly = {
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+    });
+    if (!resolveGeometryGraphicsPipelineResult) {
+        spdlog::error(resolveGeometryGraphicsPipelineResult.error());
+        return -1;
+    }
+    g_resolveGeometryGraphicsPipeline = *resolveGeometryGraphicsPipelineResult;
+
+    auto fstGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "FST",
         .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/FST.GammaCorrected.fs.glsl",
         .InputAssembly = {
@@ -3513,11 +3695,11 @@ auto main(
         },
     });
 
-    if (!fullscreenTriangleGraphicsPipelineResult) {
-        spdlog::error(fullscreenTriangleGraphicsPipelineResult.error());
+    if (!fstGraphicsPipelineResult) {
+        spdlog::error(fstGraphicsPipelineResult.error());
         return 0;
     }
-    g_fullscreenTriangleGraphicsPipeline = *fullscreenTriangleGraphicsPipelineResult;
+    g_fstGraphicsPipeline = *fstGraphicsPipelineResult;
 
     auto debugLinesGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "DebugLinesPipeline",
@@ -3549,8 +3731,8 @@ auto main(
         spdlog::error(debugLinesGraphicsPipelineResult.error());
         return 0;
     }
-
     g_debugLinesGraphicsPipeline = *debugLinesGraphicsPipelineResult;
+
     g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     auto cameraPosition = glm::vec3{0.0f, 0.0f, 20.0f};
@@ -3562,7 +3744,6 @@ auto main(
         .CameraPosition = glm::vec4{cameraPosition, 0.0f}
     };
     auto globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &globalUniforms, GL_DYNAMIC_STORAGE_BIT);
-
     auto objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     g_gpuGlobalLights.push_back(TGpuGlobalLight{
@@ -3574,12 +3755,21 @@ auto main(
 
     auto globalLightsBuffer = CreateBuffer("SGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
-    // - Load Assets ////////////
+    g_fstSamplerNearestClampToEdge = GetOrCreateSampler({
+       .AddressModeU = TTextureAddressMode::ClampToEdge,
+       .AddressModeV = TTextureAddressMode::ClampToEdge,
+       .MagFilter = TTextureMagFilter::Nearest,
+       .MinFilter = TTextureMinFilter::NearestMipmapNearest
+    });
 
-    LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
+    /*
+     * Load Assets
+     */
+
+    //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Downloads/modular_ruins_c/modular_ruins_c.glb");
-    //LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
+    LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
     //LoadModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
     
     //LoadModelFromFile("SM_DeccerCube", "data/scenes/stylized_low-poly_sand_block.glb");
@@ -3634,9 +3824,6 @@ auto main(
         previousTimeInSeconds = currentTimeInSeconds;
         currentTimeInSeconds = glfwGetTime();
 
-        // Update State
-        HandleCamera(static_cast<float>(deltaTimeInSeconds));
-
         ///////////////////////
         // Create Gpu Resources if necessary
         ///////////////////////
@@ -3648,7 +3835,7 @@ auto main(
             auto& materialComponent = g_gameRegistry.get<TComponentMaterial>(entity);
 
             CreateGpuMesh(meshComponent.Mesh);
-            CreateGpuMaterial(materialComponent.Material);
+            CreateCpuMaterial(materialComponent.Material);
 
             g_gameRegistry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
             g_gameRegistry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
@@ -3656,16 +3843,15 @@ auto main(
             g_gameRegistry.remove<TComponentCreateGpuResourcesNecessary>(entity);
         }
 
+        // Update State
+        HandleCamera(static_cast<float>(deltaTimeInSeconds));
+
         // Update Per Frame Uniforms
 
         globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(60.0f), (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y, 0.1f);
         globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
         globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, 0.0f);
         UpdateBuffer(globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &globalUniforms);
-
-        ///////
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Resize if necessary
         if (g_windowFramebufferResized || g_sceneViewerResized) {
@@ -3694,6 +3880,9 @@ auto main(
             g_sceneViewerResized = false;
         }
 
+        //
+        // CLEAR DEBUG LINES
+        //
         if (g_drawDebugLines) {
             g_debugLines.clear();
 
@@ -3708,42 +3897,77 @@ auto main(
         if (isSrgbDisabled) {
             glEnable(GL_FRAMEBUFFER_SRGB);
             isSrgbDisabled = false;
-        }        
+        }
 
-        g_geometryGraphicsPipeline.Bind();
-        BindFramebuffer(g_geometryFramebuffer);
+        {
+            PushDebugGroup("Depth PrePass");
+            g_depthPrePassGraphicsPipeline.Bind();
+            BindFramebuffer(g_depthPrePassFramebuffer);
+            glDepthFunc(GL_LESS);
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-        g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
-        g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
+            g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-        auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
-        renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
+            auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentTransform>();
+            renderablesView.each([](const auto& meshComponent, const auto& initialTransform) {
 
-            PROFILER_ZONESCOPEDN("Draw");
+                PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
-            auto& gpuMaterial = GetGpuMaterial(materialComponent.GpuMaterial);
-            auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+                auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-            glBindSampler(1, g_fullscreenSamplerNearestClampToEdge.Id);
+                g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+                g_depthPrePassGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
 
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-            g_geometryGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
-            g_geometryGraphicsPipeline.SetUniform(8, gpuMaterial.BaseColorTexture);
-            g_geometryGraphicsPipeline.SetUniform(9, gpuMaterial.NormalTexture);
+                g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+            });
 
-            g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        });
+            PopDebugGroup();
+        }
+        {
+            PushDebugGroup("Geometry");
+            g_geometryGraphicsPipeline.Bind();
+            BindFramebuffer(g_geometryFramebuffer);
+            glDepthFunc(GL_EQUAL);
 
-        /*
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBlitNamedFramebuffer(g_geometryFramebuffer.Id, 0, 
-            0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y, 
-            0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
-            GL_COLOR_BUFFER_BIT,
-            GL_NEAREST);
-        */
+            g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
+
+            auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
+            renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
+
+                PROFILER_ZONESCOPEDN("Draw Geometry");
+
+                auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
+                auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+
+                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
+                g_geometryGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
+                //g_geometryGraphicsPipeline.SetUniform(8, gpuMaterial.BaseColorTexture);
+                //g_geometryGraphicsPipeline.SetUniform(9, gpuMaterial.NormalTexture);
+                g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
+                g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
+
+                g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+            });
+            PopDebugGroup();
+        }
+        {
+            PROFILER_ZONESCOPEDN("Draw ResolveGeometry");
+            PushDebugGroup("ResolveGeometry");
+            g_resolveGeometryGraphicsPipeline.Bind();
+            BindFramebuffer(g_resolveGeometryFramebuffer);
+            {
+                //auto& samplerId = g_samplers[size_t(g_fullscreenSamplerNearestClampToEdge.Id)]
+                g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
+                g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
+                g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
+
+                g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
+            }
+            PopDebugGroup();
+        }
 
         /////////////// Debug Lines // move out to some LineRenderer
 
@@ -3767,10 +3991,22 @@ auto main(
 
         /////////////// UI
 
+        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//        /*
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBlitNamedFramebuffer(g_resolveGeometryFramebuffer.Id, 0,
+                               0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
+                               0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
+                               GL_COLOR_BUFFER_BIT,
+                               GL_NEAREST);
+//        */
+
         if (!g_isEditor) {
-            g_fullscreenTriangleGraphicsPipeline.Bind();
-            DrawFullscreenTriangleWithTexture(g_geometryFramebuffer.ColorAttachments[0].value().Texture);
+            PROFILER_ZONESCOPEDN("Draw to Fb0");
+            PushDebugGroup("Blit To Fb0");
+            //g_fstGraphicsPipeline.Bind();
+            //DrawFullscreenTriangleWithTexture(g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture);
+            PopDebugGroup();
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -3879,9 +4115,12 @@ auto main(
     DeleteBuffer(globalLightsBuffer);
     DeleteBuffer(globalUniformsBuffer);
 
-    DeleteFramebuffer(g_geometryFramebuffer);
+    DeleteRendererFramebuffers();
+
     DeletePipeline(g_geometryGraphicsPipeline);
+    DeletePipeline(g_resolveGeometryGraphicsPipeline);
     DeletePipeline(g_debugLinesGraphicsPipeline);
+    DeletePipeline(g_fstGraphicsPipeline);
 
     DeleteTextures();
 

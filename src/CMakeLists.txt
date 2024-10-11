@@ -1,5 +1,7 @@
 add_custom_target(CopyData ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data)
 
+set(USE_PROFILER ON FORCE)
+
 add_executable(HowToScript
     Main.cpp
 )
@@ -15,10 +17,6 @@ target_compile_definitions(HowToScript
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
-target_compile_definitions(HowToScript
-    PRIVATE USE_PROFILER
-)
-
 target_link_libraries(HowToScript
     PRIVATE glfw
     PRIVATE glad
@@ -29,7 +27,16 @@ target_link_libraries(HowToScript
     PRIVATE spdlog
     PRIVATE poolSTL::poolSTL
     PRIVATE tbb
-    PRIVATE TracyClient
     PRIVATE fastgltf
     PRIVATE EnTT
+    PRIVATE mimalloc-static
 )
+
+if(USE_PROFILER)
+    target_compile_definitions(HowToScript
+        PRIVATE USE_PROFILER
+    )
+    target_link_libraries(HowToScript
+        PRIVATE TracyClient
+    )
+endif()
