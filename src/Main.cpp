@@ -36,6 +36,7 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
+#include <fastgltf/util.hpp>
 
 #include <debugbreak.h>
 #include <spdlog/spdlog.h>
@@ -56,6 +57,90 @@
 #endif
 
 // - Core Types ---------------------------------------------------------------
+
+// Stolen from Jaker who stole it from https://github.com/cdgiessen/vk-module/blob/076baa98cba35cd93a6ab56c3fd1b1ea2313f806/codegen_text.py#L53
+// Thanks Jaker & Charles!
+#define DECLARE_FLAG_TYPE(TFlagType, TFlagTypeBits, TFlagBaseType)                                \
+                                                                                                  \
+struct TFlagType                                                                                  \
+{                                                                                                 \
+    TFlagBaseType flags = static_cast<TFlagBaseType>(0);                                          \
+    constexpr TFlagType() noexcept = default;                                                     \
+    constexpr explicit TFlagType(TFlagBaseType in) noexcept : flags(in) {}                        \
+    constexpr TFlagType(TFlagTypeBits in) noexcept : flags(static_cast<TFlagBaseType>(in)) {}     \
+    constexpr bool operator==(TFlagType const& right) const                                       \
+    {                                                                                             \
+        return flags == right.flags;                                                              \
+    }                                                                                             \
+    constexpr bool operator!=(TFlagType const& right) const                                       \
+    {                                                                                             \
+        return flags != right.flags;                                                              \
+    }                                                                                             \
+    constexpr explicit operator TFlagBaseType() const                                             \
+    {                                                                                             \
+        return flags;                                                                             \
+    }                                                                                             \
+    constexpr explicit operator bool() const noexcept                                             \
+    {                                                                                             \
+        return flags != 0;                                                                        \
+    }                                                                                             \
+};                                                                                                \
+                                                                                                  \
+constexpr TFlagType operator|(TFlagType a, TFlagType b) noexcept                                  \
+{                                                                                                 \
+    return static_cast<TFlagType>(a.flags | b.flags);                                             \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator&(TFlagType a, TFlagType b) noexcept                                  \
+{                                                                                                 \
+    return static_cast<TFlagType>(a.flags & b.flags);                                             \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator^(TFlagType a, TFlagType b) noexcept                                  \
+{                                                                                                 \
+    return static_cast<TFlagType>(a.flags ^ b.flags);                                             \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator~(TFlagType a) noexcept                                               \
+{                                                                                                 \
+    return static_cast<TFlagType>(~a.flags);                                                      \
+}                                                                                                 \
+constexpr TFlagType& operator|=(TFlagType& a, TFlagType b) noexcept                               \
+{                                                                                                 \
+    a.flags = (a.flags | b.flags);                                                                \
+    return a;                                                                                     \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType& operator&=(TFlagType& a, TFlagType b) noexcept                               \
+{                                                                                                 \
+    a.flags = (a.flags & b.flags);                                                                \
+    return a;                                                                                     \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator^=(TFlagType& a, TFlagType b) noexcept                                \
+{                                                                                                 \
+    a.flags = (a.flags ^ b.flags);                                                                \
+    return a;                                                                                     \
+}                                                                                                 \
+constexpr TFlagType operator|(TFlagTypeBits a, TFlagTypeBits b) noexcept                          \
+{                                                                                                 \
+    return static_cast<TFlagType>(static_cast<TFlagBaseType>(a) | static_cast<TFlagBaseType>(b)); \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator&(TFlagTypeBits a, TFlagTypeBits b) noexcept                          \
+{                                                                                                 \
+    return static_cast<TFlagType>(static_cast<TFlagBaseType>(a) & static_cast<TFlagBaseType>(b)); \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator~(TFlagTypeBits key) noexcept                                         \
+{                                                                                                 \
+    return static_cast<TFlagType>(~static_cast<TFlagBaseType>(key));                              \
+}                                                                                                 \
+                                                                                                  \
+constexpr TFlagType operator^(TFlagTypeBits a, TFlagTypeBits b) noexcept                          \
+{                                                                                                 \
+    return static_cast<TFlagType>(static_cast<TFlagBaseType>(a) ^ static_cast<TFlagBaseType>(b)); \
+}
 
 template<class TTag>
 struct TIdImpl {
@@ -87,7 +172,7 @@ constexpr auto HashString(std::string_view str) -> uint32_t {
     return hash;
 }
 
-constexpr uint32_t operator"" _hash(const char* str, size_t) {
+constexpr auto operator"" _hash(const char* str, size_t) -> uint32_t {
     return HashString(str);
 }
 
@@ -685,13 +770,94 @@ struct TVertexInputDescriptor {
     std::array<std::optional<const TVertexInputAttributeDescriptor>, 16> VertexInputAttributes = {};
 };
 
+enum class TFillMode {
+    Solid,
+    Wireframe,
+    Points
+};
+
+enum class TCullMode {
+    None,
+    Front,
+    Back,
+    FrontAndBack
+};
+
+enum class TFaceWindingOrder {
+    Clockwise,
+    CounterClockwise
+};
+
+enum class TDepthFunction {
+    Never,
+    Less,
+    Equal,
+    LessThanOrEqual,
+    Greater,
+    NotEqual,
+    GreaterThanOrEqual,
+    Always,
+};
+
+struct TClipControl {
+
+};
+
+struct TRasterizerState {
+    TFillMode FillMode;
+    TCullMode CullMode;
+    TFaceWindingOrder FaceWindingOrder;
+    bool IsDepthBiasEnabled;
+    float DepthBiasSlopeFactor;
+    float DepthBiasConstantFactor;
+    bool IsDepthClampEnabled;
+    bool IsScissorEnabled;
+    TClipControl ClipControl;
+    bool IsRasterizerDisabled;
+    float LineWidth = 1.0f;
+    float PointSize = 1.0f;
+};
+
+struct TBlendState {
+    bool IsBlendEnabled;
+};
+
+struct TDepthState {
+    bool IsDepthTestEnabled;
+    bool IsDepthWriteEnabled;
+    TDepthFunction DepthFunction;
+};
+
+struct TStencilState {
+
+};
+
+enum class TColorMaskBits {
+    None = 0,
+    R = 1 << 0,
+    G = 1 << 1,
+    B = 1 << 2,
+    A = 1 << 3
+};
+DECLARE_FLAG_TYPE(TColorMask, TColorMaskBits, uint32_t)
+
+struct TOutputMergerState {
+    TColorMask ColorMask = TColorMaskBits::R | TColorMaskBits::G | TColorMaskBits::B | TColorMaskBits::A;
+    TBlendState BlendState = {};
+    TDepthState DepthState = {};
+    TStencilState StencilState = {};
+};
+
 struct TGraphicsPipelineDescriptor {
     std::string_view Label;
     std::string_view VertexShaderFilePath;
     std::string_view FragmentShaderFilePath;
 
-    TInputAssemblyDescriptor InputAssembly;
+    TInputAssemblyDescriptor InputAssembly = {};
     std::optional<TVertexInputDescriptor> VertexInput;
+
+    TRasterizerState RasterizerState = {};
+    TOutputMergerState OutputMergerState = {};
 };
 
 struct TComputePipelineDescriptor {
@@ -772,9 +938,30 @@ struct TGraphicsPipeline : public TPipeline {
     auto DrawElements(uint32_t indexBuffer, size_t elementCount) -> void;
     auto DrawElementsInstanced(uint32_t indexBuffer, size_t elementCount, size_t instanceCount) -> void;
 
+    // Input Assembly
     std::optional<uint32_t> InputLayout;
     uint32_t PrimitiveTopology;
     bool IsPrimitiveRestartEnabled;
+
+    // Rasterizer Stage
+    TFillMode FillMode;
+    TCullMode CullMode;
+    TFaceWindingOrder FaceWindingOrder;
+    bool IsDepthBiasEnabled;
+    float DepthBiasSlopeFactor;
+    float DepthBiasConstantFactor;
+    bool IsDepthClampEnabled;
+    bool IsScissorEnabled;
+    TClipControl ClipControl;
+    bool IsRasterizerDisabled;
+    float LineWidth;
+    float PointSize;
+
+    // Output Merger State
+    TColorMask ColorMask;
+    bool IsDepthTestEnabled;
+    bool IsDepthWriteEnabled;
+    TDepthFunction DepthFunction;
 };
 
 struct TComputePipeline : public TPipeline {
@@ -2070,6 +2257,47 @@ auto CreateComputeProgram(
     return program;
 }
 
+auto FillModeToGL(TFillMode fillMode) -> uint32_t {
+    switch (fillMode) {
+        case TFillMode::Solid: return GL_FILL;
+        case TFillMode::Wireframe: return GL_LINES;
+        case TFillMode::Points: return GL_POINTS;
+        default: std::unreachable();
+    }
+}
+
+auto CullModeToGL(TCullMode cullMode) -> uint32_t {
+    switch (cullMode) {
+        case TCullMode::None: return GL_NONE;
+        case TCullMode::Back: return GL_BACK;
+        case TCullMode::Front: return GL_FRONT;
+        case TCullMode::FrontAndBack: return GL_FRONT_AND_BACK;
+        default: std::unreachable();
+    }
+}
+
+auto FaceWindingOrderToGL(TFaceWindingOrder faceWindingOrder) -> uint32_t {
+    switch (faceWindingOrder) {
+        case TFaceWindingOrder::CounterClockwise: return GL_CCW;
+        case TFaceWindingOrder::Clockwise: return GL_CW;
+        default: std::unreachable();
+    }
+}
+
+auto DepthFunctionToGL(TDepthFunction depthFunction) -> uint32_t {
+    switch (depthFunction) {
+        case TDepthFunction::Never: return GL_NEVER;
+        case TDepthFunction::Less: return GL_LESS;
+        case TDepthFunction::Equal: return GL_EQUAL;
+        case TDepthFunction::LessThanOrEqual: return GL_LEQUAL;
+        case TDepthFunction::Greater: return GL_GREATER;
+        case TDepthFunction::NotEqual: return GL_NOTEQUAL;
+        case TDepthFunction::GreaterThanOrEqual: return GL_GEQUAL;
+        case TDepthFunction::Always: return GL_ALWAYS;
+        default: std::unreachable();
+    }
+}
+
 auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<TGraphicsPipeline, std::string> {
 
     PROFILER_ZONESCOPEDN("CreateGraphicsPipeline");
@@ -2129,9 +2357,26 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
     } else {
         pipeline.InputLayout = std::nullopt;
     }
-    
+    // Input Assembly
     pipeline.PrimitiveTopology = PrimitiveTopologyToGL(graphicsPipelineDescriptor.InputAssembly.PrimitiveTopology);
     pipeline.IsPrimitiveRestartEnabled = graphicsPipelineDescriptor.InputAssembly.IsPrimitiveRestartEnabled;
+    // Rasterizer Stage
+    pipeline.FillMode = graphicsPipelineDescriptor.RasterizerState.FillMode;
+    pipeline.CullMode = graphicsPipelineDescriptor.RasterizerState.CullMode;
+    pipeline.FaceWindingOrder = graphicsPipelineDescriptor.RasterizerState.FaceWindingOrder;
+    pipeline.IsDepthBiasEnabled = graphicsPipelineDescriptor.RasterizerState.IsDepthBiasEnabled;
+    pipeline.DepthBiasSlopeFactor = graphicsPipelineDescriptor.RasterizerState.DepthBiasSlopeFactor;
+    pipeline.DepthBiasConstantFactor = graphicsPipelineDescriptor.RasterizerState.DepthBiasConstantFactor;
+    pipeline.IsDepthClampEnabled = graphicsPipelineDescriptor.RasterizerState.IsDepthClampEnabled;
+    pipeline.ClipControl = graphicsPipelineDescriptor.RasterizerState.ClipControl;
+    pipeline.IsRasterizerDisabled = graphicsPipelineDescriptor.RasterizerState.IsRasterizerDisabled;
+    pipeline.LineWidth = graphicsPipelineDescriptor.RasterizerState.LineWidth;
+    pipeline.PointSize = graphicsPipelineDescriptor.RasterizerState.PointSize;
+    // Output Merger Stage
+    pipeline.ColorMask = graphicsPipelineDescriptor.OutputMergerState.ColorMask;
+    pipeline.IsDepthTestEnabled = graphicsPipelineDescriptor.OutputMergerState.DepthState.IsDepthTestEnabled;
+    pipeline.IsDepthWriteEnabled = graphicsPipelineDescriptor.OutputMergerState.DepthState.IsDepthWriteEnabled;
+    pipeline.DepthFunction = graphicsPipelineDescriptor.OutputMergerState.DepthState.DepthFunction;
 
     return pipeline;
 }
@@ -2156,7 +2401,58 @@ auto CreateComputePipeline(const TComputePipelineDescriptor& computePipelineDesc
 auto TGraphicsPipeline::Bind() -> void {
 
     TPipeline::Bind();
+    // Input Assembly
     glBindVertexArray(InputLayout.has_value() ? *InputLayout : g_defaultInputLayout);
+
+    // Rasterizer Stage
+    glPolygonMode(GL_FRONT_AND_BACK, FillModeToGL(FillMode));
+    if (CullMode == TCullMode::None) {
+        glDisable(GL_CULL_FACE);
+    } else {
+        glEnable(GL_CULL_FACE);
+        glCullFace(CullModeToGL(CullMode));
+    }
+
+    if (IsRasterizerDisabled) {
+        glEnable(GL_RASTERIZER_DISCARD);
+    }
+    if (IsScissorEnabled) {
+        glEnable(GL_SCISSOR_TEST);
+    } else {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
+    glFrontFace(FaceWindingOrderToGL(FaceWindingOrder));
+    if (IsDepthBiasEnabled) {
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glEnable(GL_POLYGON_OFFSET_POINT);
+
+        glPolygonOffset(DepthBiasSlopeFactor, DepthBiasConstantFactor);
+    } else {
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        glDisable(GL_POLYGON_OFFSET_POINT);
+    }
+
+    glLineWidth(LineWidth);
+    glPointSize(PointSize);
+
+    // Output Merger Stage
+
+    if (IsDepthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(DepthFunctionToGL(DepthFunction));
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+
+    glDepthMask(IsDepthWriteEnabled ? GL_TRUE : GL_FALSE);
+
+    glColorMask((ColorMask & TColorMaskBits::R) == TColorMaskBits::R,
+                (ColorMask & TColorMaskBits::G) == TColorMaskBits::G,
+                (ColorMask & TColorMaskBits::B) == TColorMaskBits::B,
+                (ColorMask & TColorMaskBits::A) == TColorMaskBits::A);
 }
 
 auto TGraphicsPipeline::BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void {
@@ -3514,6 +3810,7 @@ auto main(
     [[maybe_unused]] char* argv[]) -> int32_t {
 
     PROFILER_ZONESCOPEDN("main");
+    auto previousTimeInSeconds = glfwGetTime();
 
     TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
@@ -3521,7 +3818,7 @@ auto main(
         .ResolutionScale = 1.0f,
         .WindowStyle = TWindowStyle::Windowed,
         .IsDebug = true,
-        .IsVSyncEnabled = false,
+        .IsVSyncEnabled = true,
     };
 
     if (glfwInit() == GLFW_FALSE) {
@@ -3621,11 +3918,7 @@ auto main(
         return 0;
     }
 
-    if (windowSettings.IsVSyncEnabled) {
-        glfwSwapInterval(1);
-    } else {
-        glfwSwapInterval(0);
-    }
+    glfwSwapInterval(windowSettings.IsVSyncEnabled ? 1 : 0);
 
     glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_CULL_FACE);
@@ -3633,6 +3926,10 @@ auto main(
     glFrontFace(GL_CCW);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
+
+    std::vector<float> frameTimes;
+    frameTimes.resize(512);
+    std::fill_n(frameTimes.begin(), frameTimes.size(), 60.0f);
 
     auto isSrgbDisabled = false;
     auto isCullfaceDisabled = false;
@@ -3654,6 +3951,22 @@ auto main(
         .FragmentShaderFilePath = "data/shaders/Depth.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+        .RasterizerState = {
+            .FillMode = TFillMode::Solid,
+            .CullMode = TCullMode::Back,
+            .FaceWindingOrder = TFaceWindingOrder::CounterClockwise,
+            .IsDepthBiasEnabled = false,
+            .IsScissorEnabled = false,
+            .IsRasterizerDisabled = false
+        },
+        .OutputMergerState = {
+            .ColorMask = TColorMaskBits::None,
+            .DepthState = {
+                .IsDepthTestEnabled = true,
+                .IsDepthWriteEnabled = true,
+                .DepthFunction = TDepthFunction::Less
+            },
         }
     });
     g_depthPrePassGraphicsPipeline = *depthPrePassGraphicsPipelineResult;
@@ -3665,6 +3978,12 @@ auto main(
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
+        .OutputMergerState = {
+            .DepthState = {
+                .IsDepthTestEnabled = true,
+                .DepthFunction = TDepthFunction::Equal,
+            }
+        }
     });
     if (!geometryGraphicsPipelineResult) {
         spdlog::error(geometryGraphicsPipelineResult.error());
@@ -3679,6 +3998,11 @@ auto main(
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
+        .OutputMergerState = {
+            .DepthState = {
+                .IsDepthTestEnabled = true,
+            }
+        }
     });
     if (!resolveGeometryGraphicsPipelineResult) {
         spdlog::error(resolveGeometryGraphicsPipelineResult.error());
@@ -3812,17 +4136,27 @@ auto main(
     /// Start Render Loop ///////
 
     uint64_t frameCounter = 0;
-    auto currentTimeInSeconds = glfwGetTime();    
-    auto previousTimeInSeconds = glfwGetTime();
     auto accumulatedTimeInSeconds = 0.0;
+    auto averageFramesPerSecond = 0.0f;
+
+    auto updateInterval = 1.0f;
     while (!glfwWindowShouldClose(g_window)) {
 
         PROFILER_ZONESCOPEDN("Frame");
-
+        auto currentTimeInSeconds = glfwGetTime();
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
+        auto framesPerSecond = 1.0f / deltaTimeInSeconds;
         accumulatedTimeInSeconds += deltaTimeInSeconds;
-        previousTimeInSeconds = currentTimeInSeconds;
-        currentTimeInSeconds = glfwGetTime();
+
+        frameTimes[frameCounter % frameTimes.size()] = framesPerSecond;
+        if (accumulatedTimeInSeconds >= updateInterval) {
+            auto sum = 0.0f;
+            for (auto i = 0; i < frameTimes.size(); i++) {
+                sum += frameTimes[i];
+            }
+            averageFramesPerSecond = sum / frameTimes.size();
+            accumulatedTimeInSeconds = 0.0f;
+        }
 
         ///////////////////////
         // Create Gpu Resources if necessary
@@ -3903,8 +4237,6 @@ auto main(
             PushDebugGroup("Depth PrePass");
             g_depthPrePassGraphicsPipeline.Bind();
             BindFramebuffer(g_depthPrePassFramebuffer);
-            glDepthFunc(GL_LESS);
-            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
             g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
@@ -3921,15 +4253,12 @@ auto main(
                 g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
             });
 
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
             PopDebugGroup();
         }
         {
             PushDebugGroup("Geometry");
             g_geometryGraphicsPipeline.Bind();
             BindFramebuffer(g_geometryFramebuffer);
-            glDepthFunc(GL_EQUAL);
 
             g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
@@ -4019,7 +4348,7 @@ auto main(
 
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
-            ImGui::SetNextWindowSize({168, 152});
+            ImGui::SetNextWindowSize({168, 168});
             auto windowBackgroundColor = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
             windowBackgroundColor.w = 0.4f;
             ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBackgroundColor);
@@ -4028,9 +4357,9 @@ auto main(
                 ImGui::TextColored(ImVec4{0.9f, 0.7f, 0.0f, 1.0f}, "F1 to toggle editor");
                 ImGui::SeparatorText("Frame Statistics");
 
-                auto framesPerSecond = 1.0f / deltaTimeInSeconds;
                 ImGui::Text("afps: %.0f rad/s", glm::two_pi<float>() * framesPerSecond);
                 ImGui::Text("dfps: %.0f °/s", glm::degrees(glm::two_pi<float>() * framesPerSecond));
+                ImGui::Text("Δfps: %.0f", averageFramesPerSecond);
                 ImGui::Text("rfps: %.0f", framesPerSecond);
                 ImGui::Text("rpms: %.0f", framesPerSecond * 60.0f);
                 ImGui::Text("  ft: %.2f ms", deltaTimeInSeconds * 1000.0f);
@@ -4076,24 +4405,22 @@ auto main(
             ImGui::PopStyleVar();
             ImGui::End();
         }        
-
         {
-            PROFILER_ZONESCOPEDN("Draw UI");
+            PROFILER_ZONESCOPEDN("Draw ImGUI");
 
             ImGui::Render();
             auto* imGuiDrawData = ImGui::GetDrawData();
             if (imGuiDrawData != nullptr) {
                 glDisable(GL_FRAMEBUFFER_SRGB);
                 isSrgbDisabled = true;
-                //PushDebugGroup("UI");
                 glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
                 ImGui_ImplOpenGL3_RenderDrawData(imGuiDrawData);
-                //PopDebugGroup();            
             }
         }
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");
             glfwSwapBuffers(g_window);
+            frameCounter++;
         }
 
 #ifdef USE_PROFILER
@@ -4103,11 +4430,10 @@ auto main(
 
         glfwPollEvents();
 
-        frameCounter++;
-
         if (!g_windowHasFocus && g_sleepWhenWindowHasNoFocus) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
+        previousTimeInSeconds = currentTimeInSeconds;
     }
 
     /// Cleanup Resources //////
