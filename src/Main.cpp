@@ -4240,15 +4240,17 @@ auto main(
 
             g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-            auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentTransform>();
-            renderablesView.each([](const auto& meshComponent, const auto& initialTransform) {
+            const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentTransform>();
+            renderablesView.each([](
+                const auto& meshComponent,
+                const auto& transformComponent) {
 
                 PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
                 g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
+                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
 
                 g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
             });
@@ -4262,8 +4264,11 @@ auto main(
 
             g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-            auto renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
-            renderablesView.each([](const auto& meshComponent, const auto& materialComponent, auto& initialTransform) {
+            const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
+            renderablesView.each([](
+                const auto& meshComponent,
+                const auto& materialComponent,
+                const auto& transformComponent) {
 
                 PROFILER_ZONESCOPEDN("Draw Geometry");
 
@@ -4272,9 +4277,8 @@ auto main(
 
                 g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
                 g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-                g_geometryGraphicsPipeline.SetUniform(0, initialTransform * gpuMesh.InitialTransform);
-                //g_geometryGraphicsPipeline.SetUniform(8, gpuMaterial.BaseColorTexture);
-                //g_geometryGraphicsPipeline.SetUniform(9, gpuMaterial.NormalTexture);
+                g_geometryGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
+
                 g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
                 g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
 
@@ -4320,23 +4324,12 @@ auto main(
 
         /////////////// UI
 
-        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//        /*
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBlitNamedFramebuffer(g_resolveGeometryFramebuffer.Id, 0,
                                0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
                                0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
                                GL_COLOR_BUFFER_BIT,
                                GL_NEAREST);
-//        */
-
-        if (!g_isEditor) {
-            PROFILER_ZONESCOPEDN("Draw to Fb0");
-            PushDebugGroup("Blit To Fb0");
-            //g_fstGraphicsPipeline.Bind();
-            //DrawFullscreenTriangleWithTexture(g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture);
-            PopDebugGroup();
-        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -4443,10 +4436,12 @@ auto main(
 
     DeleteRendererFramebuffers();
 
-    DeletePipeline(g_geometryGraphicsPipeline);
-    DeletePipeline(g_resolveGeometryGraphicsPipeline);
     DeletePipeline(g_debugLinesGraphicsPipeline);
     DeletePipeline(g_fstGraphicsPipeline);
+
+    DeletePipeline(g_depthPrePassGraphicsPipeline);
+    DeletePipeline(g_geometryGraphicsPipeline);
+    DeletePipeline(g_resolveGeometryGraphicsPipeline);
 
     DeleteTextures();
 
