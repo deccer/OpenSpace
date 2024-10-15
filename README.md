@@ -8,11 +8,20 @@ to handle Vulkan too, let's see.
 
 Various people help or have helped me in the process. Be it funny comments, actual advise or ideas for the future.
 
-Thank you: 
-- [Jaker](https://github.com/JuanDiegoMontoya),
-- [LVSTRI](https://github.com/LVSTRI/),
+Thank you in alphabetical order :)
+- [bayboykiller](https://github.com/BoyBaykiller/IDKEngine)
+- [bjorn](https://github.com/btipling)
+- [darian](https://github.com/Darianopolis)
+- [domeboyrichter](https://github.com/forenoonwatch)
+- [eearslya](https://github.com/Eearslya)
+- [eliasdaler](https://edw.is/)
+- [geryu](https://github.com/cajallen)
+- [hatrickek](https://github.com/Hatrickek)
+- [jaker](https://github.com/JuanDiegoMontoya)
+- [lady bloom](https://www.froyok.fr/)
+- [lvstri](https://github.com/LVSTRI/)
+- [neure](https://github.com/tksuoran)
+- [pat](https://patrick-is.cool/)
 - [sean](https://github.com/spnda)
-- [Eearslya](https://github.com/Eearslya)
-- [DR](https://github.com/forenoonwatch)
-- [Timo](https://github.com/tksuoran)
-- the_Demongod
+- [someone somewhere](https://www.s1sw.xyz/projects/)
+- [the_demongod](https://www.youtube.com/watch?v=Cx1UjaRyYvs) 
