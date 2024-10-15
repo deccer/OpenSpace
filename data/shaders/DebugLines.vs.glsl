@@ -9,7 +9,7 @@ layout (location = 0) out gl_PerVertex
 };
 layout(location = 0) out vec4 v_color;
 
-layout (location = 0, std140) uniform CameraInformation
+layout (binding = 0, std140) uniform CameraInformation
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;

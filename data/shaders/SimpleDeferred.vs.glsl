@@ -11,7 +11,7 @@ layout (location = 1) out vec2 v_uv;
 layout (location = 2) out mat3 v_tbn;
 layout (location = 6) flat out uint v_material_id;
 
-layout (location = 0, std140) uniform TGpuGlobalUniformBuffer
+layout (binding = 0, std140) uniform TGpuGlobalUniformBuffer
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;

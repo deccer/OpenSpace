@@ -1,8 +1,8 @@
 #version 460 core
 
-//#extension GL_ARB_bindless_texture : require
-#extension GL_NV_gpu_shader5 : require
-#extension GL_ARB_gpu_shader_int64 : require
+//#extension GL_ARB_bindless_texture : enable
+#extension GL_NV_gpu_shader5 : enable
+#extension GL_ARB_gpu_shader_int64 : enable
 
 layout(location = 0) in vec3 v_normal;
 layout(location = 1) in vec2 v_uv;
@@ -47,10 +47,10 @@ void main()
     /*
     vec3 normal = u_texture_normal == 0
         ? n
-        : texture(sampler2D(u_texture_normal), v_uv).rgb;
+        : texture(u_texture_normal, v_uv).rgb;
 */
-    vec3 normal = texture(sampler2D(u_texture_normal), v_uv).rgb;
+    vec3 normal = texture(u_texture_normal, v_uv).rgb;
 
-    o_color = vec4(texture(sampler2D(u_texture_base_color), v_uv).rgb, 1.0);
+    o_color = vec4(texture(u_texture_base_color, v_uv).rgb, 1.0);
     o_normal = vec4(n * 0.5 + 0.5, 1.0);
 }

@@ -3049,7 +3049,9 @@ auto LoadModelFromFile(
 
     PROFILER_ZONESCOPEDN("LoadModelFromFile");
 
-    fastgltf::Parser parser(fastgltf::Extensions::KHR_mesh_quantization | fastgltf::Extensions::EXT_mesh_gpu_instancing);
+    fastgltf::Parser parser(
+        fastgltf::Extensions::KHR_mesh_quantization |
+        fastgltf::Extensions::EXT_mesh_gpu_instancing);
 
     constexpr auto gltfOptions =
         fastgltf::Options::DontRequireValidAssetMember |
@@ -4093,7 +4095,7 @@ auto main(
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Downloads/modular_ruins_c/modular_ruins_c.glb");
-    LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
+    LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured.glb");
     //LoadModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
     
     //LoadModelFromFile("SM_DeccerCube", "data/scenes/stylized_low-poly_sand_block.glb");
@@ -4386,7 +4388,7 @@ auto main(
 
                 auto texture = g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
                 auto imagePosition = ImGui::GetCursorPos();
-                ImGui::Image(reinterpret_cast<ImTextureID>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
+                ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(imagePosition);
                 if (ImGui::BeginChild(1, ImVec2{192, -1})) {
                     if (ImGui::CollapsingHeader("Statistics")) {
