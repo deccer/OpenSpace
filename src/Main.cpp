@@ -4179,23 +4179,13 @@ auto main(
             g_gameRegistry.remove<TComponentCreateGpuResourcesNecessary>(entity);
         }
 
-        // Update State
-        HandleCamera(static_cast<float>(deltaTimeInSeconds));
-
-        // Update Per Frame Uniforms
-
-        globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(60.0f), (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y, 0.1f);
-        globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
-        globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, 0.0f);
-        UpdateBuffer(globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &globalUniforms);
-
         // Resize if necessary
         if (g_windowFramebufferResized || g_sceneViewerResized) {
 
             PROFILER_ZONESCOPEDN("Resized");
 
             g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * windowSettings.ResolutionScale, g_windowFramebufferSize.y * windowSettings.ResolutionScale};
-            g_previousSceneViewerScaledSize = glm::ivec2{ g_previousSceneViewerSize.x * windowSettings.ResolutionScale, g_previousSceneViewerSize.y * windowSettings.ResolutionScale};
+            g_previousSceneViewerScaledSize = glm::ivec2{g_previousSceneViewerSize.x * windowSettings.ResolutionScale, g_previousSceneViewerSize.y * windowSettings.ResolutionScale};
 
             if (g_isEditor) {
                 scaledFramebufferSize = g_previousSceneViewerScaledSize;
@@ -4207,14 +4197,24 @@ auto main(
             CreateRendererFramebuffers(scaledFramebufferSize);
 
             if (g_isEditor) {
-                glViewport(0, 0, g_previousSceneViewerScaledSize.x, g_previousSceneViewerScaledSize.y);
+                glViewport(0, 0, g_previousSceneViewerSize.x, g_previousSceneViewerSize.y);
             } else {
-                glViewport(0, 0, g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y);
+                glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
             }
 
             g_windowFramebufferResized = false;
             g_sceneViewerResized = false;
         }
+
+        // Update State
+        HandleCamera(static_cast<float>(deltaTimeInSeconds));
+
+        // Update Per Frame Uniforms
+
+        globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(60.0f), (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y, 0.1f);
+        globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
+        globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, 0.0f);
+        UpdateBuffer(globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &globalUniforms);
 
         //
         // CLEAR DEBUG LINES
@@ -4327,11 +4327,15 @@ auto main(
         /////////////// UI
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBlitNamedFramebuffer(g_resolveGeometryFramebuffer.Id, 0,
-                               0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
-                               0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
-                               GL_COLOR_BUFFER_BIT,
-                               GL_NEAREST);
+        if (g_isEditor) {
+            glClear(GL_COLOR_BUFFER_BIT);
+        } else {
+            glBlitNamedFramebuffer(g_resolveGeometryFramebuffer.Id, 0,
+                                   0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
+                                   0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
+                                   GL_COLOR_BUFFER_BIT,
+                                   GL_NEAREST);
+        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -4340,6 +4344,20 @@ auto main(
         if (g_isEditor) {
             ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
         }
+
+        ImGui::Text(std::format("windowFramebufferSize       {} {}", g_windowFramebufferSize.x, g_windowFramebufferSize.y).data());
+        ImGui::Text(std::format("windowFramebufferScaledSize {} {}", g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y).data());
+        ImGui::Text(std::format("windowFramebufferResized    {}", g_windowFramebufferResized).data());
+
+        ImGui::Separator();
+
+        ImGui::Text(std::format("sceneViewerSize             {} {}", g_previousSceneViewerSize.x, g_previousSceneViewerSize.y).data());
+        ImGui::Text(std::format("sceneViewerScaledSize       {} {}", g_previousSceneViewerScaledSize.x, g_previousSceneViewerScaledSize.y).data());
+        ImGui::Text(std::format("sceneViewerResized          {}", g_sceneViewerResized).data());
+
+        ImGui::Separator();
+        ImGui::Text(std::format("sceneViewerSize             {} {}", scaledFramebufferSize.x, scaledFramebufferSize.y).data());
+        ImGui::Text(std::format("sceneViewerSizeAspectRatio  {}", (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y).data());
 
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
@@ -4381,7 +4399,7 @@ auto main(
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             if (ImGui::Begin("Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
-                if (currentSceneWindowSize.x != g_previousSceneViewerSize.x || currentSceneWindowSize.y != g_previousSceneViewerSize.y) {
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) && currentSceneWindowSize.x != g_previousSceneViewerSize.x || currentSceneWindowSize.y != g_previousSceneViewerSize.y) {
                     g_previousSceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                     g_sceneViewerResized = true;
                 }
@@ -4392,7 +4410,6 @@ auto main(
                 ImGui::SetCursorPos(imagePosition);
                 if (ImGui::BeginChild(1, ImVec2{192, -1})) {
                     if (ImGui::CollapsingHeader("Statistics")) {
-                        ImGui::Text("Text");
                     }
                 }
                 ImGui::EndChild();
