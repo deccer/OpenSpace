@@ -2084,9 +2084,11 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.Id);
 
+    auto hasColorAttachment = true;
     for (auto colorAttachmentIndex = 0; auto colorAttachmentValue : framebuffer.ColorAttachments) {
         if (colorAttachmentValue.has_value()) {
             auto& colorAttachment = *colorAttachmentValue;
+            glViewportIndexedf(colorAttachmentIndex, 0, 0, colorAttachment.Texture.Extent.Width, colorAttachment.Texture.Extent.Height);
             if (colorAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
                 auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
                 switch (baseTypeClass) {
@@ -2103,12 +2105,17 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
                         std::unreachable_sentinel;
                 }
             }
+        } else {
+            hasColorAttachment = false;
         }
         colorAttachmentIndex++;
     }
 
     if (framebuffer.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebuffer.DepthStencilAttachment;
+        if (!hasColorAttachment) {
+            glViewport(0, 0, depthStencilAttachment.Texture.Extent.Width, depthStencilAttachment.Texture.Extent.Height);
+        }
         if (depthStencilAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
             glClearNamedFramebufferfi(framebuffer.Id, GL_DEPTH_STENCIL, 0, depthStencilAttachment.ClearDepthStencil.Depth, depthStencilAttachment.ClearDepthStencil.Stencil);
         }
@@ -2260,8 +2267,8 @@ auto CreateComputeProgram(
 auto FillModeToGL(TFillMode fillMode) -> uint32_t {
     switch (fillMode) {
         case TFillMode::Solid: return GL_FILL;
-        case TFillMode::Wireframe: return GL_LINES;
-        case TFillMode::Points: return GL_POINTS;
+        case TFillMode::Wireframe: return GL_LINE;
+        case TFillMode::Points: return GL_POINT;
         default: std::unreachable();
     }
 }
@@ -3611,8 +3618,6 @@ ImGuiContext* g_imguiContext = nullptr;
 bool g_isEditor = false;
 bool g_sleepWhenWindowHasNoFocus = true;
 bool g_windowHasFocus = false;
-bool g_windowFramebufferResized = false;
-bool g_sceneViewerResized = false;
 bool g_cursorJustEntered = false;
 bool g_cursorIsActive = true;
 float g_cursorSensitivity = 0.0025f;
@@ -3622,8 +3627,11 @@ glm::dvec2 g_cursorFrameOffset = {};
 
 glm::ivec2 g_windowFramebufferSize = {};
 glm::ivec2 g_windowFramebufferScaledSize = {};
-glm::ivec2 g_previousSceneViewerSize = {};
-glm::ivec2 g_previousSceneViewerScaledSize = {};
+bool g_windowFramebufferResized = false;
+
+glm::ivec2 g_sceneViewerSize = {};
+glm::ivec2 g_sceneViewerScaledSize = {};
+bool g_sceneViewerResized = false;
 
 // - Implementation -----------------------------------------------------------
 
@@ -3707,10 +3715,10 @@ auto HandleCamera(float deltaTime) -> void {
         g_cursorPosition.y = 0;
     }
 
-    const glm::vec3 forward = g_mainCamera.GetForwardDirection();
-    const glm::vec3 right = glm::normalize(glm::cross(forward, g_unitY));
+    const auto forward = g_mainCamera.GetForwardDirection();
+    const auto right = glm::normalize(glm::cross(forward, g_unitY));
 
-    float tempCameraSpeed = g_cameraSpeed;
+    auto tempCameraSpeed = g_cameraSpeed;
     if (glfwGetKey(g_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
         tempCameraSpeed *= 4.0f;
     }
@@ -3751,6 +3759,7 @@ auto HandleCamera(float deltaTime) -> void {
 
 auto DeleteRendererFramebuffers() -> void {
 
+    DeleteFramebuffer(g_depthPrePassFramebuffer);
     DeleteFramebuffer(g_geometryFramebuffer);
     DeleteFramebuffer(g_resolveGeometryFramebuffer);
 }
@@ -3936,8 +3945,8 @@ auto main(
     auto isSrgbDisabled = false;
     auto isCullfaceDisabled = false;
 
-    g_previousSceneViewerSize = g_windowFramebufferSize;
-    auto scaledFramebufferSize = glm::vec2(g_previousSceneViewerSize) * windowSettings.ResolutionScale;
+    g_sceneViewerSize = g_windowFramebufferSize;
+    auto scaledFramebufferSize = glm::vec2(g_sceneViewerSize) * windowSettings.ResolutionScale;
 
     /*
      * Renderer - Initialize Framebuffers
@@ -3979,6 +3988,10 @@ auto main(
         .FragmentShaderFilePath = "data/shaders/SimpleDeferred.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+        .RasterizerState = {
+            .FillMode = TFillMode::Wireframe,
+            .CullMode = TCullMode::Back,
         },
         .OutputMergerState = {
             .DepthState = {
@@ -4184,11 +4197,15 @@ auto main(
 
             PROFILER_ZONESCOPEDN("Resized");
 
+            if (g_isEditor) {
+                //g_sceneViewerSize = glm::ivec2(800, 600);
+            }
+
             g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * windowSettings.ResolutionScale, g_windowFramebufferSize.y * windowSettings.ResolutionScale};
-            g_previousSceneViewerScaledSize = glm::ivec2{g_previousSceneViewerSize.x * windowSettings.ResolutionScale, g_previousSceneViewerSize.y * windowSettings.ResolutionScale};
+            g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * windowSettings.ResolutionScale, g_sceneViewerSize.y * windowSettings.ResolutionScale};
 
             if (g_isEditor) {
-                scaledFramebufferSize = g_previousSceneViewerScaledSize;
+                scaledFramebufferSize = g_sceneViewerScaledSize;
             } else {
                 scaledFramebufferSize = g_windowFramebufferScaledSize;
             }
@@ -4196,11 +4213,13 @@ auto main(
             DeleteRendererFramebuffers();
             CreateRendererFramebuffers(scaledFramebufferSize);
 
+/*
             if (g_isEditor) {
-                glViewport(0, 0, g_previousSceneViewerSize.x, g_previousSceneViewerSize.y);
+                glViewport(0, 0, g_sceneViewerSize.x, g_sceneViewerSize.y);
             } else {
                 glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
             }
+*/
 
             g_windowFramebufferResized = false;
             g_sceneViewerResized = false;
@@ -4351,8 +4370,8 @@ auto main(
 
         ImGui::Separator();
 
-        ImGui::Text(std::format("sceneViewerSize             {} {}", g_previousSceneViewerSize.x, g_previousSceneViewerSize.y).data());
-        ImGui::Text(std::format("sceneViewerScaledSize       {} {}", g_previousSceneViewerScaledSize.x, g_previousSceneViewerScaledSize.y).data());
+        ImGui::Text(std::format("sceneViewerSize             {} {}", g_sceneViewerSize.x, g_sceneViewerSize.y).data());
+        ImGui::Text(std::format("sceneViewerScaledSize       {} {}", g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y).data());
         ImGui::Text(std::format("sceneViewerResized          {}", g_sceneViewerResized).data());
 
         ImGui::Separator();
@@ -4399,8 +4418,8 @@ auto main(
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             if (ImGui::Begin("Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
-                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) && currentSceneWindowSize.x != g_previousSceneViewerSize.x || currentSceneWindowSize.y != g_previousSceneViewerSize.y) {
-                    g_previousSceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
+                if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
+                    g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                     g_sceneViewerResized = true;
                 }
 
