@@ -3983,12 +3983,14 @@ auto main(
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
         .RasterizerState = {
-            .FillMode = TFillMode::Wireframe,
+            .FillMode = TFillMode::Solid,
             .CullMode = TCullMode::Back,
+            .FaceWindingOrder = TFaceWindingOrder::CounterClockwise,
         },
         .OutputMergerState = {
             .DepthState = {
                 .IsDepthTestEnabled = true,
+                .IsDepthWriteEnabled = false,
                 .DepthFunction = TDepthFunction::Equal,
             }
         }
