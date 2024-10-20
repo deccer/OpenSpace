@@ -650,13 +650,6 @@ struct TFramebufferAttachmentClearDepthStencil {
     int32_t Stencil = {};
 };
 
-struct TFramebufferAttachmendDescriptor {
-    std::string_view Label;
-    TFormat Format;
-    TExtent2D Extent;
-    TFramebufferAttachmentLoadOperation LoadOperation;
-};
-
 struct TFramebufferColorAttachmentDescriptor {
     std::string_view Label;
     TFormat Format;
