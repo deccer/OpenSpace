@@ -4192,10 +4192,6 @@ auto main(
 
             PROFILER_ZONESCOPEDN("Resized");
 
-            if (g_isEditor) {
-                //g_sceneViewerSize = glm::ivec2(800, 600);
-            }
-
             g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * windowSettings.ResolutionScale, g_windowFramebufferSize.y * windowSettings.ResolutionScale};
             g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * windowSettings.ResolutionScale, g_sceneViewerSize.y * windowSettings.ResolutionScale};
 
@@ -4207,14 +4203,6 @@ auto main(
 
             DeleteRendererFramebuffers();
             CreateRendererFramebuffers(scaledFramebufferSize);
-
-/*
-            if (g_isEditor) {
-                glViewport(0, 0, g_sceneViewerSize.x, g_sceneViewerSize.y);
-            } else {
-                glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
-            }
-*/
 
             g_windowFramebufferResized = false;
             g_sceneViewerResized = false;
