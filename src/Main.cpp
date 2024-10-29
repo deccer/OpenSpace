@@ -56,6 +56,9 @@
 #define PROFILER_ZONESCOPEDN(x)
 #endif
 
+#include "IconsMaterialDesign.h"
+#include "IconsFontAwesome6.h"
+
 // - Core Types ---------------------------------------------------------------
 
 // Stolen from Jaker who stole it from https://github.com/cdgiessen/vk-module/blob/076baa98cba35cd93a6ab56c3fd1b1ea2313f806/codegen_text.py#L53
@@ -3903,7 +3906,7 @@ auto main(
     }
 
 #ifdef USE_PROFILER
-    TracyGpuContext;
+    TracyGpuContext
 #endif
 
     g_imguiContext = ImGui::CreateContext();
@@ -3911,6 +3914,107 @@ auto main(
     io.ConfigFlags |= ImGuiConfigFlags_IsSRGB; // this little shit doesn't do anything
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    constexpr auto fontSize = 18.0f;
+
+    io.Fonts->AddFontFromFileTTF("data/fonts/HurmitNerdFont-Regular.otf", fontSize);
+    {
+        constexpr float iconFontSize = fontSize * 4.0f / 5.0f;
+        static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+        ImFontConfig icons_config;
+        icons_config.MergeMode = true;
+        icons_config.PixelSnapH = true;
+        icons_config.GlyphMinAdvanceX = iconFontSize;
+        icons_config.GlyphOffset.y = 0; // Hack to realign the icons
+        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_FAR, iconFontSize, &icons_config, icons_ranges);
+    }
+    {
+        constexpr float iconFontSize = fontSize;
+        static const ImWchar icons_ranges[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
+        ImFontConfig icons_config;
+        icons_config.MergeMode = true;
+        icons_config.PixelSnapH = true;
+        icons_config.GlyphMinAdvanceX = iconFontSize;
+        icons_config.GlyphOffset.y = 4; // Hack to realign the icons
+        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_MD, iconFontSize, &icons_config, icons_ranges);
+    }
+
+    auto& imguiStyle = ImGui::GetStyle();
+    imguiStyle.WindowMenuButtonPosition = ImGuiDir_None;
+    imguiStyle.DisabledAlpha = 0.3f;
+    imguiStyle.PopupRounding = 0;
+    imguiStyle.WindowPadding = ImVec2(4, 4);
+    imguiStyle.FramePadding = ImVec2(6, 4);
+    imguiStyle.ItemSpacing = ImVec2(6, 2);
+    imguiStyle.ScrollbarSize = 18;
+    imguiStyle.WindowBorderSize = 1;
+    imguiStyle.ChildBorderSize = 1;
+    imguiStyle.PopupBorderSize = 1;
+    imguiStyle.FrameBorderSize = 1;
+    imguiStyle.WindowRounding = 0;
+    imguiStyle.ChildRounding = 0;
+    imguiStyle.FrameRounding = 0;
+    imguiStyle.ScrollbarRounding = 0;
+    imguiStyle.GrabRounding = 0;
+    imguiStyle.AntiAliasedFill = true;
+    imguiStyle.AntiAliasedLines = true;
+
+    auto* colors = imguiStyle.Colors;
+    colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+    colors[ImGuiCol_WindowBg] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+    colors[ImGuiCol_ChildBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_PopupBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_Border] = ImVec4(0.12f, 0.12f, 0.12f, 0.71f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_FrameBg] = ImVec4(0.42f, 0.42f, 0.42f, 0.54f);
+    colors[ImGuiCol_FrameBgHovered] = ImVec4(0.42f, 0.42f, 0.42f, 0.40f);
+    colors[ImGuiCol_FrameBgActive] = ImVec4(0.36f, 0.16f, 0.96f, 1.00f);
+    colors[ImGuiCol_TitleBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_TitleBgActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.17f, 0.17f, 0.17f, 0.90f);
+    colors[ImGuiCol_MenuBarBg] = ImVec4(0.12f, 0.12f, 0.12f, 0.90f);
+    colors[ImGuiCol_ScrollbarBg] = ImVec4(0.24f, 0.24f, 0.24f, 0.53f);
+    colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.52f, 0.52f, 0.52f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.76f, 0.76f, 0.76f, 1.00f);
+    colors[ImGuiCol_CheckMark] = ImVec4(1.00f, 0.42f, 1.00f, 1.00f);
+    colors[ImGuiCol_SliderGrab] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive] = ImVec4(0.44f, 0.44f, 0.44f, 1.00f);
+    colors[ImGuiCol_Button] = ImVec4(0.17f, 0.17f, 0.17f, 0.35f);
+    colors[ImGuiCol_ButtonHovered] = ImVec4(0.32f, 0.32f, 0.32f, 0.59f);
+    colors[ImGuiCol_ButtonActive] = ImVec4(0.36f, 0.16f, 0.96f, 1.00f);
+    colors[ImGuiCol_Header] = ImVec4(0.12f, 0.12f, 0.12f, 0.00f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+    colors[ImGuiCol_HeaderActive] = ImVec4(0.36f, 0.36f, 0.36f, 0.77f);
+    colors[ImGuiCol_Separator] = ImVec4(0.47f, 0.47f, 0.47f, 1.00f);
+    colors[ImGuiCol_SeparatorHovered] = ImVec4(0.70f, 0.67f, 0.60f, 0.29f);
+    colors[ImGuiCol_SeparatorActive] = ImVec4(0.36f, 0.16f, 0.96f, 1.00f);
+    colors[ImGuiCol_ResizeGrip] = ImVec4(0.46f, 0.24f, 1.00f, 0.25f);
+    colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.69f, 0.30f, 1.00f, 0.67f);
+    colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 0.00f, 0.96f, 1.00f);
+    colors[ImGuiCol_Tab] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_TabHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_TabActive] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+    colors[ImGuiCol_TabUnfocused] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_DockingPreview] = ImVec4(0.85f, 0.85f, 0.85f, 0.28f);
+    colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
+    colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+    colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+    colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
+    colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+    colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_TextSelectedBg] = ImVec4(0.73f, 0.73f, 0.73f, 0.35f);
+    colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+    colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+    colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
 
     if (!ImGui_ImplGlfw_InitForOpenGL(g_window, true)) {
         spdlog::error("ImGui: Unable to initialize the GLFW backend");
@@ -4347,9 +4451,16 @@ auto main(
             ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
         }
 
+        if (ImGui::SliderFloat("Resolution Scale", &windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
+
+            g_sceneViewerResized = g_isEditor;
+            g_windowFramebufferResized = !g_isEditor;
+        }
+
         ImGui::Text(std::format("windowFramebufferSize       {} {}", g_windowFramebufferSize.x, g_windowFramebufferSize.y).data());
         ImGui::Text(std::format("windowFramebufferScaledSize {} {}", g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y).data());
         ImGui::Text(std::format("windowFramebufferResized    {}", g_windowFramebufferResized).data());
+
 
         ImGui::Separator();
 
@@ -4363,7 +4474,7 @@ auto main(
 
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
-            ImGui::SetNextWindowSize({168, 168});
+            ImGui::SetNextWindowSize({168, 192});
             auto windowBackgroundColor = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
             windowBackgroundColor.w = 0.4f;
             ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBackgroundColor);
@@ -4374,7 +4485,7 @@ auto main(
 
                 ImGui::Text("afps: %.0f rad/s", glm::two_pi<float>() * framesPerSecond);
                 ImGui::Text("dfps: %.0f °/s", glm::degrees(glm::two_pi<float>() * framesPerSecond));
-                ImGui::Text("Δfps: %.0f", averageFramesPerSecond);
+                ImGui::Text("mfps: %.0f", averageFramesPerSecond);
                 ImGui::Text("rfps: %.0f", framesPerSecond);
                 ImGui::Text("rpms: %.0f", framesPerSecond * 60.0f);
                 ImGui::Text("  ft: %.2f ms", deltaTimeInSeconds * 1000.0f);
@@ -4399,7 +4510,7 @@ auto main(
 
             // Scene Viewer
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            if (ImGui::Begin("Scene")) {
+            if (ImGui::Begin(ICON_MD_DIAMOND "Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
                 if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                     g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
