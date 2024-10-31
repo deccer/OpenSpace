@@ -4384,64 +4384,68 @@ auto main(
         }
 
         {
+            PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
             PushDebugGroup("Depth PrePass");
-            g_depthPrePassGraphicsPipeline.Bind();
             BindFramebuffer(g_depthPrePassFramebuffer);
+            {
+                g_depthPrePassGraphicsPipeline.Bind();
+                g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-            g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
+                const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentTransform>();
+                renderablesView.each([](
+                    const auto& meshComponent,
+                    const auto& transformComponent) {
 
-            const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentTransform>();
-            renderablesView.each([](
-                const auto& meshComponent,
-                const auto& transformComponent) {
+                    PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
-                PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
+                    auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+                    g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+                    g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
 
-                g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
-
-                g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
-            });
-
+                    g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+                });
+            }
             PopDebugGroup();
         }
         {
+            PROFILER_ZONESCOPEDN("Draw Geometry All");
             PushDebugGroup("Geometry");
-            g_geometryGraphicsPipeline.Bind();
             BindFramebuffer(g_geometryFramebuffer);
+            {
+                g_geometryGraphicsPipeline.Bind();
+                g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
 
-            g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
+                const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
+                renderablesView.each([](
+                    const auto& meshComponent,
+                    const auto& materialComponent,
+                    const auto& transformComponent) {
 
-            const auto& renderablesView = g_gameRegistry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
-            renderablesView.each([](
-                const auto& meshComponent,
-                const auto& materialComponent,
-                const auto& transformComponent) {
+                    PROFILER_ZONESCOPEDN("Draw Geometry");
 
-                PROFILER_ZONESCOPEDN("Draw Geometry");
+                    auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
+                    auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
-                auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+                    g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+                    g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
+                    g_geometryGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
 
-                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-                g_geometryGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
+                    g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId,
+                                                                     cpuMaterial.BaseColorTextureSamplerId);
+                    g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
 
-                g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
-                g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
-
-                g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
-            });
+                    g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+                });
+            }
             PopDebugGroup();
         }
         {
             PROFILER_ZONESCOPEDN("Draw ResolveGeometry");
             PushDebugGroup("ResolveGeometry");
-            g_resolveGeometryGraphicsPipeline.Bind();
             BindFramebuffer(g_resolveGeometryFramebuffer);
             {
+                g_resolveGeometryGraphicsPipeline.Bind();
                 //auto& samplerId = g_samplers[size_t(g_fullscreenSamplerNearestClampToEdge.Id)]
                 g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
                 g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
@@ -4467,7 +4471,7 @@ auto main(
             g_debugLinesGraphicsPipeline.BindBufferAsVertexBuffer(g_debugLinesVertexBuffer, 0, 0, sizeof(TGpuDebugLine) / 2);
             g_debugLinesGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
             g_debugLinesGraphicsPipeline.DrawArrays(0, g_debugLines.size() * 2);
-            
+
             glEnable(GL_CULL_FACE);
             PopDebugGroup();
         }
@@ -4554,7 +4558,7 @@ auto main(
 
             // Scene Viewer
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            if (ImGui::Begin(ICON_MD_DIAMOND "Scene")) {
+            if (ImGui::Begin(ICON_FA_WORM "Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
                 if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                     g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
@@ -4576,14 +4580,15 @@ auto main(
         }        
         {
             PROFILER_ZONESCOPEDN("Draw ImGUI");
-
             ImGui::Render();
             auto* imGuiDrawData = ImGui::GetDrawData();
             if (imGuiDrawData != nullptr) {
+                PushDebugGroup("UI");
                 glDisable(GL_FRAMEBUFFER_SRGB);
                 isSrgbDisabled = true;
                 glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
                 ImGui_ImplOpenGL3_RenderDrawData(imGuiDrawData);
+                PopDebugGroup();
             }
         }
         {
@@ -4609,6 +4614,7 @@ auto main(
 
     DeleteBuffer(globalLightsBuffer);
     DeleteBuffer(globalUniformsBuffer);
+    DeleteBuffer(objectsBuffer);
 
     DeleteRendererFramebuffers();
 
