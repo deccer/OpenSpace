@@ -2161,7 +2161,7 @@ auto CreateGraphicsProgram(
     glCompileShader(vertexShader);
     int32_t status = 0;
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
+    if (status == GL_FALSE) {
 
         int32_t infoLength = 512;
         glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLength);
@@ -2177,7 +2177,7 @@ auto CreateGraphicsProgram(
     glShaderSource(fragmentShader, 1, &fragmentShaderSourcePtr, nullptr);
     glCompileShader(fragmentShader);
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
+    if (status == GL_FALSE) {
 
         int32_t infoLength = 512;
         glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLength);
@@ -2193,20 +2193,22 @@ auto CreateGraphicsProgram(
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE) {
-
-        int32_t infoLength = 512;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLength);
-        auto infoLog = std::string(infoLength + 1, '\0');
-        glGetProgramInfoLog(program, infoLength, nullptr, infoLog.data());
-
-        return std::unexpected(std::format("Graphics program {} has linking errors\n{}", label, infoLog));
-    }
 
     glDetachShader(program, vertexShader);
     glDetachShader(program, fragmentShader);
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+
+    if (status == GL_FALSE) {
+
+        int32_t infoLength = 512;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLength);
+        auto infoLog = std::string(infoLength + 1, '\0');
+        glGetProgramInfoLog(program, infoLength, nullptr, infoLog.data());
+        glDeleteProgram(program);
+
+        return std::unexpected(std::format("Graphics program {} has linking errors\n{}", label, infoLog));
+    }
 
     return program;
 }
@@ -2229,7 +2231,7 @@ auto CreateComputeProgram(
     glShaderSource(computeShader, 1, &computeShaderSourcePtr, nullptr);
     glCompileShader(computeShader);
     glGetShaderiv(computeShader, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
+    if (status == GL_FALSE) {
 
         int32_t infoLength = 512;
         glGetShaderiv(computeShader, GL_INFO_LOG_LENGTH, &infoLength);
@@ -2244,7 +2246,11 @@ auto CreateComputeProgram(
     glAttachShader(program, computeShader);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE) {
+
+    glDetachShader(program, computeShader);
+    glDeleteShader(computeShader);
+
+    if (status == GL_FALSE) {
 
         int32_t infoLength = 512;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLength);
@@ -2253,9 +2259,6 @@ auto CreateComputeProgram(
 
         return std::unexpected(std::format("Compute program {} has linking errors\n{}", label, infoLog));
     }
-
-    glDetachShader(program, computeShader);
-    glDeleteShader(computeShader);
 
     return program;
 }
