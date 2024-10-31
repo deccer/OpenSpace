@@ -2085,6 +2085,7 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
         if (colorAttachmentValue.has_value()) {
             auto& colorAttachment = *colorAttachmentValue;
             glViewportIndexedf(colorAttachmentIndex, 0, 0, colorAttachment.Texture.Extent.Width, colorAttachment.Texture.Extent.Height);
+            glColorMaski(colorAttachmentIndex, true, true, true, true);
             if (colorAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
                 auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
                 switch (baseTypeClass) {
@@ -2113,6 +2114,8 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
             glViewport(0, 0, depthStencilAttachment.Texture.Extent.Width, depthStencilAttachment.Texture.Extent.Height);
         }
         if (depthStencilAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
+            glDepthMask(GL_TRUE);
+            glStencilMask(GL_TRUE);
             glClearNamedFramebufferfi(framebuffer.Id, GL_DEPTH_STENCIL, 0, depthStencilAttachment.ClearDepthStencil.Depth, depthStencilAttachment.ClearDepthStencil.Stencil);
         }
     }
@@ -2453,12 +2456,13 @@ auto TGraphicsPipeline::Bind() -> void {
         glDisable(GL_DEPTH_TEST);
     }
 
+    /*
     glDepthMask(IsDepthWriteEnabled ? GL_TRUE : GL_FALSE);
-
     glColorMask((ColorMask & TColorMaskBits::R) == TColorMaskBits::R,
                 (ColorMask & TColorMaskBits::G) == TColorMaskBits::G,
                 (ColorMask & TColorMaskBits::B) == TColorMaskBits::B,
                 (ColorMask & TColorMaskBits::A) == TColorMaskBits::A);
+    */
 }
 
 auto TGraphicsPipeline::BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void {
