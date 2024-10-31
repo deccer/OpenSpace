@@ -3301,6 +3301,9 @@ uint32_t g_debugInputLayout = 0;
 uint32_t g_debugLinesVertexBuffer = 0;
 TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 
+TFramebuffer g_fxaaFramebuffer = {};
+TGraphicsPipeline g_fxaaGraphicsPipeline = {};
+
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
 
@@ -3632,6 +3635,8 @@ glm::ivec2 g_sceneViewerSize = {};
 glm::ivec2 g_sceneViewerScaledSize = {};
 bool g_sceneViewerResized = false;
 
+bool g_isFxaaEnabled = false;
+
 // - Implementation -----------------------------------------------------------
 
 auto OnWindowKey(
@@ -3761,6 +3766,7 @@ auto DeleteRendererFramebuffers() -> void {
     DeleteFramebuffer(g_depthPrePassFramebuffer);
     DeleteFramebuffer(g_geometryFramebuffer);
     DeleteFramebuffer(g_resolveGeometryFramebuffer);
+    DeleteFramebuffer(g_fxaaFramebuffer);
 }
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
@@ -3812,6 +3818,19 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
         },
+    });
+
+    g_fxaaFramebuffer = CreateFramebuffer({
+        .Label = "PostFX-FXAA",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "PostFX-FXAA-Buffer",
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f }
+            }
+        }
     });
 }
 
@@ -4174,6 +4193,26 @@ auto main(
     }
     g_debugLinesGraphicsPipeline = *debugLinesGraphicsPipelineResult;
 
+    auto fxaaGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "FXAA",
+        .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/FST.fs.glsl",
+        .InputAssembly = {
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+        .RasterizerState = {
+            .FillMode = TFillMode::Solid,
+            .CullMode = TCullMode::Back,
+            .FaceWindingOrder = TFaceWindingOrder::CounterClockwise,
+        },
+    });
+    if (!fxaaGraphicsPipelineResult) {
+        spdlog::error(fxaaGraphicsPipelineResult.error());
+        return 0;
+    }
+
+    g_fxaaGraphicsPipeline = *fxaaGraphicsPipelineResult;
+
     g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     auto cameraPosition = glm::vec3{0.0f, 0.0f, 20.0f};
@@ -4433,17 +4472,33 @@ auto main(
             PopDebugGroup();
         }
 
+        if (g_isFxaaEnabled) {
+            PROFILER_ZONESCOPEDN("PostFX FXAA");
+            PushDebugGroup("PostFX FXAA");
+            BindFramebuffer(g_fxaaFramebuffer);
+            {
+                g_fxaaGraphicsPipeline.Bind();
+                g_fxaaGraphicsPipeline.BindTexture(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id);
+                g_fxaaGraphicsPipeline.SetUniform(1, 1);
+                g_fxaaGraphicsPipeline.DrawArrays(0, 3);
+            }
+            PopDebugGroup();
+        }
+
         /////////////// UI
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if (g_isEditor) {
             glClear(GL_COLOR_BUFFER_BIT);
         } else {
-            glBlitNamedFramebuffer(g_resolveGeometryFramebuffer.Id, 0,
-                                   0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
-                                   0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
-                                   GL_COLOR_BUFFER_BIT,
-                                   GL_NEAREST);
+            glBlitNamedFramebuffer(g_isFxaaEnabled
+                ? g_fxaaFramebuffer.Id
+                : g_resolveGeometryFramebuffer.Id,
+                0,
+                0, 0, scaledFramebufferSize.x, scaledFramebufferSize.y,
+                0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
+                GL_COLOR_BUFFER_BIT,
+                GL_NEAREST);
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -4459,21 +4514,7 @@ auto main(
             g_sceneViewerResized = g_isEditor;
             g_windowFramebufferResized = !g_isEditor;
         }
-
-        ImGui::Text(std::format("windowFramebufferSize       {} {}", g_windowFramebufferSize.x, g_windowFramebufferSize.y).data());
-        ImGui::Text(std::format("windowFramebufferScaledSize {} {}", g_windowFramebufferScaledSize.x, g_windowFramebufferScaledSize.y).data());
-        ImGui::Text(std::format("windowFramebufferResized    {}", g_windowFramebufferResized).data());
-
-
-        ImGui::Separator();
-
-        ImGui::Text(std::format("sceneViewerSize             {} {}", g_sceneViewerSize.x, g_sceneViewerSize.y).data());
-        ImGui::Text(std::format("sceneViewerScaledSize       {} {}", g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y).data());
-        ImGui::Text(std::format("sceneViewerResized          {}", g_sceneViewerResized).data());
-
-        ImGui::Separator();
-        ImGui::Text(std::format("sceneViewerSize             {} {}", scaledFramebufferSize.x, scaledFramebufferSize.y).data());
-        ImGui::Text(std::format("sceneViewerSizeAspectRatio  {}", (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y).data());
+        ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
 
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
@@ -4577,6 +4618,7 @@ auto main(
     DeletePipeline(g_depthPrePassGraphicsPipeline);
     DeletePipeline(g_geometryGraphicsPipeline);
     DeletePipeline(g_resolveGeometryGraphicsPipeline);
+    DeletePipeline(g_fxaaGraphicsPipeline);
 
     DeleteTextures();
 
