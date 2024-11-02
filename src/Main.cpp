@@ -25,9 +25,6 @@
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL
 #include <stb_include.h>
@@ -49,12 +46,10 @@
 
 #include <entt/entt.hpp>
 
-#ifdef USE_PROFILER
-#include <tracy/TracyOpenGL.hpp>
-#define PROFILER_ZONESCOPEDN(x) ZoneScopedN(x)
-#else
-#define PROFILER_ZONESCOPEDN(x)
-#endif
+#include "Profiler.hpp"
+#include "Io.hpp"
+#include "Images.hpp"
+#include "Helpers.hpp"
 
 #include "IconsMaterialDesign.h"
 #include "IconsFontAwesome6.h"
@@ -1739,46 +1734,6 @@ auto FormatToFormatClass(TFormat format) -> TFormatClass
 
 /////////////////////////////////////////////////////////////
 
-auto FreeImage(void* pixels) -> void {
-    if (pixels != nullptr) {
-        stbi_image_free(pixels);
-    }
-}
-
-auto LoadImageFromMemory(
-    std::byte* encodedData,
-    size_t encodedDataSize,
-    int32_t* width,
-    int32_t* height,
-    int32_t* components) -> unsigned char* {
-
-    return stbi_load_from_memory(
-        reinterpret_cast<const unsigned char*>(encodedData),
-        static_cast<int32_t>(encodedDataSize),
-        width,
-        height,
-        components,
-        4);
-}
-
-auto LoadImageFromFile(
-    const std::filesystem::path& filePath,
-    int32_t* width,
-    int32_t* height,
-    int32_t* components) -> unsigned char* {
-
-    PROFILER_ZONESCOPEDN("LoadImageFromFile");
-
-    auto imageFile = fopen(filePath.c_str(), "rb");
-    if (imageFile != nullptr) {
-        auto* pixels = stbi_load_from_file(imageFile, width, height, components, 4);
-        fclose(imageFile);
-        return pixels;
-    } else {
-        return nullptr;
-    }
-}
-
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
 
     PROFILER_ZONESCOPEDN("CreateTexture");
@@ -2618,13 +2573,7 @@ struct TCamera {
 
 // - Io -----------------------------------------------------------------------
 
-auto ReadBinaryFromFile(const std::filesystem::path& filePath) -> std::pair<std::unique_ptr<std::byte[]>, std::size_t> {
-    std::size_t fileSize = std::filesystem::file_size(filePath);
-    auto memory = std::make_unique<std::byte[]>(fileSize);
-    std::ifstream file{filePath, std::ifstream::binary};
-    std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), reinterpret_cast<char*>(memory.get()));
-    return {std::move(memory), fileSize};
-}
+
 
 // - Assets -------------------------------------------------------------------
 
@@ -2702,17 +2651,6 @@ std::unordered_map<std::string, TAssetTexture> g_assetTextures = {};
 std::unordered_map<std::string, TAssetMaterial> g_assetMaterials = {};
 std::unordered_map<std::string, TAssetMesh> g_assetMeshes = {};
 std::unordered_map<std::string, std::vector<std::string>> g_assetModelMeshes = {};
-
-auto GetSafeResourceName(
-    const char* const baseName,
-    const char* const text,
-    const char* const resourceType,
-    const std::size_t resourceIndex) -> std::string {
-
-    return (text == nullptr) || strlen(text) == 0
-        ? std::format("{}-{}-{}", baseName, resourceType, resourceIndex)
-        : std::format("{}-{}", baseName, text);
-}
 
 auto AddAssetMesh(
     const std::string& assetMeshName,
