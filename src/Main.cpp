@@ -4560,9 +4560,11 @@ auto main(
                 ImGui::EndMainMenuBar();
             }
 
-            // Scene Viewer
+            /*
+             * UI - Scene Viewer
+             */
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            if (ImGui::Begin(ICON_FA_WORM "Scene")) {
+            if (ImGui::Begin(ICON_MD_GRID_VIEW "Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
                 if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                     g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
@@ -4580,6 +4582,30 @@ auto main(
                 ImGui::EndChild();
             }
             ImGui::PopStyleVar();
+            ImGui::End();
+
+            /*
+             * UI - Assets Viewer
+             */
+            if (ImGui::Begin(ICON_MD_DATA_OBJECT "Assets")) {
+
+            }
+            ImGui::End();
+
+            /*
+             * UI - Scene Hierarchy
+             */
+            if (ImGui::Begin(ICON_MD_APP_REGISTRATION "Hierarchy")) {
+
+            }
+            ImGui::End();
+
+            /*
+             * UI - Properties
+             */
+            if (ImGui::Begin(ICON_FA_TABLE_LIST "Properties")) {
+
+            }
             ImGui::End();
         }        
         {
