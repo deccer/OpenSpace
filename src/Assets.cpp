@@ -57,7 +57,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
 
     asset.Images.resize(fgAsset.images.size());
 
-    const auto imageIndices = std::ranges::iota_view{(size_t)0, fgAsset.images.size()};
+    const auto imageIndices = std::ranges::iota_view{0uz, fgAsset.images.size()};
     std::for_each(
         poolstl::execution::par,
         imageIndices.begin(),
@@ -99,7 +99,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
             return TAssetRawImageData{};
         }();
 
-        auto& assetImage = asset.Images.emplace_back();
+        auto& assetImage = asset.Images[imageIndex];
         assetImage.ImageDataType = imageData.ImageDataType;
         if (assetImage.ImageDataType == TAssetImageDataType::CompressedKtx) {
 
@@ -111,13 +111,39 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
             int32_t components = 0;
             auto* pixels = LoadImageFromMemory(imageData.EncodedData.get(), imageData.EncodedDataSize, &width, &height, &components);
 
+            assetImage.Name = imageData.Name;
             assetImage.Width = width;
             assetImage.Height = height;
             assetImage.Components = components;
             assetImage.Data.reset(pixels);
         }
     });
+}
 
+auto LoadMaterials(const std::string& modelName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
+
+    auto GetImageIndex = [&](fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+        if (!textureInfo.has_value()) {
+            return std::nullopt;
+        }
+
+        const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
+        return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
+    };
+
+    const auto materialIndices = std::ranges::iota_view{0uz, fgAsset.materials.size()};
+    std::for_each(
+        poolstl::execution::par,
+        materialIndices.begin(),
+        materialIndices.end(),
+        [&](size_t materialIndex) -> void {
+
+        const auto& fgMaterial = fgAsset.materials[materialIndex];
+
+        auto& material = asset.Materials[materialIndex];
+        material.BaseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        material.EmissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+    });
 }
 
 auto LoadAssetFromFile(const std::string& modelName, const std::filesystem::path& filePath) -> std::expected<TAsset, std::string> {
@@ -150,6 +176,7 @@ auto LoadAssetFromFile(const std::string& modelName, const std::filesystem::path
     TAsset asset = {};
 
     LoadImages(modelName, asset, fgAsset, filePath);
+    LoadMaterials(modelName, asset, fgAsset);
 
     return asset;
 }

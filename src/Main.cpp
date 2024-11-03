@@ -11,7 +11,6 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <ranges>
 #include <span>
 #include <stack>
@@ -50,6 +49,7 @@
 #include "Io.hpp"
 #include "Images.hpp"
 #include "Helpers.hpp"
+#include "Assets.hpp"
 
 #include "IconsMaterialDesign.h"
 #include "IconsFontAwesome6.h"
@@ -2571,10 +2571,6 @@ struct TCamera {
     }
 };
 
-// - Io -----------------------------------------------------------------------
-
-
-
 // - Assets -------------------------------------------------------------------
 
 using TAssetMeshId = TId<struct AssetMeshIdMarker>;
@@ -3783,6 +3779,8 @@ auto main(
     PROFILER_ZONESCOPEDN("main");
     auto previousTimeInSeconds = glfwGetTime();
 
+    //auto x = LoadAssetFromFile("IntelSponza", "data/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
+
     TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
         .ResolutionHeight = 1080,
@@ -3978,7 +3976,6 @@ auto main(
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-
 
     if (!ImGui_ImplGlfw_InitForOpenGL(g_window, true)) {
         spdlog::error("ImGui: Unable to initialize the GLFW backend");
@@ -4289,11 +4286,14 @@ auto main(
                 scaledFramebufferSize = g_windowFramebufferScaledSize;
             }
 
-            DeleteRendererFramebuffers();
-            CreateRendererFramebuffers(scaledFramebufferSize);
+            if ((scaledFramebufferSize.x * scaledFramebufferSize.y) > 0.0f) {
+                DeleteRendererFramebuffers();
+                CreateRendererFramebuffers(scaledFramebufferSize);
 
-            g_windowFramebufferResized = false;
-            g_sceneViewerResized = false;
+                g_windowFramebufferResized = false;
+                g_sceneViewerResized = false;
+
+            }
         }
 
         // Update State
@@ -4455,13 +4455,6 @@ auto main(
             ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
         }
 
-        if (ImGui::SliderFloat("Resolution Scale", &windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
-
-            g_sceneViewerResized = g_isEditor;
-            g_windowFramebufferResized = !g_isEditor;
-        }
-        ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
-
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
             ImGui::SetNextWindowSize({168, 192});
@@ -4513,13 +4506,50 @@ auto main(
                 auto imagePosition = ImGui::GetCursorPos();
                 ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(imagePosition);
-                if (ImGui::BeginChild(1, ImVec2{192, -1})) {
-                    if (ImGui::CollapsingHeader("Statistics")) {
-                    }
-                }
-                ImGui::EndChild();
+                //if (ImGui::BeginChild(1, ImVec2{192, -1})) {
+                //    if (ImGui::CollapsingHeader("Statistics")) {
+                //    }
+                //}
+                //ImGui::EndChild();
             }
             ImGui::PopStyleVar();
+            ImGui::End();
+
+            /*
+             * UI - madrigal - Level Objects
+             */
+            /*
+            if (ImGui::Begin(ICON_MD_FILTER_LIST "Level Objects")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_SETTINGS_CELL "Tool Settings")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_SETTINGS "Level Settings")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_TYPE_SPECIMEN "Game Object Types")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_INFO "Game Object Inspector")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_TEXT_SNIPPET "Script Editor")) {
+            }
+            ImGui::End();
+            if (ImGui::Begin(ICON_MD_FORMAT_LIST_BULLETED "Editor Log")) {
+            }
+            ImGui::End();
+            */
+
+            if (ImGui::Begin(ICON_MD_SETTINGS "Settings")) {
+                if (ImGui::SliderFloat("Resolution Scale", &windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
+
+                    g_sceneViewerResized = g_isEditor;
+                    g_windowFramebufferResized = !g_isEditor;
+                }
+                ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
+            }
             ImGui::End();
 
             /*
