@@ -12,19 +12,26 @@
 #include <format>
 #include <ranges>
 
+#include <spdlog/spdlog.h>
+
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
 #include "Profiler.hpp"
+#include "glm/gtc/type_ptr.hpp"
+
+std::unordered_map<std::string, TAsset> g_assets = {};
 
 auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageDataType {
     if (mimeType == fastgltf::MimeType::KTX2) {
         return TAssetImageDataType::CompressedKtx;
-    } else if (mimeType == fastgltf::MimeType::DDS) {
-        return TAssetImageDataType::CompressedDds;
-    } else {
-        return TAssetImageDataType::Uncompressed;
     }
+
+    if (mimeType == fastgltf::MimeType::DDS) {
+        return TAssetImageDataType::CompressedDds;
+    }
+
+    return TAssetImageDataType::Uncompressed;
 }
 
 struct TAssetRawImageData {
@@ -75,8 +82,8 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
                 if (filePathFixed.is_relative()) {
                     filePathFixed = filePath.parent_path() / filePathFixed;
                 }
-                auto fileData = ReadBinaryFromFile(filePathFixed);
-                return CreateAssetRawImageData(fileData.first.get(), fileData.second, filePathUri->mimeType, imageName);
+                auto [data, dataSize] = ReadBinaryFromFile(filePathFixed);
+                return CreateAssetRawImageData(data.get(), dataSize, filePathUri->mimeType, imageName);
             }
             if (const auto* array = std::get_if<fastgltf::sources::Array>(&fgImage.data)) {
                 return CreateAssetRawImageData(array->bytes.data(), array->bytes.size(), array->mimeType, imageName);
@@ -120,20 +127,29 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
     });
 }
 
+auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+    if (!textureInfo.has_value()) {
+        return std::nullopt;
+    }
+
+    const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
+    return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
+};
+
+auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+    if (!textureInfo.has_value()) {
+        return std::nullopt;
+    }
+
+    const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
+    return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
+};
+
 auto LoadMaterials(const std::string& modelName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
-
-    auto GetImageIndex = [&](fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
-        if (!textureInfo.has_value()) {
-            return std::nullopt;
-        }
-
-        const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
-        return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
-    };
 
     const auto materialIndices = std::ranges::iota_view{0uz, fgAsset.materials.size()};
     std::for_each(
-        poolstl::execution::par,
+        poolstl::execution::seq,
         materialIndices.begin(),
         materialIndices.end(),
         [&](size_t materialIndex) -> void {
@@ -141,9 +157,30 @@ auto LoadMaterials(const std::string& modelName, TAsset& asset, fastgltf::Asset&
         const auto& fgMaterial = fgAsset.materials[materialIndex];
 
         auto& material = asset.Materials[materialIndex];
+        //material.Name = std::move(fgMaterial.name);
         material.BaseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        material.NormalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
+        material.ArmTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
         material.EmissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+
+        material.BaseColor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
+        material.Metalness = fgMaterial.pbrData.metallicFactor;
+        material.Roughness = fgMaterial.pbrData.roughnessFactor;
     });
+}
+
+auto AddAssetFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void {
+    auto assetResult = LoadAssetFromFile(assetName, filePath);
+    if (!assetResult) {
+        spdlog::error(assetResult.error());
+        return;
+    }
+
+    g_assets[assetName] = std::move(*assetResult);
+}
+
+auto GetAssets() -> std::unordered_map<std::string, TAsset>& {
+    return g_assets;
 }
 
 auto LoadAssetFromFile(const std::string& modelName, const std::filesystem::path& filePath) -> std::expected<TAsset, std::string> {
@@ -174,6 +211,7 @@ auto LoadAssetFromFile(const std::string& modelName, const std::filesystem::path
     auto& fgAsset = assetResult.get();
 
     TAsset asset = {};
+    asset.Name = modelName;
 
     LoadImages(modelName, asset, fgAsset, filePath);
     LoadMaterials(modelName, asset, fgAsset);

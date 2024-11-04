@@ -3779,7 +3779,16 @@ auto main(
     PROFILER_ZONESCOPEDN("main");
     auto previousTimeInSeconds = glfwGetTime();
 
-    //auto x = LoadAssetFromFile("IntelSponza", "data/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
+    AddAssetFromFile("fform1", "data/basic/fform_1.glb");
+    AddAssetFromFile("fform2", "data/basic/fform_2.glb");
+    AddAssetFromFile("fform3", "data/basic/fform_3.glb");
+    AddAssetFromFile("fform4", "data/basic/fform_4.glb");
+    AddAssetFromFile("fform5", "data/basic/fform_5.glb");
+    AddAssetFromFile("fform6", "data/basic/fform_6.glb");
+    AddAssetFromFile("fform7", "data/basic/fform_7.glb");
+    AddAssetFromFile("fform8", "data/basic/fform_8.glb");
+    AddAssetFromFile("fform9", "data/basic/fform_9.glb");
+    AddAssetFromFile("fform10", "data/basic/fform_10.glb");
 
     TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
@@ -4556,7 +4565,12 @@ auto main(
              * UI - Assets Viewer
              */
             if (ImGui::Begin(ICON_MD_DATA_OBJECT "Assets")) {
+                auto& assets = GetAssets();
+                for (auto& [assetName, asset] : assets) {
+                    if (ImGui::Button(ICON_FA_BOX "Create")) {
 
+                    }
+                }
             }
             ImGui::End();
 
