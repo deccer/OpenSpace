@@ -2776,7 +2776,7 @@ auto GetLocalTransform(const fastgltf::Node& node) -> glm::mat4 {
         // T * R * S
         transform = glm::scale(glm::translate(glm::mat4(1.0f), translation) * rotationMatrix, scale);
     }
-    else if (auto* mat = std::get_if<fastgltf::Node::TransformMatrix>(&node.transform))
+    else if (auto* mat = std::get_if<fastgltf::math::fmat4x4>(&node.transform))
     {
         const auto& m = *mat;
         transform = glm::make_mat4x4(m.data());
@@ -2805,21 +2805,21 @@ auto GetVertices(
     PROFILER_ZONESCOPEDN("GetVertices");
 
     std::vector<glm::vec3> positions;
-    auto& positionAccessor = asset.accessors[primitive.findAttribute("POSITION")->second];
+    auto& positionAccessor = asset.accessors[primitive.findAttribute("POSITION")->accessorIndex];
     positions.resize(positionAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec3>(asset,
                                                   positionAccessor,
                                                   [&](glm::vec3 position, std::size_t index) { positions[index] = position; });
 
     std::vector<glm::vec3> normals;
-    auto& normalAccessor = asset.accessors[primitive.findAttribute("NORMAL")->second];
+    auto& normalAccessor = asset.accessors[primitive.findAttribute("NORMAL")->accessorIndex];
     normals.resize(normalAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec3>(asset,
                                                   normalAccessor,
                                                   [&](glm::vec3 normal, std::size_t index) { normals[index] = normal; });
 
     std::vector<glm::vec4> tangents;
-    auto& tangentAccessor = asset.accessors[primitive.findAttribute("TANGENT")->second];
+    auto& tangentAccessor = asset.accessors[primitive.findAttribute("TANGENT")->accessorIndex];
     tangents.resize(tangentAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec4>(asset,
                                                   tangentAccessor,
@@ -2828,7 +2828,7 @@ auto GetVertices(
     std::vector<glm::vec3> uvs;
     if (primitive.findAttribute("TEXCOORD_0") != primitive.attributes.end())
     {
-        auto& uvAccessor = asset.accessors[primitive.findAttribute("TEXCOORD_0")->second];
+        auto& uvAccessor = asset.accessors[primitive.findAttribute("TEXCOORD_0")->accessorIndex];
         uvs.resize(uvAccessor.count);
         fastgltf::iterateAccessorWithIndex<glm::vec2>(asset,
                                                       uvAccessor,
@@ -2993,28 +2993,44 @@ auto LoadModelFromFile(
 
     PROFILER_ZONESCOPEDN("LoadModelFromFile");
 
-    fastgltf::Parser parser(
+    constexpr auto parserOptions =
+        fastgltf::Extensions::EXT_mesh_gpu_instancing |
         fastgltf::Extensions::KHR_mesh_quantization |
-        fastgltf::Extensions::EXT_mesh_gpu_instancing);
+        fastgltf::Extensions::EXT_meshopt_compression |
+        fastgltf::Extensions::KHR_lights_punctual |
+        fastgltf::Extensions::EXT_texture_webp |
+        fastgltf::Extensions::KHR_texture_transform |
+        fastgltf::Extensions::KHR_texture_basisu |
+        fastgltf::Extensions::MSFT_texture_dds |
+        fastgltf::Extensions::KHR_materials_specular |
+        fastgltf::Extensions::KHR_materials_ior |
+        fastgltf::Extensions::KHR_materials_iridescence |
+        fastgltf::Extensions::KHR_materials_volume |
+        fastgltf::Extensions::KHR_materials_transmission |
+        fastgltf::Extensions::KHR_materials_clearcoat |
+        fastgltf::Extensions::KHR_materials_emissive_strength |
+        fastgltf::Extensions::KHR_materials_sheen |
+        fastgltf::Extensions::KHR_materials_unlit;
+    fastgltf::Parser parser(parserOptions);
+
+    auto dataResult = fastgltf::GltfDataBuffer::FromPath(filePath);
+    if (dataResult.error() != fastgltf::Error::None) {
+        return;
+    }
 
     constexpr auto gltfOptions =
         fastgltf::Options::DontRequireValidAssetMember |
         fastgltf::Options::AllowDouble |
-        fastgltf::Options::LoadGLBBuffers |
         fastgltf::Options::LoadExternalBuffers |
         fastgltf::Options::LoadExternalImages;
-
-    fastgltf::GltfDataBuffer data;
-    data.loadFromFile(filePath);
-
-    auto assetResult = parser.loadGltf(&data, filePath.parent_path(), gltfOptions);
-    if (assetResult.error() != fastgltf::Error::None)
+    const auto parentPath = filePath.parent_path();
+    auto loadResult = parser.loadGltf(dataResult.get(), parentPath, gltfOptions);
+    if (loadResult.error() != fastgltf::Error::None)
     {
-        spdlog::error("fastgltf: Failed to load glTF: {}", fastgltf::getErrorMessage(assetResult.error()));
         return;
     }
 
-    auto& fgAsset = assetResult.get();
+    auto& fgAsset = loadResult.get();
 
     // images
 

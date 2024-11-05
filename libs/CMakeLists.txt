@@ -143,7 +143,7 @@ endif()
 FetchContent_Declare(
     fastgltf
     GIT_REPOSITORY https://github.com/spnda/fastgltf.git
-    GIT_TAG        v0.7.1
+    GIT_TAG        v0.8.0
 )
 
 message("Fetching fastgltf")
