@@ -9,6 +9,7 @@ to handle Vulkan too, let's see.
 Various people help or have helped me in the process. Be it funny comments, actual advise or ideas for the future.
 
 Thank you in alphabetical order :)
+- [anicator](https://anicator.com/)
 - [bayboykiller](https://github.com/BoyBaykiller/IDKEngine)
 - [bjorn](https://github.com/btipling)
 - [darian](https://github.com/Darianopolis)

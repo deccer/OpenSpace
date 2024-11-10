@@ -3,6 +3,10 @@ add_custom_target(CopyData ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAK
 set(USE_PROFILER ON FORCE)
 
 add_executable(HowToScript
+    Io.cpp
+    Images.cpp
+    Helpers.cpp
+    Assets.cpp
     Main.cpp
 )
 add_dependencies(HowToScript CopyData)

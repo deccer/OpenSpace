@@ -11,7 +11,6 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <ranges>
 #include <span>
 #include <stack>
@@ -24,9 +23,6 @@
 
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL
@@ -49,12 +45,11 @@
 
 #include <entt/entt.hpp>
 
-#ifdef USE_PROFILER
-#include <tracy/TracyOpenGL.hpp>
-#define PROFILER_ZONESCOPEDN(x) ZoneScopedN(x)
-#else
-#define PROFILER_ZONESCOPEDN(x)
-#endif
+#include "Profiler.hpp"
+#include "Io.hpp"
+#include "Images.hpp"
+#include "Helpers.hpp"
+#include "Assets.hpp"
 
 #include "IconsMaterialDesign.h"
 #include "IconsFontAwesome6.h"
@@ -1739,46 +1734,6 @@ auto FormatToFormatClass(TFormat format) -> TFormatClass
 
 /////////////////////////////////////////////////////////////
 
-auto FreeImage(void* pixels) -> void {
-    if (pixels != nullptr) {
-        stbi_image_free(pixels);
-    }
-}
-
-auto LoadImageFromMemory(
-    std::byte* encodedData,
-    size_t encodedDataSize,
-    int32_t* width,
-    int32_t* height,
-    int32_t* components) -> unsigned char* {
-
-    return stbi_load_from_memory(
-        reinterpret_cast<const unsigned char*>(encodedData),
-        static_cast<int32_t>(encodedDataSize),
-        width,
-        height,
-        components,
-        4);
-}
-
-auto LoadImageFromFile(
-    const std::filesystem::path& filePath,
-    int32_t* width,
-    int32_t* height,
-    int32_t* components) -> unsigned char* {
-
-    PROFILER_ZONESCOPEDN("LoadImageFromFile");
-
-    auto imageFile = fopen(filePath.c_str(), "rb");
-    if (imageFile != nullptr) {
-        auto* pixels = stbi_load_from_file(imageFile, width, height, components, 4);
-        fclose(imageFile);
-        return pixels;
-    } else {
-        return nullptr;
-    }
-}
-
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
 
     PROFILER_ZONESCOPEDN("CreateTexture");
@@ -2519,6 +2474,7 @@ struct TGpuGlobalUniforms {
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
     glm::vec4 CameraPosition;
+    glm::vec4 CameraDirection;
 };
 
 struct TGpuGlobalLight {
@@ -2616,16 +2572,6 @@ struct TCamera {
     }
 };
 
-// - Io -----------------------------------------------------------------------
-
-auto ReadBinaryFromFile(const std::filesystem::path& filePath) -> std::pair<std::unique_ptr<std::byte[]>, std::size_t> {
-    std::size_t fileSize = std::filesystem::file_size(filePath);
-    auto memory = std::make_unique<std::byte[]>(fileSize);
-    std::ifstream file{filePath, std::ifstream::binary};
-    std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), reinterpret_cast<char*>(memory.get()));
-    return {std::move(memory), fileSize};
-}
-
 // - Assets -------------------------------------------------------------------
 
 using TAssetMeshId = TId<struct AssetMeshIdMarker>;
@@ -2702,17 +2648,6 @@ std::unordered_map<std::string, TAssetTexture> g_assetTextures = {};
 std::unordered_map<std::string, TAssetMaterial> g_assetMaterials = {};
 std::unordered_map<std::string, TAssetMesh> g_assetMeshes = {};
 std::unordered_map<std::string, std::vector<std::string>> g_assetModelMeshes = {};
-
-auto GetSafeResourceName(
-    const char* const baseName,
-    const char* const text,
-    const char* const resourceType,
-    const std::size_t resourceIndex) -> std::string {
-
-    return (text == nullptr) || strlen(text) == 0
-        ? std::format("{}-{}-{}", baseName, resourceType, resourceIndex)
-        : std::format("{}-{}", baseName, text);
-}
 
 auto AddAssetMesh(
     const std::string& assetMeshName,
@@ -2842,7 +2777,7 @@ auto GetLocalTransform(const fastgltf::Node& node) -> glm::mat4 {
         // T * R * S
         transform = glm::scale(glm::translate(glm::mat4(1.0f), translation) * rotationMatrix, scale);
     }
-    else if (auto* mat = std::get_if<fastgltf::Node::TransformMatrix>(&node.transform))
+    else if (auto* mat = std::get_if<fastgltf::math::fmat4x4>(&node.transform))
     {
         const auto& m = *mat;
         transform = glm::make_mat4x4(m.data());
@@ -2871,21 +2806,21 @@ auto GetVertices(
     PROFILER_ZONESCOPEDN("GetVertices");
 
     std::vector<glm::vec3> positions;
-    auto& positionAccessor = asset.accessors[primitive.findAttribute("POSITION")->second];
+    auto& positionAccessor = asset.accessors[primitive.findAttribute("POSITION")->accessorIndex];
     positions.resize(positionAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec3>(asset,
                                                   positionAccessor,
                                                   [&](glm::vec3 position, std::size_t index) { positions[index] = position; });
 
     std::vector<glm::vec3> normals;
-    auto& normalAccessor = asset.accessors[primitive.findAttribute("NORMAL")->second];
+    auto& normalAccessor = asset.accessors[primitive.findAttribute("NORMAL")->accessorIndex];
     normals.resize(normalAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec3>(asset,
                                                   normalAccessor,
                                                   [&](glm::vec3 normal, std::size_t index) { normals[index] = normal; });
 
     std::vector<glm::vec4> tangents;
-    auto& tangentAccessor = asset.accessors[primitive.findAttribute("TANGENT")->second];
+    auto& tangentAccessor = asset.accessors[primitive.findAttribute("TANGENT")->accessorIndex];
     tangents.resize(tangentAccessor.count);
     fastgltf::iterateAccessorWithIndex<glm::vec4>(asset,
                                                   tangentAccessor,
@@ -2894,7 +2829,7 @@ auto GetVertices(
     std::vector<glm::vec3> uvs;
     if (primitive.findAttribute("TEXCOORD_0") != primitive.attributes.end())
     {
-        auto& uvAccessor = asset.accessors[primitive.findAttribute("TEXCOORD_0")->second];
+        auto& uvAccessor = asset.accessors[primitive.findAttribute("TEXCOORD_0")->accessorIndex];
         uvs.resize(uvAccessor.count);
         fastgltf::iterateAccessorWithIndex<glm::vec2>(asset,
                                                       uvAccessor,
@@ -3059,28 +2994,44 @@ auto LoadModelFromFile(
 
     PROFILER_ZONESCOPEDN("LoadModelFromFile");
 
-    fastgltf::Parser parser(
+    constexpr auto parserOptions =
+        fastgltf::Extensions::EXT_mesh_gpu_instancing |
         fastgltf::Extensions::KHR_mesh_quantization |
-        fastgltf::Extensions::EXT_mesh_gpu_instancing);
+        fastgltf::Extensions::EXT_meshopt_compression |
+        fastgltf::Extensions::KHR_lights_punctual |
+        fastgltf::Extensions::EXT_texture_webp |
+        fastgltf::Extensions::KHR_texture_transform |
+        fastgltf::Extensions::KHR_texture_basisu |
+        fastgltf::Extensions::MSFT_texture_dds |
+        fastgltf::Extensions::KHR_materials_specular |
+        fastgltf::Extensions::KHR_materials_ior |
+        fastgltf::Extensions::KHR_materials_iridescence |
+        fastgltf::Extensions::KHR_materials_volume |
+        fastgltf::Extensions::KHR_materials_transmission |
+        fastgltf::Extensions::KHR_materials_clearcoat |
+        fastgltf::Extensions::KHR_materials_emissive_strength |
+        fastgltf::Extensions::KHR_materials_sheen |
+        fastgltf::Extensions::KHR_materials_unlit;
+    fastgltf::Parser parser(parserOptions);
+
+    auto dataResult = fastgltf::GltfDataBuffer::FromPath(filePath);
+    if (dataResult.error() != fastgltf::Error::None) {
+        return;
+    }
 
     constexpr auto gltfOptions =
         fastgltf::Options::DontRequireValidAssetMember |
         fastgltf::Options::AllowDouble |
-        fastgltf::Options::LoadGLBBuffers |
         fastgltf::Options::LoadExternalBuffers |
         fastgltf::Options::LoadExternalImages;
-
-    fastgltf::GltfDataBuffer data;
-    data.loadFromFile(filePath);
-
-    auto assetResult = parser.loadGltf(&data, filePath.parent_path(), gltfOptions);
-    if (assetResult.error() != fastgltf::Error::None)
+    const auto parentPath = filePath.parent_path();
+    auto loadResult = parser.loadGltf(dataResult.get(), parentPath, gltfOptions);
+    if (loadResult.error() != fastgltf::Error::None)
     {
-        spdlog::error("fastgltf: Failed to load glTF: {}", fastgltf::getErrorMessage(assetResult.error()));
         return;
     }
 
-    auto& fgAsset = assetResult.get();
+    auto& fgAsset = loadResult.get();
 
     // images
 
@@ -3310,6 +3261,8 @@ TGraphicsPipeline g_fxaaGraphicsPipeline = {};
 
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
+
+uint32_t g_atmosphereSettingsBuffer = 0;
 
 std::unordered_map<std::string, TGpuMesh> g_gpuMeshes = {};
 std::unordered_map<std::string, TSampler> g_gpuSamplers = {};
@@ -3838,12 +3791,46 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 }
 
+struct TAtmosphereSettings {
+    glm::vec4 SunPositionAndPlanetRadius;
+    glm::vec4 RayOriginAndSunIntensity;
+    glm::vec4 RayleighScatteringCoefficientAndAtmosphereRadius;
+    float MieScatteringCoefficient;
+    float MieScaleHeight;
+    float MiePreferredScatteringDirection;
+    float RayleighScaleHeight;
+};
+
+glm::vec3 g_atmosphereSunPosition = {10000.0f, 6400.0f, 10000.0f};
+float g_atmospherePlanetRadius = 6371.0f;
+glm::vec3 g_atmosphereRayOrigin = {0.0f, 6372.0f, 0.0f};
+float g_atmosphereSunIntensity = 22.0f;
+glm::vec3 g_atmosphereRayleighScatteringCoefficient = {5.5e-6, 13.0e-6, 22.4e-6};
+float g_atmosphereAtmosphereRadius = 6471.0f;
+float g_atmosphereMieScatteringCoefficient = 21e-6;
+float g_atmosphereMieScaleHeight = 1.2e3;
+float g_atmosphereMiePreferredScatteringDirection = 0.758;
+float g_atmosphereRayleighScaleHeight = 8e3;
+
 auto main(
     [[maybe_unused]] int32_t argc,
     [[maybe_unused]] char* argv[]) -> int32_t {
 
     PROFILER_ZONESCOPEDN("main");
     auto previousTimeInSeconds = glfwGetTime();
+
+    /*
+    AddAssetFromFile("fform1", "data/basic/fform_1.glb");
+    AddAssetFromFile("fform2", "data/basic/fform_2.glb");
+    AddAssetFromFile("fform3", "data/basic/fform_3.glb");
+    AddAssetFromFile("fform4", "data/basic/fform_4.glb");
+    AddAssetFromFile("fform5", "data/basic/fform_5.glb");
+    AddAssetFromFile("fform6", "data/basic/fform_6.glb");
+    AddAssetFromFile("fform7", "data/basic/fform_7.glb");
+    AddAssetFromFile("fform8", "data/basic/fform_8.glb");
+    AddAssetFromFile("fform9", "data/basic/fform_9.glb");
+    AddAssetFromFile("fform10", "data/basic/fform_10.glb");
+     */
 
     TWindowSettings windowSettings = {
         .ResolutionWidth = 1920,
@@ -4041,7 +4028,6 @@ auto main(
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
-
     if (!ImGui_ImplGlfw_InitForOpenGL(g_window, true)) {
         spdlog::error("ImGui: Unable to initialize the GLFW backend");
         return 0;
@@ -4133,7 +4119,7 @@ auto main(
 
     auto resolveGeometryGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "ResolveGeometryPipeline",
-        .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
+        .VertexShaderFilePath = "data/shaders/ResolveDeferred.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/ResolveDeferred.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
@@ -4222,10 +4208,13 @@ auto main(
     auto cameraPosition = glm::vec3{0.0f, 0.0f, 20.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
+    auto fieldOfView = glm::radians(70.0f);
+    auto aspectRatio = scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y);
     TGpuGlobalUniforms globalUniforms = {
-        .ProjectionMatrix = glm::infinitePerspective(glm::radians(70.0f), scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y), 0.1f),
+        .ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f),
         .ViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp),
-        .CameraPosition = glm::vec4{cameraPosition, 0.0f}
+        .CameraPosition = glm::vec4{cameraPosition, fieldOfView},
+        .CameraDirection = glm::vec4{cameraDirection, aspectRatio}
     };
     auto globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &globalUniforms, GL_DYNAMIC_STORAGE_BIT);
     auto objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -4299,6 +4288,17 @@ auto main(
     auto accumulatedTimeInSeconds = 0.0;
     auto averageFramesPerSecond = 0.0f;
 
+    auto atmosphereSettings = TAtmosphereSettings{
+        .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
+        .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
+        .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
+        .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
+        .MieScaleHeight = g_atmosphereMieScaleHeight,
+        .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
+        .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
+    };
+    g_atmosphereSettingsBuffer = CreateBuffer("AtmosphereSettings", sizeof(TAtmosphereSettings), &atmosphereSettings, GL_DYNAMIC_STORAGE_BIT);
+
     auto updateInterval = 1.0f;
     while (!glfwWindowShouldClose(g_window)) {
 
@@ -4351,21 +4351,26 @@ auto main(
                 scaledFramebufferSize = g_windowFramebufferScaledSize;
             }
 
-            DeleteRendererFramebuffers();
-            CreateRendererFramebuffers(scaledFramebufferSize);
+            if ((scaledFramebufferSize.x * scaledFramebufferSize.y) > 0.0f) {
+                DeleteRendererFramebuffers();
+                CreateRendererFramebuffers(scaledFramebufferSize);
 
-            g_windowFramebufferResized = false;
-            g_sceneViewerResized = false;
+                g_windowFramebufferResized = false;
+                g_sceneViewerResized = false;
+
+            }
         }
 
         // Update State
         HandleCamera(static_cast<float>(deltaTimeInSeconds));
 
         // Update Per Frame Uniforms
-
-        globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(60.0f), (float)scaledFramebufferSize.x / (float)scaledFramebufferSize.y, 0.1f);
+        auto fieldOfView = glm::radians(70.0f);
+        auto aspectRatio = scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y);
+        globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
         globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
-        globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, 0.0f);
+        globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, fieldOfView);
+        globalUniforms.CameraDirection = glm::vec4(g_mainCamera.GetForwardDirection(), aspectRatio);
         UpdateBuffer(globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &globalUniforms);
 
         //
@@ -4451,9 +4456,14 @@ auto main(
             {
                 g_resolveGeometryGraphicsPipeline.Bind();
                 //auto& samplerId = g_samplers[size_t(g_fullscreenSamplerNearestClampToEdge.Id)]
+                g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(globalUniformsBuffer, 0);
                 g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(globalLightsBuffer, 2);
+                g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_atmosphereSettingsBuffer, 3);
                 g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
                 g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
+                g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
+
+                g_resolveGeometryGraphicsPipeline.SetUniform(0, g_mainCamera.GetForwardDirection());
 
                 g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
             }
@@ -4517,13 +4527,6 @@ auto main(
             ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
         }
 
-        if (ImGui::SliderFloat("Resolution Scale", &windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
-
-            g_sceneViewerResized = g_isEditor;
-            g_windowFramebufferResized = !g_isEditor;
-        }
-        ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
-
         if (!g_isEditor) {
             ImGui::SetNextWindowPos({32, 32});
             ImGui::SetNextWindowSize({168, 192});
@@ -4547,6 +4550,55 @@ auto main(
             ImGui::PopStyleColor();
         }
 
+        if (ImGui::Begin(ICON_MD_SUNNY " Atmosphere")) {
+
+            auto atmosphereModified = false;
+            if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_atmosphereSunPosition), -10000.0f, 10000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Planet Radius", &g_atmospherePlanetRadius, 1.0f, 7000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat3("Ray Origin", glm::value_ptr(g_atmosphereRayOrigin), -10000.0f, 10000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Sun Intensity", &g_atmosphereSunIntensity, 0.1f, 40.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat3("Coefficients", glm::value_ptr(g_atmosphereRayleighScatteringCoefficient), 0.0f, 0.01f, "%.5f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scattering Coeff", &g_atmosphereMieScatteringCoefficient, 0.001f, 0.1f, "%.5f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scale Height", &g_atmosphereMieScaleHeight, 0.01f, 6000.0f, "%.2f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scattering Direction", &g_atmosphereMiePreferredScatteringDirection, -1.0f, 1.0f, "%.001f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Rayleigh Scale Height", &g_atmosphereRayleighScaleHeight, -1000, 1000, "%0.01f")) {
+                atmosphereModified = true;
+            }
+
+            if (atmosphereModified) {
+
+                atmosphereSettings = TAtmosphereSettings{
+                    .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
+                    .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
+                    .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
+                    .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
+                    .MieScaleHeight = g_atmosphereMieScaleHeight,
+                    .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
+                    .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
+                };
+                UpdateBuffer(g_atmosphereSettingsBuffer, 0, sizeof(TAtmosphereSettings), &atmosphereSettings);
+
+                atmosphereModified = false;
+            }
+        }
+        ImGui::End();
+
         if (g_isEditor) {
             if (ImGui::BeginMainMenuBar()) {
                 //ImGui::Image(reinterpret_cast<ImTextureID>(g_iconPackageGreen), ImVec2(16, 16), g_imvec2UnitY, g_imvec2UnitX);
@@ -4560,9 +4612,11 @@ auto main(
                 ImGui::EndMainMenuBar();
             }
 
-            // Scene Viewer
+            /*
+             * UI - Scene Viewer
+             */
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            if (ImGui::Begin(ICON_FA_WORM "Scene")) {
+            if (ImGui::Begin(ICON_MD_GRID_VIEW "Scene")) {
                 auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
                 if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                     g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
@@ -4573,13 +4627,65 @@ auto main(
                 auto imagePosition = ImGui::GetCursorPos();
                 ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(imagePosition);
-                if (ImGui::BeginChild(1, ImVec2{192, -1})) {
-                    if (ImGui::CollapsingHeader("Statistics")) {
-                    }
-                }
-                ImGui::EndChild();
+                //if (ImGui::BeginChild(1, ImVec2{192, -1})) {
+                //    if (ImGui::CollapsingHeader("Statistics")) {
+                //    }
+                //}
+                //ImGui::EndChild();
             }
             ImGui::PopStyleVar();
+            ImGui::End();
+
+            if (ImGui::Begin(ICON_MD_SETTINGS " Settings")) {
+                if (ImGui::SliderFloat("Resolution Scale", &windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
+
+                    g_sceneViewerResized = g_isEditor;
+                    g_windowFramebufferResized = !g_isEditor;
+                }
+                ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
+            }
+            ImGui::End();
+
+
+
+            /*
+             * UI - Assets Viewer
+             */
+            if (ImGui::Begin(ICON_MD_DATA_OBJECT " Assets")) {
+                auto& assets = GetAssets();
+                ImGui::BeginTable("##Assets", 2, ImGuiTableFlags_RowBg);
+                ImGui::TableSetupColumn("Asset");
+                ImGui::TableSetupColumn("X");
+                ImGui::TableNextRow();
+                for (auto& [assetName, asset] : assets) {
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted(assetName.data());
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::PushID(assetName.data());
+                    if (ImGui::Button(ICON_MD_ADD_BOX " Create")) {
+
+                    }
+                    ImGui::PopID();
+                    ImGui::TableNextRow();
+                }
+                ImGui::EndTable();
+            }
+            ImGui::End();
+
+            /*
+             * UI - Scene Hierarchy
+             */
+            if (ImGui::Begin(ICON_MD_APP_REGISTRATION "Hierarchy")) {
+
+            }
+            ImGui::End();
+
+            /*
+             * UI - Properties
+             */
+            if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT "Properties")) {
+
+            }
             ImGui::End();
         }        
         {
