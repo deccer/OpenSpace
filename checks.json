@@ -565,7 +565,7 @@
     "readability": {
       "enabled": true,
       "issues": {
-        "readability-avoid-const-params-in-decls": true,
+        "readability-avoid-const-params-in-decls": false,
         "readability-avoid-unconditional-preprocessor-if": true,
         "readability-braces-around-statements": true,
         "readability-const-return-type": true,
