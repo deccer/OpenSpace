@@ -183,7 +183,7 @@ auto LoadMeshes(const fastgltf::Asset& fgAsset,
     }
 
     auto& sceneMesh = assetScene.Meshes.emplace_back();
-    sceneMesh.MaterialIndex = primitive.materialIndex.value_or(SIZE_MAX);
+    sceneMesh.MaterialIndex = primitive.materialIndex;
 
     auto& indices = fgAsset.accessors[primitive.indicesAccessor.value()];
     sceneMesh.Indices.resize(indices.count);
@@ -193,19 +193,19 @@ auto LoadMeshes(const fastgltf::Asset& fgAsset,
     sceneMesh.Positions.resize(positions.count);
     fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, sceneMesh.Positions.data());
 
-    if (auto normalsAttribute = primitive.findAttribute("NORMAL"); normalsAttribute != primitive.attributes.end()) {
+    if (auto* normalsAttribute = primitive.findAttribute("NORMAL"); normalsAttribute != primitive.attributes.end()) {
         auto& normals = fgAsset.accessors[normalsAttribute->accessorIndex];
         sceneMesh.Normals.resize(normals.count);
         fastgltf::copyFromAccessor<glm::vec3>(fgAsset, normals, sceneMesh.Normals.data());
     }
 
-    if (auto uv0Attribute = primitive.findAttribute("TEXCOORD_0"); uv0Attribute != primitive.attributes.end()) {
+    if (auto* uv0Attribute = primitive.findAttribute("TEXCOORD_0"); uv0Attribute != primitive.attributes.end()) {
         auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
         sceneMesh.Uvs.resize(uv0s.count);
         fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, sceneMesh.Uvs.data());
     }
 
-    if (auto tangentAttribute = primitive.findAttribute("TANGENT"); tangentAttribute != primitive.attributes.end()) {
+    if (auto* tangentAttribute = primitive.findAttribute("TANGENT"); tangentAttribute != primitive.attributes.end()) {
         auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
         sceneMesh.Tangents.resize(tangents.count);
         fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, sceneMesh.Tangents.data());

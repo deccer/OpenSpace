@@ -50,7 +50,7 @@ struct TAssetMeshData {
     std::vector<glm::vec2> Uvs;
     std::vector<glm::vec4> Tangents;
     std::vector<uint32_t> Indices;
-    size_t MaterialIndex;
+    std::optional<size_t> MaterialIndex;
 };
 
 struct TAssetInstanceData {

@@ -4683,7 +4683,7 @@ auto main(
             /*
              * UI - Properties
              */
-            if (ImGui::Begin(ICON_FA_TABLE_LIST "Properties")) {
+            if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT "Properties")) {
 
             }
             ImGui::End();
