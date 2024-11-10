@@ -1,5 +1,6 @@
 #include "Helpers.hpp"
 
+#include <cstring>
 #include <format>
 
 auto GetSafeResourceName(
