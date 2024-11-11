@@ -1,7 +1,6 @@
-#include <mimalloc.h>
+//#include <mimalloc.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -10,7 +9,6 @@
 #include <chrono>
 #include <expected>
 #include <filesystem>
-#include <fstream>
 #include <ranges>
 #include <span>
 #include <stack>
@@ -28,7 +26,6 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
-#include <fastgltf/util.hpp>
 
 #include <debugbreak.h>
 #include <spdlog/spdlog.h>
@@ -413,7 +410,7 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
 
     glm::vec2 encodedNormal = glm::vec2{normal.x, normal.y} * (1.0f / (abs(normal.x) + abs(normal.y) + abs(normal.z)));
     return (normal.z <= 0.0f)
-        ? ((1.0f - glm::abs(glm::vec2{encodedNormal.y, encodedNormal.x})) * SignNotZero(encodedNormal))
+        ? ((1.0f - glm::abs(glm::vec2{encodedNormal.x, encodedNormal.y})) * SignNotZero(encodedNormal)) //TODO(deccer) check if its encNor.y, encNor.x or not
         : encodedNormal;
 }
 
@@ -774,7 +771,7 @@ auto LoadModelFromFile(
 
     auto assetTextures = std::vector<TAssetTextureId>(fgAsset.textures.size());
     const auto assetTextureIndices = std::ranges::iota_view{(size_t)0, fgAsset.textures.size()};
-    for (auto assetTextureIndex : assetTextureIndices) {
+    for (std::weakly_incrementable auto assetTextureIndex : assetTextureIndices) {
 
         auto& fgTexture = fgAsset.textures[assetTextureIndex];
         auto textureName = GetSafeResourceName(modelName.data(), fgTexture.name.data(), "texture", assetTextureIndex);
@@ -789,7 +786,7 @@ auto LoadModelFromFile(
 
     auto assetMaterialIds = std::vector<TAssetMaterialId>(fgAsset.materials.size());
     const auto assetMaterialIndices = std::ranges::iota_view{(size_t)0, fgAsset.materials.size()};
-    for (auto assetMaterialIndex : assetMaterialIndices) {
+    for (std::weakly_incrementable auto assetMaterialIndex : assetMaterialIndices) {
 
         auto& fgMaterial = fgAsset.materials[assetMaterialIndex];
 
@@ -1448,7 +1445,7 @@ auto main(
         .ResolutionScale = 1.0f,
         .WindowStyle = TWindowStyle::Windowed,
         .IsDebug = true,
-        .IsVSyncEnabled = true,
+        .IsVSyncEnabled = false,
     };
 
     if (glfwInit() == GLFW_FALSE) {
@@ -1975,8 +1972,8 @@ auto main(
         HandleCamera(static_cast<float>(deltaTimeInSeconds));
 
         // Update Per Frame Uniforms
-        auto fieldOfView = glm::radians(70.0f);
-        auto aspectRatio = scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y);
+        fieldOfView = glm::radians(70.0f);
+        aspectRatio = scaledFramebufferSize.x / static_cast<float>(scaledFramebufferSize.y);
         globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
         globalUniforms.ViewMatrix = g_mainCamera.GetViewMatrix();
         globalUniforms.CameraPosition = glm::vec4(g_mainCamera.Position, fieldOfView);
@@ -2318,7 +2315,7 @@ auto main(
         }
 
 #ifdef USE_PROFILER
-        TracyGpuCollect;
+        TracyGpuCollect
         FrameMark;
 #endif
 

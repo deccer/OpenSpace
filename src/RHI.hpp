@@ -450,20 +450,20 @@ struct TPipeline {
     uint32_t Id;
 
     virtual auto Bind() -> void;
-    auto BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) -> void;
-    auto BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) -> void;
-    auto BindTexture(int32_t bindingIndex, uint32_t texture) -> void;
-    auto BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) -> void;
-    auto SetUniform(int32_t location, float value) -> void;
-    auto SetUniform(int32_t location, int32_t value) -> void;
-    auto SetUniform(int32_t location, uint32_t value) -> void;
-    auto SetUniform(int32_t location, uint64_t value) -> void;
-    auto SetUniform(int32_t location, const glm::vec2& value) -> void;
-    auto SetUniform(int32_t location, const glm::vec3& value) -> void;
-    auto SetUniform(int32_t location, float value1, float value2, float value3, float value4) -> void;
-    auto SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) -> void;
-    auto SetUniform(int32_t location, const glm::vec4& value) -> void;
-    auto SetUniform(int32_t location, const glm::mat4& value) -> void;
+    auto BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) const -> void;
+    auto BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) const -> void;
+    auto BindTexture(int32_t bindingIndex, uint32_t texture) const -> void;
+    auto BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const -> void;
+    auto SetUniform(int32_t location, float value) const -> void;
+    auto SetUniform(int32_t location, int32_t value) const -> void;
+    auto SetUniform(int32_t location, uint32_t value) const -> void;
+    auto SetUniform(int32_t location, uint64_t value) const -> void;
+    auto SetUniform(int32_t location, const glm::vec2& value) const -> void;
+    auto SetUniform(int32_t location, const glm::vec3& value) const -> void;
+    auto SetUniform(int32_t location, float value1, float value2, float value3, float value4) const -> void;
+    auto SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) const -> void;
+    auto SetUniform(int32_t location, const glm::vec4& value) const -> void;
+    auto SetUniform(int32_t location, const glm::mat4& value) const -> void;
 };
 
 struct TGraphicsPipeline : public TPipeline {
@@ -475,29 +475,29 @@ struct TGraphicsPipeline : public TPipeline {
     auto DrawElementsInstanced(uint32_t indexBuffer, size_t elementCount, size_t instanceCount) -> void;
 
     // Input Assembly
-    std::optional<uint32_t> InputLayout;
-    uint32_t PrimitiveTopology;
-    bool IsPrimitiveRestartEnabled;
+    std::optional<uint32_t> InputLayout = {};
+    uint32_t PrimitiveTopology = {};
+    bool IsPrimitiveRestartEnabled = {};
 
     // Rasterizer Stage
-    TFillMode FillMode;
-    TCullMode CullMode;
-    TFaceWindingOrder FaceWindingOrder;
-    bool IsDepthBiasEnabled;
-    float DepthBiasSlopeFactor;
-    float DepthBiasConstantFactor;
-    bool IsDepthClampEnabled;
-    bool IsScissorEnabled;
-    TClipControl ClipControl;
-    bool IsRasterizerDisabled;
-    float LineWidth;
-    float PointSize;
+    TFillMode FillMode = {};
+    TCullMode CullMode = {};
+    TFaceWindingOrder FaceWindingOrder = {};
+    bool IsDepthBiasEnabled = {};
+    float DepthBiasSlopeFactor = {};
+    float DepthBiasConstantFactor = {};
+    bool IsDepthClampEnabled = {};
+    bool IsScissorEnabled = {};
+    TClipControl ClipControl = {};
+    bool IsRasterizerDisabled = {};
+    float LineWidth = {};
+    float PointSize = {};
 
     // Output Merger State
-    TColorMask ColorMask;
-    bool IsDepthTestEnabled;
-    bool IsDepthWriteEnabled;
-    TDepthFunction DepthFunction;
+    TColorMask ColorMask = {};
+    bool IsDepthTestEnabled = {};
+    bool IsDepthWriteEnabled = {};
+    TDepthFunction DepthFunction = {};
 };
 
 struct TComputePipeline : public TPipeline {

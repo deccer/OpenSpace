@@ -3,6 +3,7 @@
 
 #include <expected>
 #include <filesystem>
+#include <format>
 #include <utility>
 
 #include <glad/gl.h>
@@ -22,67 +23,6 @@ std::unordered_map<TSamplerDescriptor, TSamplerId> g_samplerDescriptors;
 
 uint32_t g_defaultInputLayout = 0;
 uint32_t g_lastIndexBuffer = 0;
-
-auto SetDebugLabel(
-    const uint32_t object,
-    const uint32_t objectType,
-    const std::string_view label) -> void {
-
-    glObjectLabel(objectType, object, static_cast<GLsizei>(label.size()), label.data());
-}
-
-auto PushDebugGroup(const std::string_view label) -> void {
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(label.size()), label.data());
-}
-
-auto PopDebugGroup() -> void {
-    glPopDebugGroup();
-}
-
-
-auto CreateBuffer(
-    std::string_view label,
-    int64_t sizeInBytes,
-    const void* data,
-    uint32_t flags) -> uint32_t {
-
-    uint32_t buffer = 0;
-    glCreateBuffers(1, &buffer);
-    SetDebugLabel(buffer, GL_BUFFER, label);
-    glNamedBufferStorage(buffer, sizeInBytes, data, flags);
-    return buffer;
-}
-
-auto UpdateBuffer(
-    uint32_t buffer,
-    int64_t offsetInBytes,
-    int64_t sizeInBytes,
-    const void* data) -> void {
-
-    glNamedBufferSubData(buffer, offsetInBytes, sizeInBytes, data);
-}
-
-auto DeleteBuffer(uint32_t buffer) -> void {
-
-    glDeleteBuffers(1, &buffer);
-}
-
-auto DeletePipeline(TPipeline& pipeline) -> void {
-
-    glDeleteProgram(pipeline.Id);
-}
-
-auto TPipeline::Bind() -> void {
-    glUseProgram(Id);
-}
-
-auto TPipeline::BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) -> void {
-    glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, buffer);
-}
-
-auto TPipeline::BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) -> void {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer);
-}
 
 ///// Conversions
 
@@ -772,52 +712,113 @@ auto ReadShaderSourceFromFile(const std::filesystem::path& filePath) -> std::exp
     return processedSource.get();
 }
 
-auto TPipeline::BindTexture(int32_t bindingIndex, uint32_t texture) -> void {
+auto SetDebugLabel(
+    const uint32_t object,
+    const uint32_t objectType,
+    const std::string_view label) -> void {
+
+    glObjectLabel(objectType, object, static_cast<GLsizei>(label.size()), label.data());
+}
+
+auto PushDebugGroup(const std::string_view label) -> void {
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(label.size()), label.data());
+}
+
+auto PopDebugGroup() -> void {
+    glPopDebugGroup();
+}
+
+
+auto CreateBuffer(
+    std::string_view label,
+    int64_t sizeInBytes,
+    const void* data,
+    uint32_t flags) -> uint32_t {
+
+    uint32_t buffer = 0;
+    glCreateBuffers(1, &buffer);
+    SetDebugLabel(buffer, GL_BUFFER, label);
+    glNamedBufferStorage(buffer, sizeInBytes, data, flags);
+    return buffer;
+}
+
+auto UpdateBuffer(
+    uint32_t buffer,
+    int64_t offsetInBytes,
+    int64_t sizeInBytes,
+    const void* data) -> void {
+
+    glNamedBufferSubData(buffer, offsetInBytes, sizeInBytes, data);
+}
+
+auto DeleteBuffer(uint32_t buffer) -> void {
+
+    glDeleteBuffers(1, &buffer);
+}
+
+auto DeletePipeline(TPipeline& pipeline) -> void {
+
+    glDeleteProgram(pipeline.Id);
+}
+
+auto TPipeline::Bind() -> void {
+    glUseProgram(Id);
+}
+
+auto TPipeline::BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) const -> void {
+    glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, buffer);
+}
+
+auto TPipeline::BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) const -> void {
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer);
+}
+
+auto TPipeline::BindTexture(int32_t bindingIndex, uint32_t texture) const  -> void {
     glBindTextureUnit(bindingIndex, texture);
 }
 
-auto TPipeline::BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) -> void {
+auto TPipeline::BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const  -> void {
     glBindTextureUnit(bindingIndex, texture);
     glBindSampler(bindingIndex, sampler);
 }
 
-auto TPipeline::SetUniform(int32_t location, float value) -> void {
+auto TPipeline::SetUniform(int32_t location, float value) const -> void {
     glProgramUniform1f(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, int32_t value) -> void {
+auto TPipeline::SetUniform(int32_t location, int32_t value) const -> void {
     glProgramUniform1i(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, uint32_t value) -> void {
+auto TPipeline::SetUniform(int32_t location, uint32_t value) const -> void {
     glProgramUniform1ui(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, uint64_t value) -> void {
+auto TPipeline::SetUniform(int32_t location, uint64_t value) const -> void {
     glProgramUniformHandleui64ARB(Id, location, value); //TODO(deccer) add check for bindless support
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec2& value) -> void {
+auto TPipeline::SetUniform(int32_t location, const glm::vec2& value) const -> void {
     glProgramUniform2fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec3& value) -> void {
+auto TPipeline::SetUniform(int32_t location, const glm::vec3& value) const -> void {
     glProgramUniform3fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, float value1, float value2, float value3, float value4) -> void {
+auto TPipeline::SetUniform(int32_t location, float value1, float value2, float value3, float value4) const -> void {
     glProgramUniform4f(Id, location, value1, value2, value3, value4);
 }
 
-auto TPipeline::SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) -> void {
+auto TPipeline::SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) const -> void {
     glProgramUniform4i(Id, location, value1, value2, value3, value4);
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec4& value) -> void {
+auto TPipeline::SetUniform(int32_t location, const glm::vec4& value) const -> void {
     glProgramUniform4fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::mat4& value) -> void {
+auto TPipeline::SetUniform(int32_t location, const glm::mat4& value) const -> void {
     glProgramUniformMatrix4fv(Id, location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
