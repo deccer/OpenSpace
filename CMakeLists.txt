@@ -11,6 +11,12 @@ if(!${MSVC})
     set(CMAKE_LINKER_TYPE MOLD)
     #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ftime-report")
 endif()
+#if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#  # Workaround for std::expected not available in clang
+#  add_compile_options(
+#    -stdlib=libstdc++ -D__cpp_concepts=202002 -Wno-builtin-macro-redefined
+#  )
+#endif()
 
 add_subdirectory(libs)
 add_subdirectory(src)

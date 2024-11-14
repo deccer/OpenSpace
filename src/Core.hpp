@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string_view>
 
+#define nameof(name) #name
+
 struct TExtent2D
 {
     uint32_t Width{};

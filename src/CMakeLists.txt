@@ -9,6 +9,7 @@ add_executable(HowToScript
     Assets.cpp
     RHI.cpp
     Renderer.cpp
+    Scene.cpp
     Main.cpp
 )
 add_dependencies(HowToScript CopyData)
