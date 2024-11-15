@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [__cpp_concepts=202002]

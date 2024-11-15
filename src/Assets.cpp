@@ -2,6 +2,7 @@
 #include "Io.hpp"
 #include "Images.hpp"
 #include "Helpers.hpp"
+#include "Profiler.hpp"
 
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
@@ -13,12 +14,13 @@
 #include <ranges>
 
 #include <spdlog/spdlog.h>
+#include <unordered_map>
+#include <utility>
 
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
-#include "Profiler.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 struct TAssetRawImageData {
     std::string Name;
@@ -28,6 +30,10 @@ struct TAssetRawImageData {
 };
 
 std::unordered_map<std::string, TAsset> g_assets = {};
+std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
+std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerData = {};
+std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
+std::unordered_map<std::string, TAssetMeshData> g_assetMeshDates = {};
 
 auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {
@@ -45,6 +51,24 @@ auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::Norma
 
     const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
     return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
+}
+
+auto GetSamplerIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+    if (!textureInfo.has_value()) {
+        return std::nullopt;
+    }
+
+    const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
+    return fgTexture.samplerIndex;
+}
+
+auto GetSamplerIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+    if (!textureInfo.has_value()) {
+        return std::nullopt;
+    }
+
+    const auto& fgTexture = fgAsset.textures[textureInfo->textureIndex];
+    return fgTexture.samplerIndex;
 }
 
 auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageDataType {
@@ -81,6 +105,9 @@ auto CreateAssetRawImageData(
 auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fgAsset, const std::filesystem::path& filePath) -> void {
 
     asset.Images.resize(fgAsset.images.size());
+
+    std::vector<TAssetImageData> assetImages;
+    assetImages.resize(fgAsset.images.size());
 
     const auto imageIndices = std::ranges::iota_view{0ul, fgAsset.images.size()};
     std::for_each(
@@ -124,7 +151,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
             return TAssetRawImageData{};
         }();
 
-        auto& assetImage = asset.Images[imageIndex];
+        auto& assetImage = assetImages[imageIndex];
         assetImage.ImageDataType = imageData.ImageDataType;
         if (assetImage.ImageDataType == TAssetImageDataType::CompressedKtx) {
 
@@ -143,12 +170,65 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
             assetImage.Data.reset(pixels);
         }
     });
+
+    for(auto i = 0; i < assetImages.size(); ++i) {
+        auto& assetImage = assetImages[i];
+        asset.Images[i] = assetImage.Name;
+        g_assetImageDates[assetImage.Name] = std::move(assetImage);
+    }
+}
+
+auto ConvertMagFilter(fastgltf::Filter magFilter) -> TAssetSamplerMagFilter {
+    switch (magFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMagFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMagFilter::Nearest;
+        default: std::unreachable();
+    }
+}
+
+auto ConvertMinFilter(fastgltf::Filter minFilter) -> TAssetSamplerMinFilter {
+    switch (minFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMinFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMinFilter::Nearest;
+        case fastgltf::Filter::LinearMipMapNearest: return TAssetSamplerMinFilter::LinearMipMapNearest;
+        case fastgltf::Filter::NearestMipMapNearest: return TAssetSamplerMinFilter::NearestMipMapNearest;
+        case fastgltf::Filter::LinearMipMapLinear: return TAssetSamplerMinFilter::LinearMipMapLinear;
+        case fastgltf::Filter::NearestMipMapLinear: return TAssetSamplerMinFilter::NearestMipMapLinear;
+        default: std::unreachable();
+    }    
+}
+
+auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
+    switch (wrapMode) {
+        case fastgltf::Wrap::ClampToEdge: return TAssetSamplerWrapMode::ClampToEdge;
+        case fastgltf::Wrap::MirroredRepeat: return TAssetSamplerWrapMode::MirroredRepeat;
+        case fastgltf::Wrap::Repeat: return TAssetSamplerWrapMode::Repeat;
+        default: std::unreachable();
+    }
+}
+
+auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
+
+    const auto samplerIndices = std::ranges::iota_view{0uz, fgAsset.samplers.size()};
+
+    std::for_each(
+        samplerIndices.begin(),
+        samplerIndices.end(),
+        [&](size_t samplerIndex) -> void {
+
+        auto& fgSampler = fgAsset.samplers[samplerIndex];
+        //asset.Samplers[samplerIndex] 
+    });
 }
 
 auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
     const auto materialIndices = std::ranges::iota_view{0uz, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
+
+    std::vector<TAssetMaterialData> assetMaterials;
+    assetMaterials.resize(fgAsset.materials.size());
+
     std::for_each(
         poolstl::execution::seq,
         materialIndices.begin(),
@@ -156,34 +236,78 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
         [&](size_t materialIndex) -> void {
 
         const auto& fgMaterial = fgAsset.materials[materialIndex];
+        auto& material = assetMaterials[materialIndex];
 
-        auto& material = asset.Materials[materialIndex];
         material.Name = GetSafeResourceName(assetName.data(), fgMaterial.name.data(), "material", materialIndex);
-        material.BaseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
-        material.NormalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
-        material.ArmTextureIndex = fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr
-            ? GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture)
-            : std::nullopt;
-        material.EmissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+
+        auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+
+        material.BaseColorTextureChannel = TAssetMaterialChannelData{
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = baseColorSamplerIndex.has_value() ? asset.Samplers[baseColorSamplerIndex.value()] : "S_Default",
+            .TextureName = baseColorTextureIndex.has_value() ? asset.Images[baseColorTextureIndex.value()] : "T_Default_B",
+        };
+
+        auto normalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
+        auto normalSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.normalTexture);
+
+        material.NormalTextureChannel = TAssetMaterialChannelData{
+            .Channel = TAssetMaterialChannel::Normals,
+            .SamplerName = normalSamplerIndex.has_value() ? asset.Samplers[normalSamplerIndex.value()] : "S_Default",
+            .TextureName = normalTextureIndex.has_value() ? asset.Images[normalTextureIndex.value()] : "T_Default_N",
+        };
+
+        if (fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr) {
+            auto armTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            material.ArmTextureChannel = TAssetMaterialChannelData{
+                .Channel = TAssetMaterialChannel::Scalar,
+                .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_Default",
+                .TextureName = armTextureIndex.has_value() ? asset.Images[armTextureIndex.value()] : "T_Default_MR",
+            };
+        }
+
+        auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+        auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
+
+        material.EmissiveTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_Default",
+            .TextureName = emissiveTextureIndex.has_value() ? asset.Images[emissiveTextureIndex.value()] : "T_Default_S"
+        };
 
         material.BaseColor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
         material.Metalness = fgMaterial.pbrData.metallicFactor;
         material.Roughness = fgMaterial.pbrData.roughnessFactor;
     });
+
+    for (auto i = 0; i < assetMaterials.size(); ++i) {
+        auto& assetMaterial = assetMaterials[i];
+        asset.Materials[i] = assetMaterial.Name;
+        g_assetMaterialDates[assetMaterial.Name] = std::move(assetMaterial);
+    }
 }
 
-auto LoadMeshes(const fastgltf::Asset& fgAsset,
-                TAsset& assetScene,
-                size_t meshIndex,
-                size_t primitiveIndex) -> void {
+auto LoadMeshes(
+    std::string_view baseName,
+    const fastgltf::Asset& fgAsset,
+    TAsset& asset,
+    size_t meshIndex,
+    size_t primitiveIndex,
+    const glm::mat4x4& initialTransform) -> void {
 
     auto& primitive = fgAsset.meshes[meshIndex].primitives[primitiveIndex];
     if (!primitive.indicesAccessor.has_value() || primitive.findAttribute("POSITION") == primitive.attributes.end()) {
         return;
     }
 
-    auto& sceneMesh = assetScene.Meshes.emplace_back();
+    auto primitiveName = GetSafeResourceName(baseName.data(), fgAsset.meshes[meshIndex].name.data(), std::format("mesh-{}-primitive", meshIndex).data(), primitiveIndex);
+    
+    TAssetMeshData sceneMesh;
+    sceneMesh.Name = primitiveName;
     sceneMesh.MaterialIndex = primitive.materialIndex;
+    sceneMesh.InitialTransform = initialTransform;
 
     auto& indices = fgAsset.accessors[primitive.indicesAccessor.value()];
     sceneMesh.Indices.resize(indices.count);
@@ -209,7 +333,14 @@ auto LoadMeshes(const fastgltf::Asset& fgAsset,
         auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
         sceneMesh.Tangents.resize(tangents.count);
         fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, sceneMesh.Tangents.data());
+    } else  {
+        sceneMesh.Tangents.resize(sceneMesh.Positions.size());
+        auto unitVector = glm::vec4{1.0f};
+        std::fill_n(sceneMesh.Tangents.begin(), sceneMesh.Positions.size(), unitVector);
     }
+
+    asset.Meshes[primitiveIndex] = primitiveName;
+    g_assetMeshDates[primitiveName] = std::move(sceneMesh);
 }
 
 auto LoadNodes(const fastgltf::Asset& asset,
@@ -241,7 +372,7 @@ auto LoadNodes(const fastgltf::Asset& asset,
 
     if (node.meshIndex.has_value()) {
         auto [meshIndex, meshCount] = meshOffsets[node.meshIndex.value()];
-        for (auto i = 0; i < meshCount; ++i) {
+        for (auto i = 0; i < meshCount; i++) {
             assetScene.Instances.emplace_back(TAssetInstanceData{
                 .WorldMatrix = transform,
                 .MeshIndex = meshIndex + i
@@ -299,18 +430,27 @@ auto LoadAssetFromFile(const std::string& assetName, const std::filesystem::path
     auto& fgAsset = loadResult.get();
 
     TAsset asset = {};
-    asset.Name = assetName;
 
     LoadImages(assetName, asset, fgAsset, filePath);
+    LoadSamplers(assetName, asset, fgAsset);
     LoadMaterials(assetName, asset, fgAsset);
 
     std::vector<std::pair<size_t, size_t>> meshOffsets;
     meshOffsets.resize(fgAsset.meshes.size());
-    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); ++meshIndex) {
-        meshOffsets[meshIndex].first = asset.Meshes.size();
+
+    // determine how many meshes we will end up with
+    auto primitiveCount = 0;
+    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
+        primitiveCount += fgAsset.meshes[meshIndex].primitives.size();
+    }
+
+    asset.Meshes.resize(primitiveCount);
+
+    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
+        meshOffsets[meshIndex].first = asset.Meshes.size() - 1;
         meshOffsets[meshIndex].second = fgAsset.meshes[meshIndex].primitives.size();
         for (auto primitiveIndex = 0; primitiveIndex < fgAsset.meshes[meshIndex].primitives.size(); primitiveIndex++) {
-            LoadMeshes(fgAsset, asset, meshIndex, primitiveIndex);
+            LoadMeshes(assetName, fgAsset, asset, meshIndex, primitiveIndex, glm::mat4(1.0f));
         }
     }
 
@@ -341,4 +481,68 @@ auto GetAssets() -> std::unordered_map<std::string, TAsset>& {
 
 auto GetAsset(const std::string& assetName) -> TAsset& {
     return g_assets[assetName];
+}
+
+auto IsAssetLoaded(const std::string& assetName) -> bool {
+    return g_assets.contains(assetName);
+}
+
+auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData& {
+    return g_assetImageDates[imageDataName];
+}
+
+auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData& {
+    return g_assetSamplerData[samplerDataName];
+}
+
+auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData& {
+    return g_assetMaterialDates[materialDataName];
+}
+
+auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
+    return g_assetMeshDates[meshDataName];
+}
+
+auto AddDefaultImage(std::string imageName, const std::filesystem::path& filePath) -> void {
+
+int32_t width = 0;
+    int32_t height = 0;
+    int32_t components = 0;
+
+    auto [fileData, fileDataSize] = ReadBinaryFromFile(filePath);
+
+    auto dataCopy = std::make_unique<std::byte[]>(fileDataSize);
+    std::copy_n(static_cast<const std::byte*>(fileData.get()), fileDataSize, dataCopy.get());
+
+    auto* pixels = LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
+
+    auto assetImage = TAssetImageData {
+        .Width = width,
+        .Height = height,
+        .PixelType = 0,
+        .Bits = 8,
+        .Components = components,
+        .Name = std::string(imageName),
+    };
+    assetImage.Data.reset(pixels);
+
+    g_assetImageDates[imageName] = std::move(assetImage);
+
+}
+
+auto AddDefaultAssets() -> void {
+
+    AddDefaultImage("T_Default_B", "data/default/T_Default_B.png");
+    AddDefaultImage("T_Default_N", "data/default/T_Default_N.png");
+    AddDefaultImage("T_Default_S", "data/default/T_Default_S.png");
+    AddDefaultImage("T_Default_MR", "data/default/T_Default_MR.png");
+
+    auto defaultAssetSampler = TAssetSamplerData {
+        .Name = "S_Default",
+        .MagFilter = TAssetSamplerMagFilter::Linear,
+        .MinFilter = TAssetSamplerMinFilter::Linear,
+        .WrapS = TAssetSamplerWrapMode::ClampToEdge,
+        .WrapT = TAssetSamplerWrapMode::ClampToEdge,
+    };
+    g_assetSamplerData["S_Default"] = std::move(defaultAssetSampler);
 }
