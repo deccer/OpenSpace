@@ -217,7 +217,7 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
         [&](size_t samplerIndex) -> void {
 
         auto& fgSampler = fgAsset.samplers[samplerIndex];
-        asset.Samplers[samplerIndex] 
+        //asset.Samplers[samplerIndex] 
     });
 }
 
@@ -243,12 +243,39 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
         auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
         auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
 
-        material.BaseColorTexture = fgAsset.images[baseColorTextureIndex.value()].name;
-        material.NormalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
-        material.ArmTextureIndex = fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr
-            ? GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture)
-            : std::nullopt;
-        material.EmissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+        material.BaseColorTextureChannel = TAssetMaterialChannelData{
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = baseColorSamplerIndex.has_value() ? asset.Samplers[baseColorSamplerIndex.value()] : "S_Default",
+            .TextureName = baseColorTextureIndex.has_value() ? asset.Images[baseColorTextureIndex.value()] : "T_Default_B",
+        };
+
+        auto normalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
+        auto normalSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.normalTexture);
+
+        material.NormalTextureChannel = TAssetMaterialChannelData{
+            .Channel = TAssetMaterialChannel::Normals,
+            .SamplerName = normalSamplerIndex.has_value() ? asset.Samplers[normalSamplerIndex.value()] : "S_Default",
+            .TextureName = normalTextureIndex.has_value() ? asset.Images[normalTextureIndex.value()] : "T_Default_N",
+        };
+
+        if (fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr) {
+            auto armTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            material.ArmTextureChannel = TAssetMaterialChannelData{
+                .Channel = TAssetMaterialChannel::Scalar,
+                .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_Default",
+                .TextureName = armTextureIndex.has_value() ? asset.Images[armTextureIndex.value()] : "T_Default_MR",
+            };
+        }
+
+        auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+        auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
+
+        material.EmissiveTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_Default",
+            .TextureName = emissiveTextureIndex.has_value() ? asset.Images[emissiveTextureIndex.value()] : "T_Default_S"
+        };
 
         material.BaseColor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
         material.Metalness = fgMaterial.pbrData.metallicFactor;
@@ -265,7 +292,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
 auto LoadMeshes(
     std::string_view baseName,
     const fastgltf::Asset& fgAsset,
-    TAsset& assetScene,
+    TAsset& asset,
     size_t meshIndex,
     size_t primitiveIndex,
     const glm::mat4x4& initialTransform) -> void {
@@ -306,9 +333,13 @@ auto LoadMeshes(
         auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
         sceneMesh.Tangents.resize(tangents.count);
         fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, sceneMesh.Tangents.data());
+    } else  {
+        sceneMesh.Tangents.resize(sceneMesh.Positions.size());
+        auto unitVector = glm::vec4{1.0f};
+        std::fill_n(sceneMesh.Tangents.begin(), sceneMesh.Positions.size(), unitVector);
     }
 
-    assetScene.Meshes[primitiveIndex] = primitiveName;
+    asset.Meshes[primitiveIndex] = primitiveName;
     g_assetMeshDates[primitiveName] = std::move(sceneMesh);
 }
 
@@ -341,7 +372,7 @@ auto LoadNodes(const fastgltf::Asset& asset,
 
     if (node.meshIndex.has_value()) {
         auto [meshIndex, meshCount] = meshOffsets[node.meshIndex.value()];
-        for (auto i = 0; i < meshCount; ++i) {
+        for (auto i = 0; i < meshCount; i++) {
             assetScene.Instances.emplace_back(TAssetInstanceData{
                 .WorldMatrix = transform,
                 .MeshIndex = meshIndex + i
@@ -406,8 +437,17 @@ auto LoadAssetFromFile(const std::string& assetName, const std::filesystem::path
 
     std::vector<std::pair<size_t, size_t>> meshOffsets;
     meshOffsets.resize(fgAsset.meshes.size());
-    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); ++meshIndex) {
-        meshOffsets[meshIndex].first = asset.Meshes.size();
+
+    // determine how many meshes we will end up with
+    auto primitiveCount = 0;
+    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
+        primitiveCount += fgAsset.meshes[meshIndex].primitives.size();
+    }
+
+    asset.Meshes.resize(primitiveCount);
+
+    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
+        meshOffsets[meshIndex].first = asset.Meshes.size() - 1;
         meshOffsets[meshIndex].second = fgAsset.meshes[meshIndex].primitives.size();
         for (auto primitiveIndex = 0; primitiveIndex < fgAsset.meshes[meshIndex].primitives.size(); primitiveIndex++) {
             LoadMeshes(assetName, fgAsset, asset, meshIndex, primitiveIndex, glm::mat4(1.0f));
@@ -461,4 +501,48 @@ auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterial
 
 auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
     return g_assetMeshDates[meshDataName];
+}
+
+auto AddDefaultImage(std::string imageName, const std::filesystem::path& filePath) -> void {
+
+int32_t width = 0;
+    int32_t height = 0;
+    int32_t components = 0;
+
+    auto [fileData, fileDataSize] = ReadBinaryFromFile(filePath);
+
+    auto dataCopy = std::make_unique<std::byte[]>(fileDataSize);
+    std::copy_n(static_cast<const std::byte*>(fileData.get()), fileDataSize, dataCopy.get());
+
+    auto* pixels = LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
+
+    auto assetImage = TAssetImageData {
+        .Width = width,
+        .Height = height,
+        .PixelType = 0,
+        .Bits = 8,
+        .Components = components,
+        .Name = std::string(imageName),
+    };
+    assetImage.Data.reset(pixels);
+
+    g_assetImageDates[imageName] = std::move(assetImage);
+
+}
+
+auto AddDefaultAssets() -> void {
+
+    AddDefaultImage("T_Default_B", "data/default/T_Default_B.png");
+    AddDefaultImage("T_Default_N", "data/default/T_Default_N.png");
+    AddDefaultImage("T_Default_S", "data/default/T_Default_S.png");
+    AddDefaultImage("T_Default_MR", "data/default/T_Default_MR.png");
+
+    auto defaultAssetSampler = TAssetSamplerData {
+        .Name = "S_Default",
+        .MagFilter = TAssetSamplerMagFilter::Linear,
+        .MinFilter = TAssetSamplerMinFilter::Linear,
+        .WrapS = TAssetSamplerWrapMode::ClampToEdge,
+        .WrapT = TAssetSamplerWrapMode::ClampToEdge,
+    };
+    g_assetSamplerData["S_Default"] = std::move(defaultAssetSampler);
 }

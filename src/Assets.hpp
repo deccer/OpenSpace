@@ -67,9 +67,9 @@ struct TAssetSamplerData {
 };
 
 struct TAssetMaterialChannelData {
+    TAssetMaterialChannel Channel;    
     std::string SamplerName;
     std::string TextureName;
-    TAssetMaterialChannel Channel;
 };
 
 struct TAssetMaterialData {
@@ -79,10 +79,10 @@ struct TAssetMaterialData {
     float Metalness = 0.0f;
     float Roughness = 0.0f;
     float EmissiveFactor = 1.0f;
-    std::optional<TAssetMaterialChannelData> BaseColorTexture = {};
-    std::optional<TAssetMaterialChannelData> NormalTexture = {};
-    std::optional<TAssetMaterialChannelData> ArmTexture = {};
-    std::optional<TAssetMaterialChannelData> EmissiveTexture = {};
+    std::optional<TAssetMaterialChannelData> BaseColorTextureChannel = {};
+    std::optional<TAssetMaterialChannelData> NormalTextureChannel = {};
+    std::optional<TAssetMaterialChannelData> ArmTextureChannel = {};
+    std::optional<TAssetMaterialChannelData> EmissiveTextureChannel = {};
 };
 
 struct TAssetMeshData {
@@ -118,4 +118,4 @@ auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData&;
 auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData&;
 auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData&;
 auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData&;
-
+auto AddDefaultAssets() -> void;

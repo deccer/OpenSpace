@@ -206,7 +206,7 @@ auto main(
         .ResolutionScale = 1.0f,
         .WindowStyle = TWindowStyle::Windowed,
         .IsDebug = true,
-        .IsVSyncEnabled = false,
+        .IsVSyncEnabled = true,
     };
 
     if (glfwInit() == GLFW_FALSE) {

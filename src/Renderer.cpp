@@ -7,6 +7,7 @@
 #include "Io.hpp"
 #include "Assets.hpp"
 
+#include <algorithm>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <debugbreak.h>
@@ -31,6 +32,7 @@
 
 #include <ranges>
 #include <stack>
+#include <utility>
 
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
@@ -343,11 +345,11 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
     return MakeTextureResident(textureId);
 }
 
-auto CreateTextureForMaterialChannel(const std::string& materialDataName) -> uint32_t {
+auto CreateTextureForMaterialChannel(const std::string& imageDataName) -> uint32_t {
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
-    auto& imageData = GetAssetImageData(materialDataName);
+    auto& imageData = GetAssetImageData(imageDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -375,43 +377,81 @@ auto CreateTextureForMaterialChannel(const std::string& materialDataName) -> uin
     return GetTexture(textureId).Id;
 }
 
-auto CreateSamplerDescriptor(const TAssetSampler& assetSampler) -> TSamplerDescriptor {
+constexpr auto ToAddressMode(TAssetSamplerWrapMode wrapMode) -> TTextureAddressMode {
+    switch (wrapMode) {
+        case TAssetSamplerWrapMode::ClampToEdge: return TTextureAddressMode::ClampToEdge;
+        case TAssetSamplerWrapMode::MirroredRepeat: return TTextureAddressMode::RepeatMirrored;
+        case TAssetSamplerWrapMode::Repeat: return TTextureAddressMode::Repeat;
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ToMagFilter(std::optional<TAssetSamplerMagFilter> magFilter) -> TTextureMagFilter {
+    if (!magFilter.has_value()) {
+        return TTextureMagFilter::Linear;
+    }
+
+    switch (*magFilter) {
+        case TAssetSamplerMagFilter::Linear: return TTextureMagFilter::Linear;
+        case TAssetSamplerMagFilter::Nearest: return TTextureMagFilter::Nearest;
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ToMinFilter(std::optional<TAssetSamplerMinFilter> minFilter) -> TTextureMinFilter {
+    if (!minFilter.has_value()) {
+        return TTextureMinFilter::Linear;
+    }
+    
+    switch (*minFilter) {
+        case TAssetSamplerMinFilter::Linear: return TTextureMinFilter::Linear;
+        case TAssetSamplerMinFilter::Nearest: return TTextureMinFilter::Nearest;
+        case TAssetSamplerMinFilter::NearestMipMapLinear: return TTextureMinFilter::NearestMipmapLinear;
+        case TAssetSamplerMinFilter::NearestMipMapNearest: return TTextureMinFilter::NearestMipmapNearest;
+        case TAssetSamplerMinFilter::LinearMipMapNearest: return TTextureMinFilter::LinearMipmapNearest;
+        case TAssetSamplerMinFilter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;        
+        default: std::unreachable();
+    }
+}
+
+auto CreateSamplerDescriptor(const TAssetSamplerData& assetSampler) -> TSamplerDescriptor {
 
     return TSamplerDescriptor{
-        .AddressModeU = assetSampler.AddressModeU,
-        .AddressModeV = assetSampler.AddressModeV,
-        .MagFilter = assetSampler.MagFilter,
-        .MinFilter = assetSampler.MinFilter,
+        .Label = assetSampler.Name,
+        .AddressModeU = ToAddressMode(assetSampler.WrapS),
+        .AddressModeV = ToAddressMode(assetSampler.WrapT),
+        .MagFilter = ToMagFilter(assetSampler.MagFilter),
+        .MinFilter = ToMinFilter(assetSampler.MinFilter),
     };
 }
 
-auto CreateCpuMaterial(const std::string& assetMaterialName) -> void {
+auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     PROFILER_ZONESCOPEDN("CreateCpuMaterial");
 
-    auto& assetMaterial = GetAssetMaterialData(assetMaterialName);
+    auto& assetMaterialData = GetAssetMaterialData(assetMaterialName);
 
     auto cpuMaterial = TCpuMaterial{
-        .BaseColor = assetMaterial.BaseColorFactor,
+        .BaseColor = assetMaterialData.BaseColor,
     };
 
-    auto& baseColorChannel = assetMaterial.BaseColorChannel;
+    auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
     if (baseColorChannel.has_value()) {
         auto& baseColor = *baseColorChannel;
-        auto& baseColorSampler = GetAssetSampler(baseColor.Sampler);
+        auto& baseColorSampler = GetAssetSamplerData(baseColor.SamplerName);
 
-        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(assetMaterial.BaseColorName);
+        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
         auto& sampler = GetSampler(samplerId);
         cpuMaterial.BaseColorTextureSamplerId = sampler.Id;
     }
 
-    auto& normalTextureChannel = assetMaterial.NormalsChannel;
+    auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel.has_value()) {
         auto& normalTexture = *normalTextureChannel;
-        auto& normalTextureSampler = GetAssetSampler(normalTexture.Sampler);
+        auto& normalTextureSampler = GetAssetSamplerData(normalTexture.SamplerName);
 
-        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture);
+        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
         auto& sampler = GetSampler(samplerId);
         cpuMaterial.NormalTextureSamplerId = sampler.Id;
@@ -641,6 +681,8 @@ auto RendererInitialize(
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
 
+    AddDefaultAssets();
+
     /*
      * Renderer - Initialize Framebuffers
      */
@@ -868,9 +910,9 @@ auto RendererRender(
         auto& meshComponent = registry.get<TComponentMesh>(entity);
         auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-        auto& asset = GetAsset(meshComponent.Mesh);
-        RendererCreateGpuMesh(asset.M);
-        //CreateCpuMaterial(materialComponent.Material);
+        auto& assetMesh = GetAssetMeshData(meshComponent.Mesh);
+        RendererCreateGpuMesh(assetMesh);
+        RendererCreateCpuMaterial(materialComponent.Material);
 
         registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
         registry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);

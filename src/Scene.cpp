@@ -4,6 +4,11 @@
 #include "Core.hpp"
 #include "Assets.hpp"
 
+#include "glm/ext/matrix_transform.hpp"
+
+#include <format>
+#include <optional>
+
 entt::registry g_registry = {};
 
 auto SceneAddEntity(
@@ -51,13 +56,15 @@ auto SceneAddEntity(
     auto& asset = GetAsset(assetName);
     for(auto& assetInstanceData : asset.Instances) {
 
-        auto& assetMesh = asset.Meshes[assetInstanceData.MeshIndex];
+        auto assetMeshName = asset.Meshes[assetInstanceData.MeshIndex];
+        auto assetMesh = GetAssetMeshData(assetMeshName);
+
         auto assetMaterialName = assetMesh.MaterialIndex.has_value()
-            ? asset.Materials[assetMesh.MaterialIndex.value()].Name
+            ? asset.Materials[assetMesh.MaterialIndex.value()]
             : "M_Default";
         auto& worldMatrix = assetInstanceData.WorldMatrix;
 
-        SceneAddEntity(entityId, assetMesh.Name, assetMaterialName, initialTransform * worldMatrix);
+        SceneAddEntity(entityId, assetMeshName, assetMaterialName, initialTransform * worldMatrix);
     }
 
     return entityId;
@@ -69,18 +76,10 @@ auto SceneLoad() -> bool {
      * Load Assets
      */
 
-    AddAssetFromFile("Test", "data/basic/fform_1.glb");
-    /*
+    //AddAssetFromFile("Test", "data/basic/fform_1.glb");
+    AddAssetFromFile("fform1", "data/basic/fform_1.glb");
     AddAssetFromFile("fform2", "data/basic/fform_2.glb");
     AddAssetFromFile("fform3", "data/basic/fform_3.glb");
-    AddAssetFromFile("fform4", "data/basic/fform_4.glb");
-    AddAssetFromFile("fform5", "data/basic/fform_5.glb");
-    AddAssetFromFile("fform6", "data/basic/fform_6.glb");
-    AddAssetFromFile("fform7", "data/basic/fform_7.glb");
-    AddAssetFromFile("fform8", "data/basic/fform_8.glb");
-    AddAssetFromFile("fform9", "data/basic/fform_9.glb");
-    AddAssetFromFile("fform10", "data/basic/fform_10.glb");
-     */
 
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
@@ -102,7 +101,11 @@ auto SceneLoad() -> bool {
 
     /// Setup Scene ////////////
 
-    SceneAddEntity(std::nullopt, "Test", glm::mat4(1.0f));
+    //SceneAddEntity(std::nullopt, "Test", glm::mat4(1.0f));
+
+    for (auto i = 1; i < 4; i++) {
+        SceneAddEntity(std::nullopt, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)));
+    }
 
     //AddEntity(std::nullopt, "Test2", glm::translate(glm::mat4(1.0f), {0.0f, 0.0f, -10.0f}));
     //AddEntity(std::nullopt, "SM_Tower", glm::scale(glm::mat4(1.0f), {0.01f, 0.01f, 0.01f}) * glm::translate(glm::mat4(1.0f), {-5.0f, -2.0f, -10.0f}));
