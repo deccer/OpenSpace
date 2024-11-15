@@ -67,7 +67,7 @@ struct TAssetSamplerData {
 };
 
 struct TAssetMaterialChannelData {
-    std::string Sampler;
+    std::string SamplerName;
     std::string TextureName;
     TAssetMaterialChannel Channel;
 };
@@ -115,6 +115,7 @@ auto GetAsset(const std::string& assetName) -> TAsset&;
 auto IsAssetLoaded(const std::string& assetName) -> bool;
 
 auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData&;
+auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData&;
 auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData&;
 auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData&;
 

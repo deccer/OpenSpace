@@ -15,6 +15,7 @@
 
 #include <spdlog/spdlog.h>
 #include <unordered_map>
+#include <utility>
 
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
@@ -30,6 +31,7 @@ struct TAssetRawImageData {
 
 std::unordered_map<std::string, TAsset> g_assets = {};
 std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
+std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerData = {};
 std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
 std::unordered_map<std::string, TAssetMeshData> g_assetMeshDates = {};
 
@@ -176,6 +178,35 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
     }
 }
 
+auto ConvertMagFilter(fastgltf::Filter magFilter) -> TAssetSamplerMagFilter {
+    switch (magFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMagFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMagFilter::Nearest;
+        default: std::unreachable();
+    }
+}
+
+auto ConvertMinFilter(fastgltf::Filter minFilter) -> TAssetSamplerMinFilter {
+    switch (minFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMinFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMinFilter::Nearest;
+        case fastgltf::Filter::LinearMipMapNearest: return TAssetSamplerMinFilter::LinearMipMapNearest;
+        case fastgltf::Filter::NearestMipMapNearest: return TAssetSamplerMinFilter::NearestMipMapNearest;
+        case fastgltf::Filter::LinearMipMapLinear: return TAssetSamplerMinFilter::LinearMipMapLinear;
+        case fastgltf::Filter::NearestMipMapLinear: return TAssetSamplerMinFilter::NearestMipMapLinear;
+        default: std::unreachable();
+    }    
+}
+
+auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
+    switch (wrapMode) {
+        case fastgltf::Wrap::ClampToEdge: return TAssetSamplerWrapMode::ClampToEdge;
+        case fastgltf::Wrap::MirroredRepeat: return TAssetSamplerWrapMode::MirroredRepeat;
+        case fastgltf::Wrap::Repeat: return TAssetSamplerWrapMode::Repeat;
+        default: std::unreachable();
+    }
+}
+
 auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
     const auto samplerIndices = std::ranges::iota_view{0uz, fgAsset.samplers.size()};
@@ -186,7 +217,7 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
         [&](size_t samplerIndex) -> void {
 
         auto& fgSampler = fgAsset.samplers[samplerIndex];
-        fgSampler.magFilter
+        asset.Samplers[samplerIndex] 
     });
 }
 
@@ -205,10 +236,14 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
         [&](size_t materialIndex) -> void {
 
         const auto& fgMaterial = fgAsset.materials[materialIndex];
-
         auto& material = assetMaterials[materialIndex];
+
         material.Name = GetSafeResourceName(assetName.data(), fgMaterial.name.data(), "material", materialIndex);
-        material.BaseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+
+        auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+
+        material.BaseColorTexture = fgAsset.images[baseColorTextureIndex.value()].name;
         material.NormalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
         material.ArmTextureIndex = fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr
             ? GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture)
@@ -414,6 +449,10 @@ auto IsAssetLoaded(const std::string& assetName) -> bool {
 
 auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData& {
     return g_assetImageDates[imageDataName];
+}
+
+auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData& {
+    return g_assetSamplerData[samplerDataName];
 }
 
 auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData& {
