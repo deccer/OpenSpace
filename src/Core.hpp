@@ -291,10 +291,10 @@ private:
 };
 
 constexpr auto HashString(std::string_view str) -> uint32_t {
-    auto hash = 2166136261u;
+    auto hash = 2166136261;
     for (auto ch: str) {
         hash ^= ch;
-        hash *= 16777619u;
+        hash *= 16777619;
     }
     return hash;
 }
