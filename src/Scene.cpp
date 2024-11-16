@@ -80,11 +80,17 @@ auto SceneLoad() -> bool {
     AddAssetFromFile("fform1", "data/basic/fform_1.glb");
     AddAssetFromFile("fform2", "data/basic/fform_2.glb");
     AddAssetFromFile("fform3", "data/basic/fform_3.glb");
+    AddAssetFromFile("fform4", "data/basic/fform_4.glb");
+    AddAssetFromFile("fform5", "data/basic/fform_5.glb");
+    AddAssetFromFile("fform6", "data/basic/fform_6.glb");
+    AddAssetFromFile("fform7", "data/basic/fform_7.glb");
+    AddAssetFromFile("fform8", "data/basic/fform_9.glb");
+    AddAssetFromFile("fform9", "data/basic/fform_10.glb");
 
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/Sponza/glTF/Sponza.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
     //LoadModelFromFile("Test", "/home/deccer/Downloads/modular_ruins_c/modular_ruins_c.glb");
-    //LoadModelFromFile("Test", "data/default/SM_Deccer_Cubes_Textured.glb");
+    AddAssetFromFile("Test", "data/default/SM_Deccer_Cubes_Textured.glb");
     //LoadModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
 
     //LoadModelFromFile("SM_DeccerCube", "data/scenes/stylized_low-poly_sand_block.glb");
@@ -103,7 +109,8 @@ auto SceneLoad() -> bool {
 
     //SceneAddEntity(std::nullopt, "Test", glm::mat4(1.0f));
 
-    for (auto i = 1; i < 4; i++) {
+    SceneAddEntity(std::nullopt, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)));
+    for (auto i = 1; i < 10; i++) {
         SceneAddEntity(std::nullopt, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)));
     }
 
