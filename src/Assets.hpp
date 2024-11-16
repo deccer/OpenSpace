@@ -14,6 +14,8 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
+namespace Assets {
+
 enum class TAssetImageDataType {
     Uncompressed,
     CompressedKtx,
@@ -119,3 +121,5 @@ auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerDat
 auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData&;
 auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData&;
 auto AddDefaultAssets() -> void;
+
+}

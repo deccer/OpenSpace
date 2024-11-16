@@ -22,6 +22,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+namespace Assets {
+
 struct TAssetRawImageData {
     std::string Name;
     std::unique_ptr<std::byte[]> EncodedData = {};
@@ -624,4 +626,6 @@ auto AddDefaultAssets() -> void {
         },
     };
     g_assetMaterialDates["M_Default"] = std::move(defaultMaterial);
+}
+
 }

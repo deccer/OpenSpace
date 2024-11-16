@@ -238,7 +238,7 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
            : encodedNormal;
 }
 
-auto RendererCreateGpuMesh(const TAssetMeshData& assetMeshData) -> void {
+auto RendererCreateGpuMesh(const Assets::TAssetMeshData& assetMeshData) -> void {
 
     std::vector<TGpuVertexPosition> vertexPositions;
     std::vector<TGpuPackedVertexNormalTangentUvTangentSign> vertexNormalUvTangents;
@@ -312,7 +312,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
-    auto& imageData = GetAssetImageData(materialDataName);
+    auto& imageData = Assets::GetAssetImageData(materialDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -344,7 +344,7 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName) -> uint32
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
-    auto& imageData = GetAssetImageData(imageDataName);
+    auto& imageData = Assets::GetAssetImageData(imageDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -372,44 +372,44 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName) -> uint32
     return GetTexture(textureId).Id;
 }
 
-constexpr auto ToAddressMode(TAssetSamplerWrapMode wrapMode) -> TTextureAddressMode {
+constexpr auto ToAddressMode(Assets::TAssetSamplerWrapMode wrapMode) -> TTextureAddressMode {
     switch (wrapMode) {
-        case TAssetSamplerWrapMode::ClampToEdge: return TTextureAddressMode::ClampToEdge;
-        case TAssetSamplerWrapMode::MirroredRepeat: return TTextureAddressMode::RepeatMirrored;
-        case TAssetSamplerWrapMode::Repeat: return TTextureAddressMode::Repeat;
+        case Assets::TAssetSamplerWrapMode::ClampToEdge: return TTextureAddressMode::ClampToEdge;
+        case Assets::TAssetSamplerWrapMode::MirroredRepeat: return TTextureAddressMode::RepeatMirrored;
+        case Assets::TAssetSamplerWrapMode::Repeat: return TTextureAddressMode::Repeat;
         default: std::unreachable();
     }
 }
 
-constexpr auto ToMagFilter(std::optional<TAssetSamplerMagFilter> magFilter) -> TTextureMagFilter {
+constexpr auto ToMagFilter(std::optional<Assets::TAssetSamplerMagFilter> magFilter) -> TTextureMagFilter {
     if (!magFilter.has_value()) {
         return TTextureMagFilter::Linear;
     }
 
     switch (*magFilter) {
-        case TAssetSamplerMagFilter::Linear: return TTextureMagFilter::Linear;
-        case TAssetSamplerMagFilter::Nearest: return TTextureMagFilter::Nearest;
+        case Assets::TAssetSamplerMagFilter::Linear: return TTextureMagFilter::Linear;
+        case Assets::TAssetSamplerMagFilter::Nearest: return TTextureMagFilter::Nearest;
         default: std::unreachable();
     }
 }
 
-constexpr auto ToMinFilter(std::optional<TAssetSamplerMinFilter> minFilter) -> TTextureMinFilter {
+constexpr auto ToMinFilter(std::optional<Assets::TAssetSamplerMinFilter> minFilter) -> TTextureMinFilter {
     if (!minFilter.has_value()) {
         return TTextureMinFilter::Linear;
     }
     
     switch (*minFilter) {
-        case TAssetSamplerMinFilter::Linear: return TTextureMinFilter::Linear;
-        case TAssetSamplerMinFilter::Nearest: return TTextureMinFilter::Nearest;
-        case TAssetSamplerMinFilter::NearestMipMapLinear: return TTextureMinFilter::NearestMipmapLinear;
-        case TAssetSamplerMinFilter::NearestMipMapNearest: return TTextureMinFilter::NearestMipmapNearest;
-        case TAssetSamplerMinFilter::LinearMipMapNearest: return TTextureMinFilter::LinearMipmapNearest;
-        case TAssetSamplerMinFilter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;        
+        case Assets::TAssetSamplerMinFilter::Linear: return TTextureMinFilter::Linear;
+        case Assets::TAssetSamplerMinFilter::Nearest: return TTextureMinFilter::Nearest;
+        case Assets::TAssetSamplerMinFilter::NearestMipMapLinear: return TTextureMinFilter::NearestMipmapLinear;
+        case Assets::TAssetSamplerMinFilter::NearestMipMapNearest: return TTextureMinFilter::NearestMipmapNearest;
+        case Assets::TAssetSamplerMinFilter::LinearMipMapNearest: return TTextureMinFilter::LinearMipmapNearest;
+        case Assets::TAssetSamplerMinFilter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;        
         default: std::unreachable();
     }
 }
 
-auto CreateSamplerDescriptor(const TAssetSamplerData& assetSampler) -> TSamplerDescriptor {
+auto CreateSamplerDescriptor(const Assets::TAssetSamplerData& assetSampler) -> TSamplerDescriptor {
 
     return TSamplerDescriptor{
         .Label = assetSampler.Name,
@@ -424,7 +424,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     PROFILER_ZONESCOPEDN("CreateCpuMaterial");
 
-    auto& assetMaterialData = GetAssetMaterialData(assetMaterialName);
+    auto& assetMaterialData = Assets::GetAssetMaterialData(assetMaterialName);
 
     auto cpuMaterial = TCpuMaterial{
         .BaseColor = assetMaterialData.BaseColor,
@@ -433,7 +433,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
     if (baseColorChannel.has_value()) {
         auto& baseColor = *baseColorChannel;
-        auto& baseColorSampler = GetAssetSamplerData(baseColor.SamplerName);
+        auto& baseColorSampler = Assets::GetAssetSamplerData(baseColor.SamplerName);
 
         cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
@@ -444,7 +444,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel.has_value()) {
         auto& normalTexture = *normalTextureChannel;
-        auto& normalTextureSampler = GetAssetSamplerData(normalTexture.SamplerName);
+        auto& normalTextureSampler = Assets::GetAssetSamplerData(normalTexture.SamplerName);
 
         cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
@@ -676,7 +676,7 @@ auto RendererInitialize(
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
 
-    AddDefaultAssets();
+    Assets::AddDefaultAssets();
 
     /*
      * Renderer - Initialize Framebuffers
@@ -905,7 +905,7 @@ auto RendererRender(
         auto& meshComponent = registry.get<TComponentMesh>(entity);
         auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-        auto& assetMesh = GetAssetMeshData(meshComponent.Mesh);
+        auto& assetMesh = Assets::GetAssetMeshData(meshComponent.Mesh);
         RendererCreateGpuMesh(assetMesh);
         RendererCreateCpuMaterial(materialComponent.Material);
 
@@ -1175,7 +1175,7 @@ auto RendererRender(
          * UI - Assets Viewer
          */
         if (ImGui::Begin(ICON_MD_DATA_OBJECT " Assets")) {
-            auto& assets = GetAssets();
+            auto& assets = Assets::GetAssets();
             ImGui::BeginTable("##Assets", 2, ImGuiTableFlags_RowBg);
             ImGui::TableSetupColumn("Asset");
             ImGui::TableSetupColumn("X");
