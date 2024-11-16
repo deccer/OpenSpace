@@ -9,6 +9,7 @@ to handle Vulkan too, let's see.
 Various people help or have helped me in the process. Be it funny comments, actual advise or ideas for the future.
 
 Thank you in alphabetical order :)
+
 - [anicator](https://anicator.com/)
 - [bayboykiller](https://github.com/BoyBaykiller/IDKEngine)
 - [bjorn](https://github.com/btipling)
@@ -25,4 +26,6 @@ Thank you in alphabetical order :)
 - [pat](https://patrick-is.cool/)
 - [sean](https://github.com/spnda)
 - [someone somewhere](https://www.s1sw.xyz/projects/)
-- [the_demongod](https://www.youtube.com/watch?v=Cx1UjaRyYvs) 
+- [the_demongod](https://www.youtube.com/watch?v=Cx1UjaRyYvs)
+
+The fform models are made by [this](https://untitled.xyz/) cool person and I have them from [here](https://sketchfab.com/untitledxyz_). They seem to be CC Licenced and they have not been modified.
