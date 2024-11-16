@@ -1,7 +1,7 @@
 # HowToScript
 
-Just me trying out yet another way to write an engine from scratch. This time in C++23. Trying to keep everything
-in [Main.cpp](src/Main.cpp) and then abstract parts out into separate units or class when needed/necessary.
+Just me trying out yet another way to write an engine from scratch. This time in C++23. ~~Trying to keep everything
+in [Main.cpp](src/Main.cpp) and then abstract parts out into separate units or class when needed/necessary.~~ Looks like I just went past this point and did separate things out into separate units.
 
 I will be using OpenGL 4.6. Perhaps when I found a form or state I am happy with I might make it flexible enough
 to handle Vulkan too, let's see.
@@ -27,5 +27,7 @@ Thank you in alphabetical order :)
 - [sean](https://github.com/spnda)
 - [someone somewhere](https://www.s1sw.xyz/projects/)
 - [the_demongod](https://www.youtube.com/watch?v=Cx1UjaRyYvs)
+
+<3
 
 The fform models are made by [this](https://untitled.xyz/) cool person and I have them from [here](https://sketchfab.com/untitledxyz_). They seem to be CC Licenced and they have not been modified.
