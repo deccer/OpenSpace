@@ -73,16 +73,16 @@ TAtmosphereSettings g_atmosphereSettings = {};
 
 TWindowSettings g_windowSettings = {};
 
-glm::vec3 g_atmosphereSunPosition = {10000.0f, 6400.0f, 10000.0f};
-float g_atmospherePlanetRadius = 6371.0f;
-glm::vec3 g_atmosphereRayOrigin = {0.0f, 6372.0f, 0.0f};
-float g_atmosphereSunIntensity = 22.0f;
-glm::vec3 g_atmosphereRayleighScatteringCoefficient = {5.5e-6, 13.0e-6, 22.4e-6};
-float g_atmosphereAtmosphereRadius = 6471.0f;
-float g_atmosphereMieScatteringCoefficient = 21e-6;
-float g_atmosphereMieScaleHeight = 1.2e3;
-float g_atmosphereMiePreferredScatteringDirection = 0.758;
-float g_atmosphereRayleighScaleHeight = 8e3;
+glm::vec3 g_atmosphereSunPosition = {10000.0f, 10000.0f, 10000.0f};
+float g_atmospherePlanetRadius = 6232.558f;
+glm::vec3 g_atmosphereRayOrigin = {0.0f, 6227.072f, 0.0f};
+float g_atmosphereSunIntensity = 15.0f;
+glm::vec3 g_atmosphereRayleighScatteringCoefficient = {0.00037f, 0.00255f, 0.00765};
+float g_atmosphereAtmosphereRadius = g_atmospherePlanetRadius + 70.0f;
+float g_atmosphereMieScatteringCoefficient = 0.0001;
+float g_atmosphereMieScaleHeight = 13.0f;
+float g_atmosphereMiePreferredScatteringDirection = 0.9f;
+float g_atmosphereRayleighScaleHeight = 6.6f;
 
 constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
@@ -1124,55 +1124,6 @@ auto RendererRender(
         ImGui::PopStyleColor();
     }
 
-    if (ImGui::Begin(ICON_MD_SUNNY " Atmosphere")) {
-
-        auto atmosphereModified = false;
-        if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_atmosphereSunPosition), -10000.0f, 10000.0f)) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Planet Radius", &g_atmospherePlanetRadius, 1.0f, 7000.0f)) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat3("Ray Origin", glm::value_ptr(g_atmosphereRayOrigin), -10000.0f, 10000.0f)) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Sun Intensity", &g_atmosphereSunIntensity, 0.1f, 40.0f)) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat3("Coefficients", glm::value_ptr(g_atmosphereRayleighScatteringCoefficient), 0.0f, 0.01f, "%.5f")) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Mie Scattering Coeff", &g_atmosphereMieScatteringCoefficient, 0.001f, 0.1f, "%.5f")) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Mie Scale Height", &g_atmosphereMieScaleHeight, 0.01f, 6000.0f, "%.2f")) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Mie Scattering Direction", &g_atmosphereMiePreferredScatteringDirection, -1.0f, 1.0f, "%.001f")) {
-            atmosphereModified = true;
-        }
-        if (ImGui::SliderFloat("Rayleigh Scale Height", &g_atmosphereRayleighScaleHeight, -1000, 1000, "%0.01f")) {
-            atmosphereModified = true;
-        }
-
-        if (atmosphereModified) {
-
-            g_atmosphereSettings = TAtmosphereSettings{
-                .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
-                .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
-                .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
-                .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
-                .MieScaleHeight = g_atmosphereMieScaleHeight,
-                .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
-                .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
-            };
-            UpdateBuffer(g_atmosphereSettingsBuffer, 0, sizeof(TAtmosphereSettings), &g_atmosphereSettings);
-
-            atmosphereModified = false;
-        }
-    }
-    ImGui::End();
-
     if (g_isEditor) {
         if (ImGui::BeginMainMenuBar()) {
             //ImGui::Image(reinterpret_cast<ImTextureID>(g_iconPackageGreen), ImVec2(16, 16), g_imvec2UnitY, g_imvec2UnitX);
@@ -1220,8 +1171,6 @@ auto RendererRender(
         }
         ImGui::End();
 
-
-
         /*
          * UI - Assets Viewer
          */
@@ -1259,6 +1208,58 @@ auto RendererRender(
          */
         if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT "Properties")) {
 
+        }
+        ImGui::End();
+
+        /*
+        * UI - Atmosphere Settings
+        */
+        if (ImGui::Begin(ICON_MD_SUNNY " Atmosphere")) {
+
+            auto atmosphereModified = false;
+            if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_atmosphereSunPosition), -10000.0f, 10000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Planet Radius", &g_atmospherePlanetRadius, 1.0f, 7000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat3("Ray Origin", glm::value_ptr(g_atmosphereRayOrigin), -10000.0f, 10000.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Sun Intensity", &g_atmosphereSunIntensity, 0.1f, 40.0f)) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat3("Coefficients", glm::value_ptr(g_atmosphereRayleighScatteringCoefficient), 0.0f, 0.01f, "%.5f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scattering Coeff", &g_atmosphereMieScatteringCoefficient, 0.001f, 0.1f, "%.5f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scale Height", &g_atmosphereMieScaleHeight, 0.01f, 6000.0f, "%.2f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Mie Scattering Direction", &g_atmosphereMiePreferredScatteringDirection, -1.0f, 1.0f, "%.001f")) {
+                atmosphereModified = true;
+            }
+            if (ImGui::SliderFloat("Rayleigh Scale Height", &g_atmosphereRayleighScaleHeight, -1000, 1000, "%0.01f")) {
+                atmosphereModified = true;
+            }
+
+            if (atmosphereModified) {
+
+                g_atmosphereSettings = TAtmosphereSettings{
+                    .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
+                    .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
+                    .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
+                    .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
+                    .MieScaleHeight = g_atmosphereMieScaleHeight,
+                    .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
+                    .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
+                };
+                UpdateBuffer(g_atmosphereSettingsBuffer, 0, sizeof(TAtmosphereSettings), &g_atmosphereSettings);
+
+                atmosphereModified = false;
+            }
         }
         ImGui::End();
     }
