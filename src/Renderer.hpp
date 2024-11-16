@@ -16,12 +16,12 @@ struct TCamera {
     float Pitch = {};
     float Yaw = {glm::radians(-90.0f)}; // look at 0, 0, -1
 
-    auto GetForwardDirection() -> const glm::vec3
+    auto GetForwardDirection() -> glm::vec3
     {
         return glm::vec3{cos(Pitch) * cos(Yaw), sin(Pitch), cos(Pitch) * sin(Yaw)};
     }
 
-    auto GetViewMatrix() -> const glm::mat4
+    auto GetViewMatrix() -> glm::mat4
     {
         return glm::lookAt(Position, Position + GetForwardDirection(), glm::vec3(0, 1, 0));
     }
