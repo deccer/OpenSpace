@@ -295,7 +295,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
 
         material.BaseColorTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Color,
-            .SamplerName = baseColorSamplerIndex.has_value() ? asset.Samplers[baseColorSamplerIndex.value()] : "S_magL_minL_C2E_C2E",
+            .SamplerName = baseColorSamplerIndex.has_value() ? asset.Samplers[baseColorSamplerIndex.value()] : "S_L_L_C2E_C2E",
             .TextureName = baseColorTextureIndex.has_value() ? asset.Images[baseColorTextureIndex.value()] : "T_Default_B",
         };
 
@@ -304,7 +304,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
 
         material.NormalTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Normals,
-            .SamplerName = normalSamplerIndex.has_value() ? asset.Samplers[normalSamplerIndex.value()] : "S_magL_minL_C2E_C2E",
+            .SamplerName = normalSamplerIndex.has_value() ? asset.Samplers[normalSamplerIndex.value()] : "S_L_L_C2E_C2E",
             .TextureName = normalTextureIndex.has_value() ? asset.Images[normalTextureIndex.value()] : "T_Default_N",
         };
 
@@ -313,7 +313,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
             auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
             material.ArmTextureChannel = TAssetMaterialChannelData{
                 .Channel = TAssetMaterialChannel::Scalar,
-                .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_magL_minL_C2E_C2E",
+                .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_L_L_C2E_C2E",
                 .TextureName = armTextureIndex.has_value() ? asset.Images[armTextureIndex.value()] : "T_Default_MR",
             };
         }
@@ -323,7 +323,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
 
         material.EmissiveTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
-            .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_magL_minL_C2E_C2E",
+            .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_L_L_C2E_C2E",
             .TextureName = emissiveTextureIndex.has_value() ? asset.Images[emissiveTextureIndex.value()] : "T_Default_S"
         };
 
@@ -356,7 +356,7 @@ auto LoadMesh(
     auto primitiveName = GetSafeResourceName(assetName.data(), fgAsset.meshes[meshIndex].name.data(), std::format("mesh-{}-primitive", meshIndex).data(), primitiveIndex);
     
     TAssetMeshData assetMeshData;
-    assetMeshData.Name = std::string(primitiveName);
+    assetMeshData.Name = primitiveName;
     assetMeshData.MaterialIndex = primitive.materialIndex;
     assetMeshData.InitialTransform = initialTransform;
 
@@ -389,15 +389,16 @@ auto LoadMesh(
         std::fill_n(assetMeshData.Tangents.begin(), assetMeshData.Positions.size(), glm::vec4{1.0f});
     }
 
-    asset.Meshes[assetGlobalPrimitiveIndex++] = std::string(primitiveName);
-    g_assetMeshDates[assetMeshData.Name] = std::move(assetMeshData);
+    asset.Meshes[assetGlobalPrimitiveIndex++] = primitiveName;
+    g_assetMeshDates[primitiveName] = std::move(assetMeshData);
 }
 
-auto LoadNode(const fastgltf::Asset& asset,
-               TAsset& assetScene,
-               size_t nodeIndex,
-               glm::mat4 parentTransform,
-               std::vector<std::pair<size_t, size_t>>& meshOffsets) -> void {
+auto LoadNode(
+    const fastgltf::Asset& asset,
+    TAsset& assetScene,
+    size_t nodeIndex,
+    glm::mat4 parentTransform,
+    std::vector<std::pair<size_t, size_t>>& meshOffsets) -> void {
 
     auto& node = asset.nodes[nodeIndex];
 
@@ -441,7 +442,10 @@ auto LoadNode(const fastgltf::Asset& asset,
     }
 }
 
-auto LoadAssetFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> std::expected<TAsset, std::string> {
+auto LoadAssetFromFile(
+    const std::string& assetName,
+    const std::filesystem::path& filePath) -> std::expected<TAsset, std::string> {
+
     if (!std::filesystem::exists(filePath)) {
         return std::unexpected(std::format("Unable to load asset. File '{}' does not exist", filePath.string()));
     }
@@ -511,7 +515,6 @@ auto LoadAssetFromFile(const std::string& assetName, const std::filesystem::path
         }
     }
 
-    //const auto nodeIndices = std::ranges::iota_view{0uz, fgAsset.scenes[fgAsset.defaultScene.value()].nodeIndices.size()};
     const auto& defaultScene = fgAsset.scenes[fgAsset.defaultScene.value()];
     std::for_each(poolstl::execution::par,
                   defaultScene.nodeIndices.begin(),
@@ -523,7 +526,10 @@ auto LoadAssetFromFile(const std::string& assetName, const std::filesystem::path
     return asset;
 }
 
-auto AddAssetFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void {
+auto AddAssetFromFile(
+    const std::string& assetName,
+    const std::filesystem::path& filePath) -> void {
+
     auto assetResult = LoadAssetFromFile(assetName, filePath);
     if (!assetResult) {
         spdlog::error(assetResult.error());
@@ -561,9 +567,11 @@ auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
     return g_assetMeshDates[meshDataName];
 }
 
-auto AddDefaultImage(std::string imageName, const std::filesystem::path& filePath) -> void {
+auto AddDefaultImage(
+    std::string imageName,
+    const std::filesystem::path& filePath) -> void {
 
-int32_t width = 0;
+    int32_t width = 0;
     int32_t height = 0;
     int32_t components = 0;
 
@@ -595,6 +603,9 @@ auto AddDefaultAssets() -> void {
     AddDefaultImage("T_Default_S", "data/default/T_Default_S.png");
     AddDefaultImage("T_Default_MR", "data/default/T_Default_MR.png");
 
+    AddDefaultImage("T_Purple", "data/default/T_Purple.png");
+    AddDefaultImage("T_Orange", "data/default/T_Orange.png");
+
     auto defaultAssetSampler = TAssetSamplerData {
         .Name = "S_L_L_C2E_C2E",
         .MagFilter = TAssetSamplerMagFilter::Linear,
@@ -603,4 +614,14 @@ auto AddDefaultAssets() -> void {
         .WrapT = TAssetSamplerWrapMode::ClampToEdge,
     };
     g_assetSamplerDates["S_L_L_C2E_C2E"] = std::move(defaultAssetSampler);
+
+    auto defaultMaterial = TAssetMaterialData {
+        .Name = "M_Default",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Purple"
+        },
+    };
+    g_assetMaterialDates["M_Default"] = std::move(defaultMaterial);
 }

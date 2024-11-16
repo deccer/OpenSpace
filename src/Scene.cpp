@@ -39,7 +39,7 @@ auto SceneAddEntity(
     const std::string& assetName,
     glm::mat4 initialTransform) -> std::optional<entt::entity> {
 
-    PROFILER_ZONESCOPEDN("SceneAddEntity");
+    PROFILER_ZONESCOPEDN(nameof(SceneAddEntity));
 
     if (!IsAssetLoaded(assetName)) {
         return std::nullopt;

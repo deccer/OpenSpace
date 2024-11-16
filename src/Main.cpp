@@ -215,7 +215,7 @@ auto main(
         return 0;
     }
 
-    const auto primaryMonitorVideoMode = glfwGetVideoMode(primaryMonitor);
+    const auto* primaryMonitorVideoMode = glfwGetVideoMode(primaryMonitor);
     const auto screenWidth = primaryMonitorVideoMode->width;
     const auto screenHeight = primaryMonitorVideoMode->height;
 
@@ -266,9 +266,7 @@ auto main(
         return 0;
     }
 
-    std::vector<float> frameTimes;
-    frameTimes.resize(512);
-    std::fill_n(frameTimes.begin(), frameTimes.size(), 60.0f);
+    std::vector<float> frameTimes(512, 60.0f);
 
     /*
     uint32_t g_gridTexture;
