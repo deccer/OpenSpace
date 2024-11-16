@@ -7,21 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <filesystem>
-#include <ranges>
-#include <span>
-#include <stack>
-#include <string_view>
-#include <thread>
-#include <unordered_map>
-#include <utility>
-#include <variant>
 #include <vector>
-
-#include <fastgltf/glm_element_traits.hpp>
-#include <fastgltf/core.hpp>
-#include <fastgltf/tools.hpp>
-#include <fastgltf/types.hpp>
 
 #include <spdlog/spdlog.h>
 #include <glad/gl.h>
@@ -33,16 +19,8 @@
 
 #include "Core.hpp"
 #include "Profiler.hpp"
-#include "Io.hpp"
-#include "Images.hpp"
-#include "Helpers.hpp"
-#include "RHI.hpp"
-#include "Assets.hpp"
-#include "Components.hpp"
 #include "Scene.hpp"
 
-#include "IconsMaterialDesign.h"
-#include "IconsFontAwesome6.h"
 #include "Renderer.hpp"
 #include "WindowSettings.hpp"
 

@@ -217,7 +217,7 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
         [&](size_t samplerIndex) -> void {
 
         auto& fgSampler = fgAsset.samplers[samplerIndex];
-        //asset.Samplers[samplerIndex] 
+        //TODO(deccer) complete this
     });
 }
 
