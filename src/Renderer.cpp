@@ -88,6 +88,8 @@ constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
 ImGuiContext* g_imguiContext = nullptr;
 
+int32_t g_sceneViewerTextureIndex = {};
+
 TFramebuffer g_depthPrePassFramebuffer = {};
 TGraphicsPipeline g_depthPrePassGraphicsPipeline = {};
 
@@ -468,64 +470,64 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
 
     g_depthPrePassFramebuffer = CreateFramebuffer({
-                                                      .Label = "Depth PrePass",
-                                                      .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
-                                                          .Label = "Depth",
-                                                          .Format = TFormat::D24_UNORM_S8_UINT,
-                                                          .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                                                          .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-                                                          .ClearDepthStencil = { 1.0f, 0 },
-                                                      }
-                                                  });
+        .Label = "Depth PrePass",
+        .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
+            .Label = "Depth",
+            .Format = TFormat::D24_UNORM_S8_UINT,
+            .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+            .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+            .ClearDepthStencil = { 1.0f, 0 },
+        }
+    });
 
     g_geometryFramebuffer = CreateFramebuffer({
-                                                  .Label = "Geometry",
-                                                  .ColorAttachments = {
-                                                      TFramebufferColorAttachmentDescriptor{
-                                                          .Label = "GeometryAlbedo",
-                                                          .Format = TFormat::R8G8B8A8_SRGB,
-                                                          .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                                                          .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-                                                          .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-                                                      },
-                                                      TFramebufferColorAttachmentDescriptor{
-                                                          .Label = "GeometryNormals",
-                                                          .Format = TFormat::R32G32B32A32_FLOAT,
-                                                          .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                                                          .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-                                                          .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-                                                      },
-                                                  },
-                                                  .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
-                                                      .ExistingDepthTexture = g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture,
-                                                  }
-                                              });
+        .Label = "Geometry",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "GeometryAlbedo",
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            },
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "GeometryNormals",
+                .Format = TFormat::R32G32B32A32_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            },
+        },
+        .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
+            .ExistingDepthTexture = g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture,
+        }
+    });
 
     g_resolveGeometryFramebuffer = CreateFramebuffer({
-                                                         .Label = "ResolveGeometry",
-                                                         .ColorAttachments = {
-                                                             TFramebufferColorAttachmentDescriptor{
-                                                                 .Label = "ResolvedGeometry",
-                                                                 .Format = TFormat::R8G8B8A8_SRGB,
-                                                                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                                                                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
-                                                                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-                                                             },
-                                                         },
-                                                     });
+        .Label = "ResolveGeometry",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "ResolvedGeometry",
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            },
+        },
+    });
 
     g_fxaaFramebuffer = CreateFramebuffer({
-                                              .Label = "PostFX-FXAA",
-                                              .ColorAttachments = {
-                                                  TFramebufferColorAttachmentDescriptor{
-                                                      .Label = "PostFX-FXAA-Buffer",
-                                                      .Format = TFormat::R8G8B8A8_SRGB,
-                                                      .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                                                      .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
-                                                      .ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f }
-                                                  }
-                                              }
-                                          });
+        .Label = "PostFX-FXAA",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "PostFX-FXAA-Buffer",
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f }
+            }
+        }
+    });
 }
 
 auto RendererInitialize(
@@ -1148,15 +1150,31 @@ auto RendererRender(
                 g_sceneViewerResized = true;
             }
 
-            auto texture = g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
+            auto GetCurrentSceneViewerTexture = [&](int32_t sceneViewerTextureIndex) -> uint32_t {
+                switch (sceneViewerTextureIndex) {
+                    case 0: return g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture.Id;
+                    case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture.Id;
+                    case 2: return g_geometryFramebuffer.ColorAttachments[0].value().Texture.Id;
+                    case 3: return g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
+                    case 4: return g_fxaaFramebuffer.ColorAttachments[0].value().Texture.Id;
+                    default: std::unreachable();
+                }
+
+                std::unreachable();
+            };
+
+            auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
             auto imagePosition = ImGui::GetCursorPos();
             ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
             ImGui::SetCursorPos(imagePosition);
-            //if (ImGui::BeginChild(1, ImVec2{192, -1})) {
-            //    if (ImGui::CollapsingHeader("Statistics")) {
-            //    }
-            //}
-            //ImGui::EndChild();
+
+            if (ImGui::CollapsingHeader(ICON_MD_IMAGESEARCH_ROLLER "Display")) {
+                ImGui::RadioButton("Final", &g_sceneViewerTextureIndex, 0);
+                ImGui::RadioButton("Depth", &g_sceneViewerTextureIndex, 1);
+                ImGui::RadioButton("Geometry Colors", &g_sceneViewerTextureIndex, 2);
+                ImGui::RadioButton("Geometry Normals", &g_sceneViewerTextureIndex, 3);
+                ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 4);
+            }
         }
         ImGui::PopStyleVar();
         ImGui::End();

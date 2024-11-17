@@ -37,7 +37,9 @@ auto SceneAddEntity(
 auto SceneAddEntity(
     std::optional<entt::entity> parent,
     const std::string& assetName,
-    glm::mat4 initialTransform) -> std::optional<entt::entity> {
+    glm::mat4 initialTransform,
+    bool overrideMaterial,
+    const std::string& materialName) -> std::optional<entt::entity> {
 
     PROFILER_ZONESCOPEDN(nameof(SceneAddEntity));
 
@@ -60,7 +62,7 @@ auto SceneAddEntity(
         auto assetMesh = Assets::GetAssetMeshData(assetMeshName);
 
         auto assetMaterialName = assetMesh.MaterialIndex.has_value()
-            ? asset.Materials[assetMesh.MaterialIndex.value()]
+            ? overrideMaterial ? materialName : asset.Materials[assetMesh.MaterialIndex.value()]
             : "M_Default";
         auto& worldMatrix = assetInstanceData.WorldMatrix;
 
@@ -109,9 +111,9 @@ auto SceneLoad() -> bool {
 
     //SceneAddEntity(std::nullopt, "Test", glm::mat4(1.0f));
 
-    SceneAddEntity(std::nullopt, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)));
+    SceneAddEntity(std::nullopt, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)), false, "");
     for (auto i = 1; i < 10; i++) {
-        SceneAddEntity(std::nullopt, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)));
+        SceneAddEntity(std::nullopt, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
     }
 
     //AddEntity(std::nullopt, "Test2", glm::translate(glm::mat4(1.0f), {0.0f, 0.0f, -10.0f}));
