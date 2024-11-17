@@ -17,6 +17,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <ImGuizmo.h>
 
 #include "IconsMaterialDesign.h"
 #include "IconsFontAwesome6.h"
@@ -31,6 +32,19 @@
 
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
+
+enum class TImGuizmoOperation
+{
+    Translate,
+    Rotate,
+    Scale
+};
+
+enum class TImGuizmoMode
+{
+    Local,
+    World
+};
 
 struct TGpuDebugLine {
     glm::vec3 StartPosition;
@@ -147,6 +161,72 @@ auto OnOpenGLDebugMessage(
         spdlog::error(message);
         debug_break();
     }
+}
+
+void EditTransform(const TGpuGlobalUniforms& globalUniforms, glm::mat4& matrix)
+{
+    static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::OPERATION::ROTATE);
+    static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::MODE::LOCAL);
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_1))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_2))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_3))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::SCALE;
+    if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::OPERATION::TRANSLATE))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::OPERATION::ROTATE))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::OPERATION::SCALE))
+        mCurrentGizmoOperation = ImGuizmo::OPERATION::SCALE;
+    float matrixTranslation[3];
+    float matrixRotation[3];
+    float matrixScale[3];
+    ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), matrixTranslation, matrixRotation, matrixScale);
+    ImGui::InputFloat3("Tr", matrixTranslation);
+    ImGui::InputFloat3("Rt", matrixRotation);
+    ImGui::InputFloat3("Sc", matrixScale);
+    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(matrix));
+
+    if (mCurrentGizmoOperation != ImGuizmo::OPERATION::SCALE)
+    {
+        if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::MODE::LOCAL))
+            mCurrentGizmoMode = ImGuizmo::MODE::LOCAL;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::MODE::WORLD))
+            mCurrentGizmoMode = ImGuizmo::MODE::WORLD;
+    }
+    static bool useSnap(false);
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_0))
+        useSnap = !useSnap;
+    ImGui::Checkbox("Snap##Check", &useSnap);
+    ImGui::SameLine();
+    glm::vec3 snap = {};
+    switch (mCurrentGizmoOperation)
+    {
+    case ImGuizmo::OPERATION::TRANSLATE:
+        //snap = config.mSnapTranslation;
+        ImGui::InputFloat3("Snap", &snap.x);
+        break;
+    case ImGuizmo::OPERATION::ROTATE:
+        //snap = config.mSnapRotation;
+        ImGui::InputFloat("Angle Snap", &snap.x);
+        break;
+    case ImGuizmo::OPERATION::SCALE:
+        //snap = config.mSnapScale;
+        ImGui::InputFloat("Scale Snap", &snap.x);
+        break;
+    }
+    ImGuizmo::Manipulate(
+        glm::value_ptr(globalUniforms.ViewMatrix),
+        glm::value_ptr(globalUniforms.ProjectionMatrix),
+        mCurrentGizmoOperation,
+        mCurrentGizmoMode,
+        glm::value_ptr(matrix),
+        nullptr, 
+        useSnap ? &snap.x : nullptr);
 }
 
 struct TGpuVertexPosition {
@@ -993,6 +1073,10 @@ auto RendererRender(
         }
         PopDebugGroup();
     }
+
+    static glm::mat4 selectedObjectMatrix;
+    static int32_t counter = 0;
+
     {
         PROFILER_ZONESCOPEDN("Draw Geometry All");
         PushDebugGroup("Geometry");
@@ -1012,9 +1096,13 @@ auto RendererRender(
                 auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
+                auto worldMatrix = transformComponent * gpuMesh.InitialTransform;
+                if (counter == 1) {
+                    selectedObjectMatrix = worldMatrix;
+                }
                 g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
                 g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-                g_geometryGraphicsPipeline.SetUniform(0, transformComponent * gpuMesh.InitialTransform);
+                g_geometryGraphicsPipeline.SetUniform(0, worldMatrix);
 
                 g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId,
                                                                  cpuMaterial.BaseColorTextureSamplerId);
@@ -1098,6 +1186,9 @@ auto RendererRender(
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::BeginFrame();
+    auto& io = ImGui::GetIO();
+    ImGuizmo::SetRect(0, 0, g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y); //TODO(deccer) get cursorposition from where i draw the scene view
 
     if (g_isEditor) {
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
@@ -1225,7 +1316,7 @@ auto RendererRender(
          * UI - Properties
          */
         if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT "Properties")) {
-
+            EditTransform(g_globalUniforms, selectedObjectMatrix);
         }
         ImGui::End();
 
