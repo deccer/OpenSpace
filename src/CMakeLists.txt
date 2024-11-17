@@ -29,6 +29,7 @@ target_link_libraries(HowToScript
     PRIVATE glad
     PRIVATE glm
     PRIVATE imgui
+    PRIVATE imguizmo
     PRIVATE stb
     PRIVATE debugbreak
     PRIVATE spdlog
