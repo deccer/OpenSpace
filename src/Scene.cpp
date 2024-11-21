@@ -26,6 +26,7 @@ auto SceneAddEntity(
         g_registry.emplace<TComponentChildOf>(entityId, parent.value());
     }
 
+    g_registry.emplace<TComponentName>(entityId, assetMeshName);
     g_registry.emplace<TComponentMesh>(entityId, assetMeshName);
     g_registry.emplace<TComponentMaterial>(entityId, assetMaterialName);
     g_registry.emplace<TComponentTransform>(entityId, initialTransform);

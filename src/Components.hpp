@@ -6,6 +6,10 @@
 #include <string>
 #include <vector>
 
+struct TComponentName {
+    std::string Name;
+};
+
 struct TComponentTransform : public glm::mat4x4
 {
     using glm::mat4x4::mat4x4;

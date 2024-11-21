@@ -21,6 +21,7 @@
 
 #include "IconsMaterialDesign.h"
 #include "IconsFontAwesome6.h"
+#include "entt/entity/fwd.hpp"
 
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
@@ -103,6 +104,7 @@ constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
 ImGuiContext* g_imguiContext = nullptr;
 
 int32_t g_sceneViewerTextureIndex = {};
+ImVec2 g_sceneViewerImagePosition = {};
 
 TFramebuffer g_depthPrePassFramebuffer = {};
 TGraphicsPipeline g_depthPrePassGraphicsPipeline = {};
@@ -148,6 +150,8 @@ bool g_sceneViewerResized = false;
 bool g_isEditor = false;
 bool g_isSrgbDisabled = false;
 
+std::optional<entt::entity> g_selectedEntity = {};
+
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
     uint32_t type,
@@ -161,72 +165,6 @@ auto OnOpenGLDebugMessage(
         spdlog::error(message);
         debug_break();
     }
-}
-
-void EditTransform(const TGpuGlobalUniforms& globalUniforms, glm::mat4& matrix)
-{
-    static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::OPERATION::ROTATE);
-    static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::MODE::LOCAL);
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_1))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_2))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_3))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::SCALE;
-    if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::OPERATION::TRANSLATE))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::OPERATION::ROTATE))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::OPERATION::SCALE))
-        mCurrentGizmoOperation = ImGuizmo::OPERATION::SCALE;
-    float matrixTranslation[3];
-    float matrixRotation[3];
-    float matrixScale[3];
-    ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), matrixTranslation, matrixRotation, matrixScale);
-    ImGui::InputFloat3("Tr", matrixTranslation);
-    ImGui::InputFloat3("Rt", matrixRotation);
-    ImGui::InputFloat3("Sc", matrixScale);
-    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(matrix));
-
-    if (mCurrentGizmoOperation != ImGuizmo::OPERATION::SCALE)
-    {
-        if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::MODE::LOCAL))
-            mCurrentGizmoMode = ImGuizmo::MODE::LOCAL;
-        ImGui::SameLine();
-        if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::MODE::WORLD))
-            mCurrentGizmoMode = ImGuizmo::MODE::WORLD;
-    }
-    static bool useSnap(false);
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_0))
-        useSnap = !useSnap;
-    ImGui::Checkbox("Snap##Check", &useSnap);
-    ImGui::SameLine();
-    glm::vec3 snap = {};
-    switch (mCurrentGizmoOperation)
-    {
-    case ImGuizmo::OPERATION::TRANSLATE:
-        //snap = config.mSnapTranslation;
-        ImGui::InputFloat3("Snap", &snap.x);
-        break;
-    case ImGuizmo::OPERATION::ROTATE:
-        //snap = config.mSnapRotation;
-        ImGui::InputFloat("Angle Snap", &snap.x);
-        break;
-    case ImGuizmo::OPERATION::SCALE:
-        //snap = config.mSnapScale;
-        ImGui::InputFloat("Scale Snap", &snap.x);
-        break;
-    }
-    ImGuizmo::Manipulate(
-        glm::value_ptr(globalUniforms.ViewMatrix),
-        glm::value_ptr(globalUniforms.ProjectionMatrix),
-        mCurrentGizmoOperation,
-        mCurrentGizmoMode,
-        glm::value_ptr(matrix),
-        nullptr, 
-        useSnap ? &snap.x : nullptr);
 }
 
 struct TGpuVertexPosition {
@@ -1051,6 +989,10 @@ auto RendererUnload() -> void {
     RhiShutdown();
 }
 
+auto RenderEntityProperties(entt::entity entity) {
+
+}
+
 auto RendererRender(
     TRenderContext& renderContext,
     entt::registry& registry,
@@ -1265,9 +1207,9 @@ auto RendererRender(
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::BeginFrame();
-    auto& io = ImGui::GetIO();
-    ImGuizmo::SetRect(0, 0, g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y); //TODO(deccer) get cursorposition from where i draw the scene view
 
     if (g_isEditor) {
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
@@ -1313,38 +1255,97 @@ auto RendererRender(
          * UI - Scene Viewer
          */
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        if (ImGui::Begin(ICON_MD_GRID_VIEW "Scene")) {
+        if (ImGui::Begin(ICON_MD_GRID_VIEW " Scene")) {
             auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
             if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                 g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                 g_sceneViewerResized = true;
             }
 
-            auto GetCurrentSceneViewerTexture = [&](int32_t sceneViewerTextureIndex) -> uint32_t {
-                switch (sceneViewerTextureIndex) {
-                    case 0: return g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture.Id;
-                    case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture.Id;
-                    case 2: return g_geometryFramebuffer.ColorAttachments[0].value().Texture.Id;
-                    case 3: return g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
-                    case 4: return g_fxaaFramebuffer.ColorAttachments[0].value().Texture.Id;
-                    default: std::unreachable();
+            if (ImGui::BeginChild("Render Output", currentSceneWindowSize, ImGuiChildFlags_Border)) {
+                auto currentWindowPosition = ImGui::GetWindowPos();
+
+                auto GetCurrentSceneViewerTexture = [&](int32_t sceneViewerTextureIndex) -> uint32_t {
+                    switch (sceneViewerTextureIndex) {
+                        case 0: return g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture.Id;
+                        case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture.Id;
+                        case 2: return g_geometryFramebuffer.ColorAttachments[0].value().Texture.Id;
+                        case 3: return g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
+                        case 4: return g_fxaaFramebuffer.ColorAttachments[0].value().Texture.Id;
+                        default: std::unreachable();
+                    }
+
+                    std::unreachable();
+                };
+
+                auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
+                g_sceneViewerImagePosition = ImGui::GetCursorPos();
+                ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
+                ImGui::SetCursorPos(g_sceneViewerImagePosition);
+                if (ImGui::CollapsingHeader(ICON_MD_IMAGESEARCH_ROLLER "Display")) {
+                    ImGui::RadioButton("Final", &g_sceneViewerTextureIndex, 0);
+                    ImGui::RadioButton("Depth", &g_sceneViewerTextureIndex, 1);
+                    ImGui::RadioButton("Geometry Colors", &g_sceneViewerTextureIndex, 2);
+                    ImGui::RadioButton("Geometry Normals", &g_sceneViewerTextureIndex, 3);
+                    ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 4);
                 }
 
-                std::unreachable();
-            };
+                if (g_selectedEntity.has_value()) {
 
-            auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
-            auto imagePosition = ImGui::GetCursorPos();
-            ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
-            ImGui::SetCursorPos(imagePosition);
+                    ImGuizmo::SetDrawlist();
+                    ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-            if (ImGui::CollapsingHeader(ICON_MD_IMAGESEARCH_ROLLER "Display")) {
-                ImGui::RadioButton("Final", &g_sceneViewerTextureIndex, 0);
-                ImGui::RadioButton("Depth", &g_sceneViewerTextureIndex, 1);
-                ImGui::RadioButton("Geometry Colors", &g_sceneViewerTextureIndex, 2);
-                ImGui::RadioButton("Geometry Normals", &g_sceneViewerTextureIndex, 3);
-                ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 4);
+                    auto& transformComponent = registry.get<TComponentTransform>(*g_selectedEntity);
+                    glm::mat4 temp = transformComponent;
+
+                    static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
+                    static ImGuizmo::MODE currentGizmoMode(ImGuizmo::MODE::WORLD);
+                    static bool useSnap(false);
+
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_1)) {
+                        currentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+                    }
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_2)) {
+                        currentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
+                    }
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_3)) {
+                        currentGizmoOperation = ImGuizmo::OPERATION::SCALE;
+                    }
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_4)) {
+                        currentGizmoMode = ImGuizmo::MODE::LOCAL;
+                    }
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_5)) {
+                        currentGizmoMode = ImGuizmo::MODE::WORLD;
+                    }
+                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_0)) {
+                        useSnap = !useSnap;
+                    }
+                /*
+                    float matrixTranslation[3];
+                    float matrixRotation[3];
+                    float matrixScale[3];
+                    ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), matrixTranslation, matrixRotation, matrixScale);
+                    ImGui::InputFloat3("Tr", matrixTranslation);
+                    ImGui::InputFloat3("Rt", matrixRotation);
+                    ImGui::InputFloat3("Sc", matrixScale);
+                    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(matrix));
+                */
+
+                    ImGuizmo::Manipulate(
+                        glm::value_ptr(g_globalUniforms.ViewMatrix),
+                        glm::value_ptr(g_globalUniforms.ProjectionMatrix),
+                        currentGizmoOperation,
+                        currentGizmoMode,
+                        glm::value_ptr(temp));
+
+                    registry.replace<TComponentTransform>(*g_selectedEntity, temp);
+                }
             }
+
+            ImGui::EndChild();
+          
+            //auto collapsingHeaderHeight = ImGui::GetItemRectSize().y;
+            //ImGuizmo::SetRect(0, collapsingHeaderHeight, g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y); //TODO(deccer) get cursorposition from where i draw the scene view
         }
         ImGui::PopStyleVar();
         ImGui::End();
@@ -1386,16 +1387,32 @@ auto RendererRender(
         /*
          * UI - Scene Hierarchy
          */
-        if (ImGui::Begin(ICON_MD_APP_REGISTRATION "Hierarchy")) {
+        if (ImGui::Begin(ICON_MD_APP_REGISTRATION " Hierarchy")) {
 
+            auto entities = registry.view<TComponentName>();
+            for (auto& entity : entities) {
+
+                auto entityName = registry.get<TComponentName>(entity);
+
+                auto isOpen = ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_None);
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                    g_selectedEntity = entity;
+                }
+                if (isOpen) {
+                    ImGui::TreePop();
+                }
+            }
         }
         ImGui::End();
 
         /*
          * UI - Properties
          */
-        if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT "Properties")) {
-            EditTransform(g_globalUniforms, selectedObjectMatrix);
+        if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT " Properties")) {
+
+            if (g_selectedEntity.has_value()) {
+                RenderEntityProperties(*g_selectedEntity);
+            }
         }
         ImGui::End();
 
