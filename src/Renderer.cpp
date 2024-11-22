@@ -958,7 +958,7 @@ auto RendererInitialize(
         .Strength = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)
     });
 
-    g_globalLightsBuffer = CreateBuffer("SGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
+    g_globalLightsBuffer = CreateBuffer("TGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
     g_fstSamplerNearestClampToEdge = GetOrCreateSampler({
                                                             .AddressModeU = TTextureAddressMode::ClampToEdge,
@@ -997,6 +997,13 @@ auto RendererRender(
     TRenderContext& renderContext,
     entt::registry& registry,
     TCamera& camera) -> void {
+
+    auto planetEntities = registry.view<TComponentPlanet>();
+    for(auto& planetEntity : planetEntities) {
+        auto& planetComponent = registry.get<TComponentPlanet>(planetEntity);
+        if (!planetComponent.ResourcesCreated) {
+        }
+    }
 
     ///////////////////////
     // Create Gpu Resources if necessary
@@ -1125,8 +1132,7 @@ auto RendererRender(
                 g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
                 g_geometryGraphicsPipeline.SetUniform(0, worldMatrix);
 
-                g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId,
-                                                                 cpuMaterial.BaseColorTextureSamplerId);
+                g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
                 g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
 
                 g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);

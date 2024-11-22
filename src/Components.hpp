@@ -45,3 +45,8 @@ struct TComponentGpuMesh {
 struct TComponentGpuMaterial {
     std::string GpuMaterial;
 };
+
+struct TComponentPlanet {
+    double Radius;
+    bool ResourcesCreated;
+};

@@ -136,7 +136,7 @@ auto HandleCamera(float deltaTime) -> void {
         tempCameraSpeed *= 4.0f;
     }
     if (glfwGetKey(g_window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
-        tempCameraSpeed *= 40.0f;
+        tempCameraSpeed *= 4000.0f;
     }
     if (glfwGetKey(g_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
         tempCameraSpeed *= 0.25f;

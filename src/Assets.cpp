@@ -569,7 +569,7 @@ auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
     return g_assetMeshDates[meshDataName];
 }
 
-auto AddDefaultImage(
+auto AddImage(
     std::string imageName,
     const std::filesystem::path& filePath) -> void {
 
@@ -598,15 +598,347 @@ auto AddDefaultImage(
 
 }
 
+auto CreateUvSphereMeshData(
+    std::string name,
+    float radius,
+    int32_t rings,
+    int32_t segments) -> TAssetMeshData {
+
+    TAssetMeshData assetMeshData;
+
+    assetMeshData.Name = name;
+    assetMeshData.Positions.resize(rings * segments * 4);
+    assetMeshData.Normals.resize(rings * segments * 4);
+    assetMeshData.Uvs.resize(rings * segments * 4);
+    assetMeshData.Tangents.resize(rings * segments * 4);
+
+    auto index = 0;
+    const auto pi = glm::pi<float>();
+    for (auto ring = 0; ring <= rings; ++ring) {
+        auto theta = ring * pi / rings;
+        auto sinTheta = glm::sin(theta);
+        auto cosTheta = glm::cos(theta);
+
+        for (unsigned int segment = 0; segment <= segments; ++segment) {
+            float phi = segment * 2.0f * pi / segments;
+            float sinPhi = sin(phi);
+            float cosPhi = cos(phi);
+
+            glm::vec3 position;
+            position.x = radius * cosPhi * sinTheta;
+            position.y = radius * cosTheta;
+            position.z = radius * sinPhi * sinTheta;
+
+            glm::vec3 normal = {
+                cosPhi * sinTheta,
+                cosTheta,
+                sinPhi * sinTheta
+            };
+
+            glm::vec2 uv = {
+                static_cast<float>(segment) / segments,
+                static_cast<float>(ring) / rings,
+            };
+
+            assetMeshData.Positions[index] = position;
+            assetMeshData.Normals[index] = normal;
+            assetMeshData.Uvs[index] = uv;
+            assetMeshData.Tangents[index] = glm::vec4{0.0f};
+            index++;
+        }
+    }
+
+    assetMeshData.Indices.resize(rings * segments * 6);
+
+    index = 0;
+    for (auto ring = 0; ring < rings; ++ring) {
+        for (auto seg = 0; seg < segments; ++seg) {
+            auto first = (ring * (segments + 1)) + seg;
+            auto second = first + segments + 1;
+
+            // Two triangles per quad
+            assetMeshData.Indices[index + 0] = first;
+            assetMeshData.Indices[index + 1] = first + 1;
+            assetMeshData.Indices[index + 2] = second;
+
+            assetMeshData.Indices[index + 3] = second;
+            assetMeshData.Indices[index + 4] = first + 1;
+            assetMeshData.Indices[index + 5] = second + 1;
+
+            index += 6;
+        }
+    }
+
+    assetMeshData.InitialTransform = glm::mat4(1.0f);
+    assetMeshData.MaterialIndex = 0;
+
+    return assetMeshData;
+}
+
+auto CreateCuboid(
+    const std::string& name,
+    float width,
+    float height,
+    float depth,
+    uint32_t segmentsX = 1,
+    uint32_t segmentsY = 1,
+    uint32_t resZ = 1) -> TAssetMeshData {
+
+    auto halfW = width / 2.0f;
+    auto halfH = height / 2.0f;
+    auto halfD = depth / 2.0f;
+
+    TAssetMeshData assetMeshData;
+    assetMeshData.Name = name;
+    assetMeshData.MaterialIndex = 0;
+    assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfH, 0));
+
+    std::size_t vertOffset = 0;
+
+    // Front Face //
+    glm::vec3 normal = {0.f, 0.f, 1.f};
+    for(int iy = 0; iy < segmentsY; iy++) {
+        for(int ix = 0; ix < segmentsX; ix++) {
+
+            glm::vec2 uv;
+            uv.x = ((float)ix/((float)segmentsX-1.f));
+            uv.y = 1.f - ((float)iy/((float)segmentsY-1.f));
+
+            glm::vec3 position;
+            position.x = uv.x * width - halfW;
+            position.y = -(uv.y-1.f) * height - halfH;
+            position.z = halfD;
+
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4(0.0f));
+        }
+    }
+
+    for(int y = 0; y < segmentsY-1; y++) {
+        for(int x = 0; x < segmentsX-1; x++) {
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);            
+
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+        }
+    }
+
+    vertOffset = assetMeshData.Positions.size();
+
+    // Right Side Face //
+    normal = {1.f, 0.f, 0.f};
+    for(int iy = 0; iy < segmentsY; iy++) {
+        for(int ix = 0; ix < resZ; ix++) {
+
+            glm::vec2 texcoord;
+            texcoord.x = ((float)ix/((float)resZ-1.f));
+            texcoord.y = 1.f - ((float)iy/((float)segmentsY-1.f));
+
+            glm::vec3 vert;
+            vert.x = halfW;
+            vert.y = -(texcoord.y-1.f) * height - halfH;
+            vert.z = texcoord.x * -depth + halfD;
+
+            assetMeshData.Positions.push_back(vert);
+            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+        }
+    }
+
+    for(int y = 0; y < segmentsY-1; y++) {
+        for(int x = 0; x < resZ-1; x++) {
+            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*resZ + x + vertOffset);            
+
+            assetMeshData.Indices.push_back((y+1)*resZ + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
+        }
+    }
+
+    vertOffset = assetMeshData.Positions.size();
+
+    // Left Side Face //
+    normal = {-1.f, 0.f, 0.f};
+    for(int iy = 0; iy < segmentsY; iy++) {
+        for(int ix = 0; ix < resZ; ix++) {
+
+            glm::vec2 texcoord;
+            texcoord.x = ((float)ix/((float)resZ-1.f));
+            texcoord.y = 1.f-((float)iy/((float)segmentsY-1.f));
+
+            glm::vec3 vert;
+            vert.x = -halfW;
+            vert.y = -(texcoord.y-1.f) * height - halfH;
+            vert.z = texcoord.x * depth - halfD;
+
+            assetMeshData.Positions.push_back(vert);
+            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+        }
+    }
+
+    for(int y = 0; y < segmentsY-1; y++) {
+        for(int x = 0; x < resZ-1; x++) {
+            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*resZ + x + vertOffset);            
+
+            assetMeshData.Indices.push_back((y+1)*resZ + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
+        }
+    }
+
+    vertOffset = assetMeshData.Positions.size();
+
+
+    // Back Face //
+    normal = {0.f, 0.f, -1.f};
+    for(int iy = 0; iy < segmentsY; iy++) {
+        for(int ix = 0; ix < segmentsX; ix++) {
+
+            glm::vec2 texcoord;
+            texcoord.x = ((float)ix/((float)segmentsX-1.f));
+            texcoord.y = 1.f-((float)iy/((float)segmentsY-1.f));
+
+            glm::vec3 vert;
+            vert.x = texcoord.x * -width + halfW;
+            vert.y = -(texcoord.y-1.f) * height - halfH;
+            vert.z = -halfD;
+
+            assetMeshData.Positions.push_back(vert);
+            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+        }
+    }
+
+    for(int y = 0; y < segmentsY-1; y++) {
+        for(int x = 0; x < segmentsX-1; x++) {
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);            
+
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+        }
+    }
+
+    vertOffset = assetMeshData.Positions.size();
+
+    // Top Face //
+    normal = {0.f, -1.f, 0.f};
+    for(int iy = 0; iy < resZ; iy++) {
+        for(int ix = 0; ix < segmentsX; ix++) {
+
+            glm::vec2 texcoord;
+            texcoord.x = ((float)ix/((float)segmentsX-1.f));
+            texcoord.y = 1.f-((float)iy/((float)resZ-1.f));
+
+            glm::vec3 vert;
+            vert.x = texcoord.x * width - halfW;
+            vert.y = -halfH;
+            vert.z = texcoord.y * depth - halfD;
+
+            assetMeshData.Positions.push_back(vert);
+            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+        }
+    }
+
+    for(int y = 0; y < resZ-1; y++) {
+        for(int x = 0; x < segmentsX-1; x++) {
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);            
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);
+
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+        }
+    }
+
+    vertOffset = assetMeshData.Positions.size();
+
+    // Bottom Face //
+    normal = {0.f, 1.f, 0.f};
+    for(int iy = 0; iy < resZ; iy++) {
+        for(int ix = 0; ix < segmentsX; ix++) {
+
+            glm::vec2 texcoord;
+            texcoord.x = ((float)ix/((float)segmentsX-1.f));
+            texcoord.y = 1.f-((float)iy/((float)resZ-1.f));
+
+            glm::vec3 vert;
+            vert.x = texcoord.x * width - halfW;
+            vert.y = halfH;
+            vert.z = texcoord.y * -depth + halfD;
+
+            assetMeshData.Positions.push_back(vert);
+            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Normals.push_back(normal);
+            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+        }
+    }
+
+    for(int y = 0; y < resZ-1; y++) {
+        for(int x = 0; x < segmentsX-1; x++) {
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);
+            
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            
+        }
+    }
+   
+    return std::move(assetMeshData);
+}
+
+auto CreateCuboid(
+    const std::string& name,
+    float width,
+    float height,
+    float depth,
+    uint32_t segmentsX,
+    uint32_t segmentsY,
+    uint32_t segmentsZ,
+    const std::string& materialName) -> void {
+
+    TAsset cuboid = {};
+    cuboid.Materials.push_back(materialName);
+    cuboid.Meshes.push_back(name);
+    cuboid.Instances.push_back(TAssetInstanceData{
+        .WorldMatrix = glm::mat4(1.0f),
+        .MeshIndex = 0,
+    });
+   
+    g_assets[name] = std::move(cuboid);
+    g_assetMeshDates[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
+}
+
 auto AddDefaultAssets() -> void {
 
-    AddDefaultImage("T_Default_B", "data/default/T_Default_B.png");
-    AddDefaultImage("T_Default_N", "data/default/T_Default_N.png");
-    AddDefaultImage("T_Default_S", "data/default/T_Default_S.png");
-    AddDefaultImage("T_Default_MR", "data/default/T_Default_MR.png");
+    AddImage("T_Default_B", "data/default/T_Default_B.png");
+    AddImage("T_Default_N", "data/default/T_Default_N.png");
+    AddImage("T_Default_S", "data/default/T_Default_S.png");
+    AddImage("T_Default_MR", "data/default/T_Default_MR.png");
 
-    AddDefaultImage("T_Purple", "data/default/T_Purple.png");
-    AddDefaultImage("T_Orange", "data/default/T_Orange.png");
+    AddImage("T_Purple", "data/default/T_Purple.png");
+    AddImage("T_Orange", "data/default/T_Orange.png");
 
     auto defaultAssetSampler = TAssetSamplerData {
         .Name = "S_L_L_C2E_C2E",
@@ -626,6 +958,36 @@ auto AddDefaultAssets() -> void {
         },
     };
     g_assetMaterialDates["M_Default"] = std::move(defaultMaterial);
+
+    auto orangeMaterial = TAssetMaterialData {
+        .Name = "M_Orange",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Orange"
+        },
+    };
+    g_assetMaterialDates["M_Orange"] = std::move(orangeMaterial);
+
+    AddImage("T_Mars_B", "data/default/2k_mars.jpg");
+    auto marsMaterial = TAssetMaterialData {
+        .Name = "M_Mars",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Mars_B"
+        }
+    };
+    g_assetMaterialDates["M_Mars"] = std::move(marsMaterial);
+
+    auto geodesic = CreateUvSphereMeshData("SM_Geodesic", 1, 64, 64);
+    g_assetMeshDates["SM_Geodesic"] = std::move(geodesic);
+
+    for (auto i = 1; i < 11; i++) {
+        CreateCuboid(std::format("SM_Cuboid_x{}_y1_z1", i), i, 1.0f, 1.0f, i + 1, i + 1, i + 1, "M_Orange");
+        CreateCuboid(std::format("SM_Cuboid_x1_y{}_z1", i), 1.0f, i, 1.0f, i + 1, i + 1, i + 1, "M_Orange");
+        CreateCuboid(std::format("SM_Cuboid_x1_y1_z{}", i), 1.0f, 1.0f, i, i + 1, i + 1, i + 1, "M_Orange");
+    }
 }
 
 }

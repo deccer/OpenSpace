@@ -44,13 +44,9 @@ void main()
 
     TGpuMaterial material = GpuMaterials[v_material_id];
 
-    /*
-    vec3 normal = u_texture_normal == 0
-        ? n
-        : texture(u_texture_normal, v_uv).rgb;
-*/
     vec3 normal = texture(u_texture_normal, v_uv).rgb;
 
     o_color = vec4(texture(u_texture_base_color, v_uv).rgb, 1.0);
-    o_normal = vec4(n * 0.5 + 0.5, 1.0);
+    //o_normal = vec4(n * 0.5 + 0.5, 1.0);
+    o_normal = normal.r <= 0.01f ? vec4(n, 1.0) : vec4(normal, 1.0);
 }
