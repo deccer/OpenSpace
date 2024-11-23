@@ -9,12 +9,16 @@
 #include <optional>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 
+//#include "entt/entity/fwd.hpp"
 #include <GLFW/glfw3.h>
 
 entt::registry g_registry = {};
 
 glm::dvec2 g_cursorFrameOffset = {};
+
+entt::entity g_entity_mars = {};
 
 const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
 const glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
@@ -122,7 +126,7 @@ auto SceneLoad() -> bool {
 
     auto t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
     auto s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
-    SceneAddEntity(std::nullopt, "SM_Geodesic", "M_Mars", t * s);
+    g_entity_mars = SceneAddEntity(std::nullopt, "SM_Geodesic", "M_Mars", t * s);
 
     SceneAddEntity(std::nullopt, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
 
@@ -183,6 +187,11 @@ auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> voi
         cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * cameraComponent.Sensitivity);
         cameraComponent.Pitch = glm::clamp(cameraComponent.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
     }
+
+    auto& marsTransform = registry.get<TComponentTransform>(g_entity_mars);
+    auto mars_t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
+    auto mars_s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
+    marsTransform = glm::rotate(mars_t * mars_s, glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f));
 }
 
 auto SceneGetRegistry() -> entt::registry& {

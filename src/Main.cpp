@@ -252,8 +252,11 @@ auto main(
         renderContext.DeltaTimeInSeconds = static_cast<float>(deltaTimeInSeconds);
         renderContext.FramesPerSecond = static_cast<float>(framesPerSecond);
         renderContext.AverageFramesPerSecond = averageFramesPerSecond;
-        //glfwSetInputMode(g_window, GLFW_CURSOR, g_cursorIsActive ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
-        if (glfwGetMouseButton(renderContext.Window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
+
+        auto isCursorActive = glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_2) == GLFW_RELEASE;
+        glfwSetInputMode(g_window, GLFW_CURSOR, isCursorActive ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+
+        if (!isCursorActive) {
             glfwSetCursorPos(g_window, 0, 0);
             g_cursorPosition.x = 0;
             g_cursorPosition.y = 0;
