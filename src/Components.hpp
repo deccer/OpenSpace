@@ -61,6 +61,7 @@ struct TComponentCamera {
     float Yaw = {glm::radians(-90.0f)}; // look at 0, 0, -1
 
     float CameraSpeed = 10.0f;
+    float Sensitivity = 0.0025f;
 
     auto GetForwardDirection() -> glm::vec3
     {

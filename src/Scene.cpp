@@ -14,8 +14,6 @@
 
 entt::registry g_registry = {};
 
-bool g_cursorIsActive = true;
-float g_cursorSensitivity = 0.0025f;
 glm::dvec2 g_cursorFrameOffset = {};
 
 const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
@@ -85,10 +83,6 @@ auto SceneAddEntity(
 }
 
 auto SceneLoad() -> bool {
-
-    g_cursorIsActive = true;
-    g_cursorSensitivity = 0.0025f;
-    g_cursorFrameOffset = {};
 
     /*
      * Load Assets
@@ -183,10 +177,10 @@ auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> voi
         cameraComponent.Position.y += renderContext.DeltaTimeInSeconds * tempCameraSpeed;
     }
 
-    if (!g_cursorIsActive) {
+    if (glfwGetMouseButton(renderContext.Window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
 
-        cameraComponent.Yaw += static_cast<float>(g_cursorFrameOffset.x * g_cursorSensitivity);
-        cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * g_cursorSensitivity);
+        cameraComponent.Yaw += static_cast<float>(g_cursorFrameOffset.x * cameraComponent.Sensitivity);
+        cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * cameraComponent.Sensitivity);
         cameraComponent.Pitch = glm::clamp(cameraComponent.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
     }
 }
