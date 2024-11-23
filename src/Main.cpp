@@ -197,7 +197,7 @@ auto main(
         return 0;
     }
 
-    if (!SceneLoad()) {
+    if (!Scene::Load()) {
         spdlog::error("Scene: Unable to load");
         return 0;
     }
@@ -262,8 +262,8 @@ auto main(
             g_cursorPosition.y = 0;
         }
 
-        auto& registry = SceneGetRegistry();
-        SceneUpdate(renderContext, registry);
+        auto& registry = Scene::GetRegistry();
+        Scene::Update(renderContext, registry);
         RendererRender(renderContext, registry);
 
         g_cursorFrameOffset = {0.0, 0.0};
@@ -289,7 +289,7 @@ auto main(
 
     /// Cleanup Resources //////
 
-    SceneUnload();
+    Scene::Unload();
     RendererUnload();
 
     return 0;

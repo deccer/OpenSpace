@@ -18,12 +18,15 @@ struct TRenderContext {
     uint64_t FrameCounter;
 };
 
-extern entt::entity g_mainCameraEntity;
-
-auto RendererInitialize(const TWindowSettings& windowSettings,
+auto RendererInitialize(
+    const TWindowSettings& windowSettings,
     GLFWwindow* window,
     const glm::vec2& initialFramebufferSize) -> bool;
 auto RendererUnload() -> void;
-auto RendererRender(TRenderContext& renderContext, entt::registry& registry) -> void;
-auto RendererResizeWindowFramebuffer(int32_t width, int32_t height) -> void;
+auto RendererRender(
+    TRenderContext& renderContext,
+    entt::registry& registry) -> void;
+auto RendererResizeWindowFramebuffer(
+    int32_t width,
+    int32_t height) -> void;
 auto RendererToggleEditorMode() -> void;

@@ -7,7 +7,11 @@
 
 extern glm::dvec2 g_cursorFrameOffset;
 
-auto SceneLoad() -> bool;
-auto SceneUnload() -> void;
-auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> void;
-auto SceneGetRegistry() -> entt::registry&;
+namespace Scene {
+
+auto Load() -> bool;
+auto Unload() -> void;
+auto Update(TRenderContext& renderContext, entt::registry& registry) -> void;
+auto GetRegistry() -> entt::registry&;
+
+}

@@ -14,10 +14,13 @@
 //#include "entt/entity/fwd.hpp"
 #include <GLFW/glfw3.h>
 
-entt::registry g_registry = {};
-
 glm::dvec2 g_cursorFrameOffset = {};
 
+namespace Scene {
+
+entt::registry g_registry = {};
+
+entt::entity g_playerEntity = {};
 entt::entity g_entity_mars = {};
 
 const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
@@ -86,7 +89,7 @@ auto SceneAddEntity(
     return entityId;
 }
 
-auto SceneLoad() -> bool {
+auto Load() -> bool {
 
     /*
      * Load Assets
@@ -130,8 +133,8 @@ auto SceneLoad() -> bool {
 
     SceneAddEntity(std::nullopt, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
 
-    g_mainCameraEntity = g_registry.create();
-    g_registry.emplace<TComponentCamera>(g_mainCameraEntity, TComponentCamera {
+    g_playerEntity = g_registry.create();
+    g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
         .Position = {0.0f, 0.0f, 5.0f},
         .Pitch = 0.0f,
         .Yaw = glm::radians(-90.0f), // look at 0, 0, -1
@@ -141,13 +144,13 @@ auto SceneLoad() -> bool {
     return true;
 }
 
-auto SceneUnload() -> void {
+auto Unload() -> void {
 
 }
 
-auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> void {
+auto Update(TRenderContext& renderContext, entt::registry& registry) -> void {
 
-    auto& cameraComponent = registry.get<TComponentCamera>(g_mainCameraEntity);
+    auto& cameraComponent = registry.get<TComponentCamera>(g_playerEntity);
 
     const auto forward = cameraComponent.GetForwardDirection();
     const auto right = glm::normalize(glm::cross(forward, g_unitY));
@@ -194,6 +197,8 @@ auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> voi
     marsTransform = glm::rotate(mars_t * mars_s, glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f));
 }
 
-auto SceneGetRegistry() -> entt::registry& {
+auto GetRegistry() -> entt::registry& {
     return g_registry;
+}
+
 }

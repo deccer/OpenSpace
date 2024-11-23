@@ -84,7 +84,7 @@ struct TAtmosphereSettings {
     float RayleighScaleHeight;
 };
 
-entt::entity g_mainCameraEntity = {};
+std::optional<entt::entity> g_playerEntity = {};
 
 TAtmosphereSettings g_atmosphereSettings = {};
 
@@ -999,11 +999,8 @@ auto RendererRender(
     TRenderContext& renderContext,
     entt::registry& registry) -> void {
 
-    auto planetEntities = registry.view<TComponentPlanet>();
-    for(auto& planetEntity : planetEntities) {
-        auto& planetComponent = registry.get<TComponentPlanet>(planetEntity);
-        if (!planetComponent.ResourcesCreated) {
-        }
+    if (g_playerEntity == std::nullopt) {
+        g_playerEntity = registry.view<TComponentCamera>().front();
     }
 
     ///////////////////////
@@ -1050,7 +1047,7 @@ auto RendererRender(
     }
 
     // Update Per Frame Uniforms
-    auto cameraComponent = registry.get<TComponentCamera>(g_mainCameraEntity);
+    auto cameraComponent = registry.get<TComponentCamera>(*g_playerEntity);
 
     auto fieldOfView = glm::radians(70.0f); // TODO(deccer) move this into the camera?
     auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
