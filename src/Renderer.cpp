@@ -84,6 +84,8 @@ struct TAtmosphereSettings {
     float RayleighScaleHeight;
 };
 
+entt::entity g_mainCameraEntity = {};
+
 TAtmosphereSettings g_atmosphereSettings = {};
 
 TWindowSettings g_windowSettings = {};
@@ -995,8 +997,7 @@ auto RenderEntityProperties(entt::entity entity) {
 
 auto RendererRender(
     TRenderContext& renderContext,
-    entt::registry& registry,
-    TCamera& camera) -> void {
+    entt::registry& registry) -> void {
 
     auto planetEntities = registry.view<TComponentPlanet>();
     for(auto& planetEntity : planetEntities) {
@@ -1049,12 +1050,14 @@ auto RendererRender(
     }
 
     // Update Per Frame Uniforms
+    auto cameraComponent = registry.get<TComponentCamera>(g_mainCameraEntity);
+
     auto fieldOfView = glm::radians(70.0f); // TODO(deccer) move this into the camera?
     auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
     g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
-    g_globalUniforms.ViewMatrix = camera.GetViewMatrix();
-    g_globalUniforms.CameraPosition = glm::vec4(camera.Position, fieldOfView);
-    g_globalUniforms.CameraDirection = glm::vec4(camera.GetForwardDirection(), aspectRatio);
+    g_globalUniforms.ViewMatrix = cameraComponent.GetViewMatrix();
+    g_globalUniforms.CameraPosition = glm::vec4(cameraComponent.Position, fieldOfView);
+    g_globalUniforms.CameraDirection = glm::vec4(cameraComponent.GetForwardDirection(), aspectRatio);
     UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
 
     //
@@ -1154,7 +1157,7 @@ auto RendererRender(
             g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
 
-            g_resolveGeometryGraphicsPipeline.SetUniform(0, camera.GetForwardDirection());
+            g_resolveGeometryGraphicsPipeline.SetUniform(0, cameraComponent.GetForwardDirection());
 
             g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
         }

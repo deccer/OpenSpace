@@ -1,6 +1,9 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
+#include <glm/trigonometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <entt/entt.hpp>
 
 #include <string>
@@ -49,4 +52,23 @@ struct TComponentGpuMaterial {
 struct TComponentPlanet {
     double Radius;
     bool ResourcesCreated;
+};
+
+struct TComponentCamera {
+
+    glm::vec3 Position = {0.0f, 0.0f, 5.0f};
+    float Pitch = {};
+    float Yaw = {glm::radians(-90.0f)}; // look at 0, 0, -1
+
+    float CameraSpeed = 10.0f;
+
+    auto GetForwardDirection() -> glm::vec3
+    {
+        return glm::vec3{glm::cos(Pitch) * glm::cos(Yaw), glm::sin(Pitch), glm::cos(Pitch) * glm::sin(Yaw)};
+    }
+
+    auto GetViewMatrix() -> glm::mat4
+    {
+        return glm::lookAt(Position, Position + GetForwardDirection(), glm::vec3(0, 1, 0));
+    }
 };

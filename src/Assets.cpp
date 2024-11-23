@@ -988,6 +988,8 @@ auto AddDefaultAssets() -> void {
         CreateCuboid(std::format("SM_Cuboid_x1_y{}_z1", i), 1.0f, i, 1.0f, i + 1, i + 1, i + 1, "M_Orange");
         CreateCuboid(std::format("SM_Cuboid_x1_y1_z{}", i), 1.0f, 1.0f, i, i + 1, i + 1, i + 1, "M_Orange");
     }
+
+    CreateCuboid("SM_Cuboid_x50_y1_z50", 50.0f, 1.0f, 50.0f, 4, 4, 4, "M_Orange");
 }
 
 }

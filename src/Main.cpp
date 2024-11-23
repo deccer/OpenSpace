@@ -39,16 +39,11 @@ TIdGenerator<TGpuMeshId> g_gpuMeshCounter = {};
 
 // - Game ---------------------------------------------------------------------
 
-TCamera g_mainCamera = {};
 float g_cameraSpeed = 4.0f;
 
 entt::registry g_gameRegistry = {};
 
 // - Application --------------------------------------------------------------
-
-const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
-const glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
-const glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
 
 constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
@@ -58,11 +53,8 @@ GLFWwindow* g_window = nullptr;
 bool g_sleepWhenWindowHasNoFocus = true;
 bool g_windowHasFocus = false;
 bool g_cursorJustEntered = false;
-bool g_cursorIsActive = true;
-float g_cursorSensitivity = 0.0025f;
 
 glm::dvec2 g_cursorPosition = {};
-glm::dvec2 g_cursorFrameOffset = {};
 
 // - Implementation -----------------------------------------------------------
 
@@ -115,59 +107,6 @@ auto OnWindowFramebufferSizeChanged(
     const int height) -> void {
 
     RendererResizeWindowFramebuffer(width, height);
-}
-
-auto HandleCamera(float deltaTime) -> void {
-
-    g_cursorIsActive = glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_2) == GLFW_RELEASE;
-    glfwSetInputMode(g_window, GLFW_CURSOR, g_cursorIsActive ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
-
-    if (!g_cursorIsActive) {
-        glfwSetCursorPos(g_window, 0, 0);
-        g_cursorPosition.x = 0;
-        g_cursorPosition.y = 0;
-    }
-
-    const auto forward = g_mainCamera.GetForwardDirection();
-    const auto right = glm::normalize(glm::cross(forward, g_unitY));
-
-    auto tempCameraSpeed = g_cameraSpeed;
-    if (glfwGetKey(g_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        tempCameraSpeed *= 4.0f;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
-        tempCameraSpeed *= 4000.0f;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        tempCameraSpeed *= 0.25f;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_W) == GLFW_PRESS) {
-        g_mainCamera.Position += forward * deltaTime * tempCameraSpeed;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_S) == GLFW_PRESS) {
-        g_mainCamera.Position -= forward * deltaTime * tempCameraSpeed;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_D) == GLFW_PRESS) {
-        g_mainCamera.Position += right * deltaTime * tempCameraSpeed;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_A) == GLFW_PRESS) {
-        g_mainCamera.Position -= right * deltaTime * tempCameraSpeed;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_Q) == GLFW_PRESS) {
-        g_mainCamera.Position.y -= deltaTime * tempCameraSpeed;
-    }
-    if (glfwGetKey(g_window, GLFW_KEY_E) == GLFW_PRESS) {
-        g_mainCamera.Position.y += deltaTime * tempCameraSpeed;
-    }
-
-    if (!g_cursorIsActive) {
-
-        g_mainCamera.Yaw += static_cast<float>(g_cursorFrameOffset.x * g_cursorSensitivity);
-        g_mainCamera.Pitch += static_cast<float>(g_cursorFrameOffset.y * g_cursorSensitivity);
-        g_mainCamera.Pitch = glm::clamp(g_mainCamera.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
-    }
-
-    g_cursorFrameOffset = {0.0, 0.0};
 }
 
 auto main(
@@ -292,6 +231,7 @@ auto main(
     auto updateInterval = 1.0f;
 
     TRenderContext renderContext = {};
+    renderContext.Window = g_window;
 
     while (!glfwWindowShouldClose(g_window)) {
 
@@ -316,9 +256,20 @@ auto main(
         renderContext.AverageFramesPerSecond = averageFramesPerSecond;
 
         // Update State
-        HandleCamera(static_cast<float>(deltaTimeInSeconds));
+        g_cursorIsActive = glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_2) == GLFW_RELEASE;
+        glfwSetInputMode(g_window, GLFW_CURSOR, g_cursorIsActive ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
-        RendererRender(renderContext, SceneGetRegistry(), g_mainCamera);
+        if (!g_cursorIsActive) {
+            glfwSetCursorPos(g_window, 0, 0);
+            g_cursorPosition.x = 0;
+            g_cursorPosition.y = 0;
+        }
+
+        auto& registry = SceneGetRegistry();
+        SceneUpdate(renderContext, registry);
+        RendererRender(renderContext, registry);
+
+        g_cursorFrameOffset = {0.0, 0.0};
 
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");

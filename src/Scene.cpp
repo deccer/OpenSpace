@@ -3,13 +3,24 @@
 #include "Profiler.hpp"
 #include "Core.hpp"
 #include "Assets.hpp"
+#include "Renderer.hpp"
 
 #include <format>
 #include <optional>
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <GLFW/glfw3.h>
+
 entt::registry g_registry = {};
+
+bool g_cursorIsActive = true;
+float g_cursorSensitivity = 0.0025f;
+glm::dvec2 g_cursorFrameOffset = {};
+
+const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
+const glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
+const glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
 
 auto SceneAddEntity(
     std::optional<entt::entity> parent,
@@ -75,6 +86,10 @@ auto SceneAddEntity(
 
 auto SceneLoad() -> bool {
 
+    g_cursorIsActive = true;
+    g_cursorSensitivity = 0.0025f;
+    g_cursorFrameOffset = {};
+
     /*
      * Load Assets
      */
@@ -115,11 +130,65 @@ auto SceneLoad() -> bool {
     auto s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
     SceneAddEntity(std::nullopt, "SM_Geodesic", "M_Mars", t * s);
 
+    SceneAddEntity(std::nullopt, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
+
+    g_mainCameraEntity = g_registry.create();
+    g_registry.emplace<TComponentCamera>(g_mainCameraEntity, TComponentCamera {
+        .Position = {0.0f, 0.0f, 5.0f},
+        .Pitch = 0.0f,
+        .Yaw = glm::radians(-90.0f), // look at 0, 0, -1
+        .CameraSpeed = 10.0f,
+    });
+
     return true;
 }
 
 auto SceneUnload() -> void {
 
+}
+
+auto SceneUpdate(TRenderContext& renderContext, entt::registry& registry) -> void {
+
+    auto& cameraComponent = registry.get<TComponentCamera>(g_mainCameraEntity);
+
+    const auto forward = cameraComponent.GetForwardDirection();
+    const auto right = glm::normalize(glm::cross(forward, g_unitY));
+
+    auto tempCameraSpeed = cameraComponent.CameraSpeed;
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        tempCameraSpeed *= 4.0f;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+        tempCameraSpeed *= 4000.0f;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        tempCameraSpeed *= 0.25f;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_W) == GLFW_PRESS) {
+        cameraComponent.Position += forward * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_S) == GLFW_PRESS) {
+        cameraComponent.Position -= forward * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_D) == GLFW_PRESS) {
+        cameraComponent.Position += right * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_A) == GLFW_PRESS) {
+        cameraComponent.Position -= right * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_Q) == GLFW_PRESS) {
+        cameraComponent.Position.y -= renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+    if (glfwGetKey(renderContext.Window, GLFW_KEY_E) == GLFW_PRESS) {
+        cameraComponent.Position.y += renderContext.DeltaTimeInSeconds * tempCameraSpeed;
+    }
+
+    if (!g_cursorIsActive) {
+
+        cameraComponent.Yaw += static_cast<float>(g_cursorFrameOffset.x * g_cursorSensitivity);
+        cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * g_cursorSensitivity);
+        cameraComponent.Pitch = glm::clamp(cameraComponent.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
+    }
 }
 
 auto SceneGetRegistry() -> entt::registry& {
