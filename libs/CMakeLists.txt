@@ -4,15 +4,15 @@ include(FetchContent)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_VULKAN_STATIC OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_VULKAN_STATIC OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 set(GLFW_INCLUDE_NONE ON CACHE BOOL "" FORCE)
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw
-    GIT_TAG        3.3.8
+    GIT_TAG        3.4
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
 )
@@ -307,6 +307,6 @@ FetchContent_GetProperties(JoltPhysics)
 string(TOLOWER "JoltPhysics" lc_JoltPhysics)
 if (NOT ${lc_JoltPhysics}_POPULATED)
     message("Fetching jolt")
-    FetchContent_Populate(JoltPhysics)
+    FetchContent_MakeAvailable(JoltPhysics)
     add_subdirectory(${${lc_JoltPhysics}_SOURCE_DIR}/Build ${${lc_JoltPhysics}_BINARY_DIR})
 endif()

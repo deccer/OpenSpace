@@ -19,9 +19,9 @@
 #include "Core.hpp"
 #include "Profiler.hpp"
 #include "Scene.hpp"
-
 #include "Renderer.hpp"
 #include "WindowSettings.hpp"
+#include "Input.hpp"
 
 // - Engine -------------------------------------------------------------------
 
@@ -45,6 +45,8 @@ entt::registry g_gameRegistry = {};
 
 // - Application --------------------------------------------------------------
 
+TInputState g_inputState = {};
+
 constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
 
@@ -52,9 +54,6 @@ GLFWwindow* g_window = nullptr;
 
 bool g_sleepWhenWindowHasNoFocus = true;
 bool g_windowHasFocus = false;
-bool g_cursorJustEntered = false;
-
-glm::dvec2 g_cursorPosition = {};
 
 // - Implementation -----------------------------------------------------------
 
@@ -71,32 +70,64 @@ auto OnWindowKey(
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
         RendererToggleEditorMode();
     }
+
+    if (action == GLFW_REPEAT) { 
+        return;
+    }
+    if (action == GLFW_PRESS)
+    {
+        g_inputState.Keys[key].JustPressed = true;
+        g_inputState.Keys[key].IsDown = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        g_inputState.Keys[key].JustReleased = true;
+        g_inputState.Keys[key].IsDown = false;
+    }
 }
 
 auto OnWindowCursorEntered(
     [[maybe_unused]] GLFWwindow* window,
     int entered) -> void {
 
-    if (entered) {
-        g_cursorJustEntered = true;
-    }
-
     g_windowHasFocus = entered == GLFW_TRUE;
 }
 
-auto OnWindowCursorPosition(
+auto OnWindowMouseMove(
     [[maybe_unused]] GLFWwindow* window,
-    double cursorPositionX,
-    double cursorPositionY) -> void {
+    double mousePositionX,
+    double mousePositionY) -> void {
 
-    if (g_cursorJustEntered)
+    glm::vec2 mousePosition = {mousePositionX, mousePositionY};
+    auto mousePositionDelta = mousePosition - g_inputState.MousePosition;
+   
+    g_inputState.MousePositionDelta += mousePositionDelta;
+    g_inputState.MousePosition = mousePosition;
+}
+
+auto OnWindowMouseClick(
+    [[maybe_unused]] GLFWwindow* window,
+    int32_t button,
+    int32_t action,
+    [[maybe_unused]] int32_t modifier) {
+
+    if (action == GLFW_PRESS)
     {
-        g_cursorPosition = {cursorPositionX, cursorPositionY};
-        g_cursorJustEntered = false;
-    }        
+        g_inputState.MouseButtons[button].JustPressed = true;
+        g_inputState.MouseButtons[button].IsDown = true;
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        g_inputState.MouseButtons[button].JustReleased = true;
+        g_inputState.MouseButtons[button].IsDown = false;
+    }
+}
 
-    g_cursorFrameOffset += glm::dvec2{cursorPositionX - g_cursorPosition.x, g_cursorPosition.y - cursorPositionY};
-    g_cursorPosition = {cursorPositionX, cursorPositionY};
+auto OnWindowMouseScroll(
+    [[maybe_unused]] GLFWwindow* window,
+    double offsetX,
+    double offsetY) {
+
+    g_inputState.ScrollDelta += glm::vec2(offsetX, offsetY);
 }
 
 auto OnWindowFramebufferSizeChanged(
@@ -105,6 +136,22 @@ auto OnWindowFramebufferSizeChanged(
     const int height) -> void {
 
     RendererResizeWindowFramebuffer(width, height);
+}
+
+auto ResetInputState() -> void {
+
+    for (auto& key : g_inputState.Keys)
+    {
+        key.JustPressed = false;
+        key.JustReleased = false;
+    }
+    for (auto& btn : g_inputState.MouseButtons)
+    {
+        btn.JustPressed = false;
+        btn.JustReleased = false;
+    }
+    g_inputState.MousePositionDelta = glm::vec2(0.0f);
+    g_inputState.ScrollDelta = glm::vec2(0.0f);
 }
 
 auto main(
@@ -178,10 +225,16 @@ auto main(
     }
 
     glfwSetKeyCallback(g_window, OnWindowKey);
-    glfwSetCursorPosCallback(g_window, OnWindowCursorPosition);
-    glfwSetCursorEnterCallback(g_window, OnWindowCursorEntered);    
+    glfwSetCursorEnterCallback(g_window, OnWindowCursorEntered);
+    glfwSetCursorPosCallback(g_window, OnWindowMouseMove);
+    glfwSetMouseButtonCallback(g_window, OnWindowMouseClick);
+    glfwSetScrollCallback(g_window, OnWindowMouseScroll);
     glfwSetFramebufferSizeCallback(g_window, OnWindowFramebufferSizeChanged);
-    glfwSetInputMode(g_window, GLFW_CURSOR, true ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+
+    glfwSetInputMode(g_window, GLFW_CURSOR, false ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_HIDDEN);
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(g_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
 
     int32_t windowFramebufferWidth = 0;
     int32_t windowFramebufferHeight = 0;
@@ -226,12 +279,16 @@ auto main(
 
     auto accumulatedTimeInSeconds = 0.0;
     auto averageFramesPerSecond = 0.0f;
-    auto updateInterval = 1.0f;
+    auto updateIntervalInSeconds = 1.0f;
 
     TRenderContext renderContext = {};
     renderContext.Window = g_window;
 
     while (!glfwWindowShouldClose(g_window)) {
+
+        glfwPollEvents();
+        TInputState inputState = g_inputState;
+        ResetInputState();        
 
         PROFILER_ZONESCOPEDN("Frame");
         auto currentTimeInSeconds = glfwGetTime();
@@ -240,7 +297,7 @@ auto main(
         accumulatedTimeInSeconds += deltaTimeInSeconds;
 
         frameTimes[renderContext.FrameCounter % frameTimes.size()] = framesPerSecond;
-        if (accumulatedTimeInSeconds >= updateInterval) {
+        if (accumulatedTimeInSeconds >= updateIntervalInSeconds) {
             auto sum = 0.0f;
             for (auto i = 0; i < frameTimes.size(); i++) {
                 sum += frameTimes[i];
@@ -253,20 +310,9 @@ auto main(
         renderContext.FramesPerSecond = static_cast<float>(framesPerSecond);
         renderContext.AverageFramesPerSecond = averageFramesPerSecond;
 
-        auto isCursorActive = glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_2) == GLFW_RELEASE;
-        glfwSetInputMode(g_window, GLFW_CURSOR, isCursorActive ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
-
-        if (!isCursorActive) {
-            glfwSetCursorPos(g_window, 0, 0);
-            g_cursorPosition.x = 0;
-            g_cursorPosition.y = 0;
-        }
-
         auto& registry = Scene::GetRegistry();
-        Scene::Update(renderContext, registry);
-        RendererRender(renderContext, registry);
-
-        g_cursorFrameOffset = {0.0, 0.0};
+        Scene::Update(renderContext, registry, inputState);
+        RendererRender(renderContext, registry, inputState);
 
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");
@@ -278,9 +324,6 @@ auto main(
         TracyGpuCollect
         FrameMark;
 #endif
-
-        glfwPollEvents();
-
         if (!g_windowHasFocus && g_sleepWhenWindowHasNoFocus) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
@@ -291,6 +334,16 @@ auto main(
 
     Scene::Unload();
     RendererUnload();
+
+    glfwSetKeyCallback(g_window, nullptr);
+    glfwSetCursorEnterCallback(g_window, nullptr);
+    glfwSetCursorPosCallback(g_window, nullptr);
+    glfwSetMouseButtonCallback(g_window, nullptr);
+    glfwSetScrollCallback(g_window, nullptr);
+    glfwSetFramebufferSizeCallback(g_window, nullptr);
+
+    glfwDestroyWindow(g_window);
+    glfwTerminate();
 
     return 0;
 }

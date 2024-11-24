@@ -2,6 +2,7 @@
 
 #include <glm/mat4x4.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <entt/entt.hpp>
@@ -57,19 +58,12 @@ struct TComponentPlanet {
 struct TComponentCamera {
 
     glm::vec3 Position = {0.0f, 0.0f, 5.0f};
-    float Pitch = {};
-    float Yaw = {glm::radians(-90.0f)}; // look at 0, 0, -1
+    glm::quat Orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
-    float CameraSpeed = 10.0f;
-    float Sensitivity = 0.0025f;
+    float Yaw;
+    float Pitch;
 
-    auto GetForwardDirection() -> glm::vec3
-    {
-        return glm::vec3{glm::cos(Pitch) * glm::cos(Yaw), glm::sin(Pitch), glm::cos(Pitch) * glm::sin(Yaw)};
-    }
-
-    auto GetViewMatrix() -> glm::mat4
-    {
-        return glm::lookAt(Position, Position + GetForwardDirection(), glm::vec3(0, 1, 0));
-    }
+    float FieldOfView = 70.0f;
+    float CameraSpeed = 2.0f;
+    float Sensitivity = 0.0015f;
 };

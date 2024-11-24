@@ -1,8 +1,10 @@
 #pragma once
 
 #include "WindowSettings.hpp"
+#include "Input.hpp"
 
 #include <entt/entt.hpp>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/trigonometric.hpp>
@@ -25,7 +27,8 @@ auto RendererInitialize(
 auto RendererUnload() -> void;
 auto RendererRender(
     TRenderContext& renderContext,
-    entt::registry& registry) -> void;
+    entt::registry& registry,
+    const TInputState& inputState) -> void;
 auto RendererResizeWindowFramebuffer(
     int32_t width,
     int32_t height) -> void;

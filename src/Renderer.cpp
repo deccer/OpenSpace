@@ -11,7 +11,10 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <imgui.h>
@@ -939,7 +942,7 @@ auto RendererInitialize(
     };
     g_atmosphereSettingsBuffer = CreateBuffer("AtmosphereSettings", sizeof(TAtmosphereSettings), &atmosphereSettings, GL_DYNAMIC_STORAGE_BIT);
 
-    auto cameraPosition = glm::vec3{0.0f, 0.0f, 20.0f};
+    auto cameraPosition = glm::vec3{-60.0f, -3.0f, 0.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
     auto fieldOfView = glm::radians(70.0f);
@@ -997,7 +1000,8 @@ auto RenderEntityProperties(entt::entity entity) {
 
 auto RendererRender(
     TRenderContext& renderContext,
-    entt::registry& registry) -> void {
+    entt::registry& registry,
+    const TInputState& inputState) -> void {
 
     if (g_playerEntity == std::nullopt) {
         g_playerEntity = registry.view<TComponentCamera>().front();
@@ -1046,15 +1050,16 @@ auto RendererRender(
         }
     }
 
-    // Update Per Frame Uniforms
-    auto cameraComponent = registry.get<TComponentCamera>(*g_playerEntity);
+    /*
+     * Update Global Uniforms
+     */
+    auto playerCamera = registry.get<TComponentCamera>(*g_playerEntity);
 
-    auto fieldOfView = glm::radians(70.0f); // TODO(deccer) move this into the camera?
     auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
-    g_globalUniforms.ViewMatrix = cameraComponent.GetViewMatrix();
-    g_globalUniforms.CameraPosition = glm::vec4(cameraComponent.Position, fieldOfView);
-    g_globalUniforms.CameraDirection = glm::vec4(cameraComponent.GetForwardDirection(), aspectRatio);
+    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(playerCamera.FieldOfView, aspectRatio, 0.1f);
+    g_globalUniforms.ViewMatrix = glm::inverse(glm::translate(glm::mat4(1.0f), playerCamera.Position) * glm::mat4_cast(playerCamera.Orientation));
+    //g_globalUniforms.CameraPosition = glm::vec4(cameraComponent.Position, cameraComponent.FieldOfView);
+    //g_globalUniforms.CameraDirection = glm::vec4(cameraComponent.Orientation * glm::vec3(0.0, 0.0, -1.0), aspectRatio);
     UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
 
     //
@@ -1154,7 +1159,7 @@ auto RendererRender(
             g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
 
-            g_resolveGeometryGraphicsPipeline.SetUniform(0, cameraComponent.GetForwardDirection());
+            //g_resolveGeometryGraphicsPipeline.SetUniform(0, cameraComponent.GetForwardDirection());
 
             g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
         }
@@ -1223,7 +1228,7 @@ auto RendererRender(
 
     if (!g_isEditor) {
         ImGui::SetNextWindowPos({32, 32});
-        ImGui::SetNextWindowSize({168, 192});
+        ImGui::SetNextWindowSize({168, 212});
         auto windowBackgroundColor = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
         windowBackgroundColor.w = 0.4f;
         ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBackgroundColor);
@@ -1238,7 +1243,9 @@ auto RendererRender(
             ImGui::Text("rfps: %.0f", renderContext.FramesPerSecond);
             ImGui::Text("rpms: %.0f", renderContext.FramesPerSecond * 60.0f);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
-            ImGui::Text("   f: %lu", renderContext.FrameCounter);
+            //ImGui::Text("   f: %lu", renderContext.FrameCounter);
+            ImGui::Text("mx: %3.0f my: %3.0f", inputState.MousePosition.x, inputState.MousePosition.y);
+            ImGui::Text("dx: %3.0f dy: %3.0f", inputState.MousePositionDelta.x, inputState.MousePositionDelta.y);
         }
         ImGui::End();
         ImGui::PopStyleColor();

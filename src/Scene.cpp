@@ -4,17 +4,17 @@
 #include "Core.hpp"
 #include "Assets.hpp"
 #include "Renderer.hpp"
+#include "Input.hpp"
 
 #include <format>
 #include <optional>
 
+#include <glm/ext/scalar_constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/trigonometric.hpp>
 
-//#include "entt/entity/fwd.hpp"
 #include <GLFW/glfw3.h>
-
-glm::dvec2 g_cursorFrameOffset = {};
 
 namespace Scene {
 
@@ -135,10 +135,11 @@ auto Load() -> bool {
 
     g_playerEntity = g_registry.create();
     g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
-        .Position = {0.0f, 0.0f, 5.0f},
-        .Pitch = 0.0f,
-        .Yaw = glm::radians(-90.0f), // look at 0, 0, -1
+        .Position = {-60.0f, -3.0f, 5.0f},
+        .Orientation = glm::identity<glm::quat>(),//glm::angleAxis(glm::radians(-90.f), glm::vec3(0, 1, 0)),
+        .FieldOfView = 70.0f,
         .CameraSpeed = 10.0f,
+        .Sensitivity = 0.0025f,
     });
 
     return true;
@@ -148,10 +149,12 @@ auto Unload() -> void {
 
 }
 
-auto Update(TRenderContext& renderContext, entt::registry& registry) -> void {
+auto Update(
+    TRenderContext& renderContext,
+    entt::registry& registry,
+    const TInputState& inputState) -> void {
 
-    auto& cameraComponent = registry.get<TComponentCamera>(g_playerEntity);
-
+/*
     const auto forward = cameraComponent.GetForwardDirection();
     const auto right = glm::normalize(glm::cross(forward, g_unitY));
 
@@ -189,6 +192,66 @@ auto Update(TRenderContext& renderContext, entt::registry& registry) -> void {
         cameraComponent.Yaw += static_cast<float>(g_cursorFrameOffset.x * cameraComponent.Sensitivity);
         cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * cameraComponent.Sensitivity);
         cameraComponent.Pitch = glm::clamp(cameraComponent.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
+    }
+*/
+    auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
+
+    glm::vec3 forward = playerCamera.Orientation * glm::vec3(0, 0, -1);
+    forward.y = 0;
+    forward = glm::normalize(forward);
+
+    glm::vec3 right = playerCamera.Orientation * glm::vec3(1, 0, 0);
+    right = glm::normalize(right);
+
+    auto tempCameraSpeed = playerCamera.CameraSpeed;
+    if (inputState.Keys[INPUT_KEY_LEFT_SHIFT].IsDown) {
+        tempCameraSpeed *= 4.0f;
+    }
+    if (inputState.Keys[INPUT_KEY_LEFT_ALT].IsDown) {
+        tempCameraSpeed *= 4000.0f;
+    }
+    if (inputState.Keys[INPUT_KEY_LEFT_CONTROL].IsDown) {
+        tempCameraSpeed *= 0.25f;
+    }
+
+    forward *= tempCameraSpeed;
+    right *= tempCameraSpeed;
+    glm::vec3 up = tempCameraSpeed * glm::vec3(0, 1, 0);
+
+    if (inputState.Keys[INPUT_KEY_W].IsDown) {
+
+        playerCamera.Position += forward;
+    }
+    if (inputState.Keys[INPUT_KEY_S].IsDown) {
+    
+        playerCamera.Position -= forward;
+    }
+    if (inputState.Keys[INPUT_KEY_D].IsDown) {
+    
+        playerCamera.Position += right;
+    }
+    if (inputState.Keys[INPUT_KEY_A].IsDown) {
+    
+        playerCamera.Position -= right;
+    }
+    if (inputState.Keys[INPUT_KEY_Q].IsDown) {
+    
+        playerCamera.Position += up;
+    }
+    if (inputState.Keys[INPUT_KEY_Z].IsDown) {
+    
+        playerCamera.Position -= up;
+    }
+
+    if (inputState.MouseButtons[INPUT_MOUSE_BUTTON_RIGHT].IsDown) {
+
+        playerCamera.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity;
+        playerCamera.Pitch -= inputState.MousePositionDelta.y * playerCamera.Sensitivity;
+        playerCamera.Pitch = glm::clamp(playerCamera.Pitch, glm::radians(-89.0f), glm::radians(89.0f));
+
+        auto pitch = glm::angleAxis(playerCamera.Pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+        auto yaw = glm::angleAxis(playerCamera.Yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+        playerCamera.Orientation = yaw * pitch;
     }
 
     auto& marsTransform = registry.get<TComponentTransform>(g_entity_mars);

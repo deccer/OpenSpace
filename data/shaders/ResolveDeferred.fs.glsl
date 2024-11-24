@@ -7,7 +7,6 @@ layout(location = 0) out vec4 o_color;
 layout(binding = 0) uniform sampler2D s_texture_gbuffer_albedo;
 layout(binding = 1) uniform sampler2D s_texture_gbuffer_normal;
 layout(binding = 2) uniform sampler2D s_texture_depth;
-layout(location = 0) uniform vec3 u_position_sun;
 
 layout (binding = 2, std140) uniform TGlobalLights {
     mat4 ProjectionMatrix;
@@ -81,23 +80,8 @@ void main()
     }
 
     vec3 color = vec3(1, 1, 1);
-    /*
-    vec3 color = atmosphere(
-        normalize(reflect(v_sky_ray, vec3(0, -1, 0))),           // normalized ray direction
-        atmosphereSettings.RayOriginAndSunIntensity.xyz,               // ray origin = vec3(0,6372e3,0)
-        atmosphereSettings.SunPositionAndPlanetRadius.xyz,                        // position of the sun
-        atmosphereSettings.RayOriginAndSunIntensity.w,                           // intensity of the sun = 22.0
-        atmosphereSettings.SunPositionAndPlanetRadius.w,                         // radius of the planet in meters = 6371e3
-        atmosphereSettings.RayleighScatteringCoefficientAndAtmosphereRadius.w,                         // radius of the atmosphere in meters = 6471e3
-        atmosphereSettings.RayleighScatteringCoefficientAndAtmosphereRadius.xyz, // Rayleigh scattering coefficient = vec3(5.5e-6, 13.0e-6, 22.4e-6)
-        atmosphereSettings.MieScatteringCoefficient,                          // Mie scattering coefficient = 21e-6
-        atmosphereSettings.RayleighScaleHeight,                            // Rayleigh scale height = 8e3
-        atmosphereSettings.MieScaleHeight,                          // Mie scale height = 1.2e3
-        atmosphereSettings.MiePreferredScatteringDirection                           // Mie preferred scattering direction = 0.758
-    );
-    */
 
-    float sun_n_dot_l = clamp(dot(normal, normalize(vec3(1, 10, 1))), 0.0, 1.0);
+    float sun_n_dot_l = clamp(dot(normal, normalize(atmosphereSettings.SunPositionAndPlanetRadius.xyz)), 0.0, 1.0);
 
     o_color = vec4((albedo.rgb * sun_n_dot_l), 1.0);
 }
