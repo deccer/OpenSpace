@@ -14,6 +14,33 @@ struct TComponentName {
     std::string Name;
 };
 
+struct TComponentPosition : public glm::vec3
+{
+    using glm::vec3::vec3;
+    using glm::vec3::operator=;
+    TComponentPosition() = default;
+    TComponentPosition(glm::vec3 const& m) : glm::vec3(m) {}
+    TComponentPosition(glm::vec3&& m) : glm::vec3(std::move(m)) {}
+};
+
+struct TComponentOrientation : public glm::quat
+{
+    using glm::quat::quat;
+    using glm::quat::operator=;
+    TComponentOrientation() = default;
+    TComponentOrientation(glm::quat const& m) : glm::quat(m) {}
+    TComponentOrientation(glm::quat&& m) : glm::quat(std::move(m)) {}
+};
+
+struct TComponentScale : public glm::vec3
+{
+    using glm::vec3::vec3;
+    using glm::vec3::operator=;
+    TComponentScale() = default;
+    TComponentScale(glm::vec3 const& m) : glm::vec3(m) {}
+    TComponentScale(glm::vec3&& m) : glm::vec3(std::move(m)) {}
+};
+
 struct TComponentTransform : public glm::mat4x4
 {
     using glm::mat4x4::mat4x4;

@@ -5,6 +5,8 @@
 #include "Assets.hpp"
 #include "Renderer.hpp"
 #include "Input.hpp"
+#include "entt/entity/fwd.hpp"
+#include "glm/ext/matrix_transform.hpp"
 
 #include <format>
 #include <optional>
@@ -12,7 +14,9 @@
 #include <glm/ext/scalar_constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
+
 
 #include <GLFW/glfw3.h>
 
@@ -20,8 +24,12 @@ namespace Scene {
 
 entt::registry g_registry = {};
 
+entt::entity g_rootEntity = {};
 entt::entity g_playerEntity = {};
 entt::entity g_entity_mars = {};
+std::optional<entt::entity> g_ship = {};
+
+bool g_playerMounted = false;
 
 const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
 const glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
@@ -72,6 +80,8 @@ auto SceneAddEntity(
         g_registry.emplace<TComponentChildOf>(entityId, parent.value());
     }
 
+    g_registry.emplace<TComponentName>(entityId, assetName);
+
     auto& asset = Assets::GetAsset(assetName);
     for(auto& assetInstanceData : asset.Instances) {
 
@@ -87,6 +97,43 @@ auto SceneAddEntity(
     }
 
     return entityId;
+}
+
+auto CreateEntity(
+    entt::entity parent,
+    std::string_view name,
+    glm::vec3 position,
+    glm::quat orientation,
+    glm::vec3 scale) -> entt::entity {
+
+    auto entity = g_registry.create();
+    auto& parentComponent = g_registry.get_or_emplace<TComponentParent>(parent);
+    parentComponent.Children.push_back(entity);
+
+    g_registry.emplace<TComponentChildOf>(entity, parent);
+    g_registry.emplace<TComponentName>(entity, name);
+    g_registry.emplace<TComponentPosition>(entity, position);
+    g_registry.emplace<TComponentOrientation>(entity, orientation);
+    g_registry.emplace<TComponentScale>(entity, scale);
+
+    return entity;
+}
+
+auto CreateEntityWithGraphics(
+    entt::entity parent,
+    std::string_view name,
+    glm::vec3 position,
+    glm::quat orientation,
+    glm::vec3 scale,
+    const std::string& assetMeshName,
+    const std::string& assetMaterialName) -> entt::entity {
+
+    auto entity = CreateEntity(parent, name, position, orientation, scale);
+
+    g_registry.emplace<TComponentMesh>(entity, assetMeshName);
+    g_registry.emplace<TComponentMaterial>(entity, assetMaterialName);
+
+    return entity;
 }
 
 auto Load() -> bool {
@@ -106,6 +153,8 @@ auto Load() -> bool {
     Assets::AddAssetFromFile("fform8", "data/basic/fform_9.glb");
     Assets::AddAssetFromFile("fform9", "data/basic/fform_10.glb");
 
+    Assets::AddAssetFromFile("SM_SillyShip", "data/scenes/SillyShip/SM_Ship6.gltf");
+
     //Assets::AddAssetFromFile("SM_Cube_x1_y1_z1", "data/scenes/SM_Cube_x1_y1_z1.glb");
     //Assets::AddAssetFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
 
@@ -116,27 +165,35 @@ auto Load() -> bool {
 
     /// Setup Scene ////////////
 
-    for (auto i = 1; i < 11; i++) {
-        SceneAddEntity(std::nullopt, std::format("SM_Cuboid_x{}_y1_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, i * 2.0f, -10.0f)), false, "");
-        SceneAddEntity(std::nullopt, std::format("SM_Cuboid_x1_y{}_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, 0.0f, -5.0f)), false, "");
-        SceneAddEntity(std::nullopt, std::format("SM_Cuboid_x1_y1_z{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, i * 2.0f, -5.0f)), false, "");
-    }
+    g_rootEntity = g_registry.create();
 
-    SceneAddEntity(std::nullopt, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)), false, "");
-    for (auto i = 1; i < 10; i++) {
-        SceneAddEntity(std::nullopt, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
+/*
+    for (auto i = 1; i < 11; i++) {
+        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x{}_y1_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, i * 2.0f, -10.0f)), false, "");
+        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x1_y{}_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, 0.0f, -5.0f)), false, "");
+        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x1_y1_z{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, i * 2.0f, -5.0f)), false, "");
     }
+*/
+
+/*
+    SceneAddEntity(g_rootEntity, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)), false, "");
+    for (auto i = 1; i < 10; i++) {
+        SceneAddEntity(g_rootEntity, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
+    }
+*/
+
 
     auto t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
     auto s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
-    g_entity_mars = SceneAddEntity(std::nullopt, "SM_Geodesic", "M_Mars", t * s);
+    g_entity_mars = SceneAddEntity(g_rootEntity, "SM_Geodesic", "M_Mars", t * s);
 
-    SceneAddEntity(std::nullopt, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
+    SceneAddEntity(g_rootEntity, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
+    g_ship = SceneAddEntity(g_rootEntity, "SM_SillyShip", glm::translate(glm::mat4(1.0f), glm::vec3{-70.0f, -4.0f, -10.0f}), false, "");
 
     g_playerEntity = g_registry.create();
     g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
         .Position = {-60.0f, -3.0f, 5.0f},
-        .Orientation = glm::identity<glm::quat>(),//glm::angleAxis(glm::radians(-90.f), glm::vec3(0, 1, 0)),
+        .Orientation = glm::angleAxis(glm::radians(-90.f), glm::vec3(0, 1, 0)),
         .FieldOfView = 70.0f,
         .CameraSpeed = 10.0f,
         .Sensitivity = 0.0025f,
@@ -154,46 +211,6 @@ auto Update(
     entt::registry& registry,
     const TInputState& inputState) -> void {
 
-/*
-    const auto forward = cameraComponent.GetForwardDirection();
-    const auto right = glm::normalize(glm::cross(forward, g_unitY));
-
-    auto tempCameraSpeed = cameraComponent.CameraSpeed;
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        tempCameraSpeed *= 4.0f;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
-        tempCameraSpeed *= 4000.0f;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        tempCameraSpeed *= 0.25f;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_W) == GLFW_PRESS) {
-        cameraComponent.Position += forward * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_S) == GLFW_PRESS) {
-        cameraComponent.Position -= forward * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_D) == GLFW_PRESS) {
-        cameraComponent.Position += right * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_A) == GLFW_PRESS) {
-        cameraComponent.Position -= right * renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_Q) == GLFW_PRESS) {
-        cameraComponent.Position.y -= renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-    if (glfwGetKey(renderContext.Window, GLFW_KEY_E) == GLFW_PRESS) {
-        cameraComponent.Position.y += renderContext.DeltaTimeInSeconds * tempCameraSpeed;
-    }
-
-    if (glfwGetMouseButton(renderContext.Window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
-
-        cameraComponent.Yaw += static_cast<float>(g_cursorFrameOffset.x * cameraComponent.Sensitivity);
-        cameraComponent.Pitch += static_cast<float>(g_cursorFrameOffset.y * cameraComponent.Sensitivity);
-        cameraComponent.Pitch = glm::clamp(cameraComponent.Pitch, -glm::half_pi<float>() + 1e-4f, glm::half_pi<float>() - 1e-4f);    
-    }
-*/
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
 
     glm::vec3 forward = playerCamera.Orientation * glm::vec3(0, 0, -1);
@@ -211,7 +228,7 @@ auto Update(
         tempCameraSpeed *= 4000.0f;
     }
     if (inputState.Keys[INPUT_KEY_LEFT_CONTROL].IsDown) {
-        tempCameraSpeed *= 0.25f;
+        tempCameraSpeed *= 0.125f;
     }
 
     forward *= tempCameraSpeed;
@@ -223,23 +240,23 @@ auto Update(
         playerCamera.Position += forward;
     }
     if (inputState.Keys[INPUT_KEY_S].IsDown) {
-    
+
         playerCamera.Position -= forward;
     }
     if (inputState.Keys[INPUT_KEY_D].IsDown) {
-    
+
         playerCamera.Position += right;
     }
     if (inputState.Keys[INPUT_KEY_A].IsDown) {
-    
+
         playerCamera.Position -= right;
     }
     if (inputState.Keys[INPUT_KEY_Q].IsDown) {
-    
+
         playerCamera.Position += up;
     }
     if (inputState.Keys[INPUT_KEY_Z].IsDown) {
-    
+
         playerCamera.Position -= up;
     }
 
@@ -247,11 +264,28 @@ auto Update(
 
         playerCamera.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity;
         playerCamera.Pitch -= inputState.MousePositionDelta.y * playerCamera.Sensitivity;
-        playerCamera.Pitch = glm::clamp(playerCamera.Pitch, glm::radians(-89.0f), glm::radians(89.0f));
+        playerCamera.Pitch = glm::clamp(playerCamera.Pitch, -3.1f/2.0f, 3.1f/2.0f);
 
         auto pitch = glm::angleAxis(playerCamera.Pitch, glm::vec3(1.0f, 0.0f, 0.0f));
         auto yaw = glm::angleAxis(playerCamera.Yaw, glm::vec3(0.0f, 1.0f, 0.0f));
         playerCamera.Orientation = yaw * pitch;
+    }
+
+    if (inputState.Keys[INPUT_KEY_M].IsDown) {
+        g_playerMounted = !g_playerMounted;
+    }
+
+    if (g_playerMounted) {
+        auto& parent = registry.get<TComponentParent>(*g_ship);
+        auto& child = parent.Children.front();
+        auto& shipTransform = registry.get<TComponentTransform>(child);
+        glm::vec3 shipScale;
+        glm::vec3 shipTranslation;
+        glm::quat shipOrientation;
+        glm::vec3 shipSkew;
+        glm::vec4 perspective;
+        glm::decompose(shipTransform, shipScale, shipOrientation, shipTranslation, shipSkew, perspective);
+        playerCamera.Position = shipTranslation + glm::vec3(0.0f, 0.0f, -2.5f);
     }
 
     auto& marsTransform = registry.get<TComponentTransform>(g_entity_mars);

@@ -1007,9 +1007,9 @@ auto RendererRender(
         g_playerEntity = registry.view<TComponentCamera>().front();
     }
 
-    ///////////////////////
-    // Create Gpu Resources if necessary
-    ///////////////////////
+    /*
+     * ECS - Create Gpu Resources if necessary
+     */
     auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
     for (auto& entity : createGpuResourcesNecessaryView) {
 
@@ -1026,6 +1026,33 @@ auto RendererRender(
 
         registry.remove<TComponentCreateGpuResourcesNecessary>(entity);
     }
+
+    /*
+     * ECS - Update Transforms
+     */
+    registry.view<TComponentTransform, TComponentPosition, TComponentOrientation, TComponentScale>().each([&](
+        auto& entity,
+        auto& transformComponent,
+        const auto& positionComponent,
+        const auto& orientationComponent,
+        const auto& scaleComponent) {
+
+        PROFILER_ZONESCOPEDN("ECS - Update Transform");
+
+        auto parentTransform = glm::mat4(1.0f);
+        if (registry.any_of<TComponentChildOf>(entity)) {
+            auto& parentComponent = registry.get<TComponentChildOf>(entity);
+            auto& parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
+            parentTransform = parentTransform;
+        }
+
+        auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
+        auto localOrientation = glm::mat4_cast(orientationComponent);
+        auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
+        auto localTransform = localTranslation * localOrientation * localScale;
+
+        transformComponent = parentTransform * localTransform;
+    });
 
     // Resize if necessary
     if (g_windowFramebufferResized || g_sceneViewerResized) {
