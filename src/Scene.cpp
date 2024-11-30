@@ -7,6 +7,7 @@
 #include "Input.hpp"
 #include "entt/entity/fwd.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/gtc/quaternion.hpp"
 
 #include <format>
 #include <optional>
@@ -101,7 +102,7 @@ auto SceneAddEntity(
 
 auto CreateEntity(
     entt::entity parent,
-    std::string_view name,
+    const std::string& name,
     glm::vec3 position,
     glm::quat orientation,
     glm::vec3 scale) -> entt::entity {
@@ -115,13 +116,14 @@ auto CreateEntity(
     g_registry.emplace<TComponentPosition>(entity, position);
     g_registry.emplace<TComponentOrientation>(entity, orientation);
     g_registry.emplace<TComponentScale>(entity, scale);
+    g_registry.emplace<TComponentTransform>(entity, glm::mat4(1.0f));
 
     return entity;
 }
 
 auto CreateEntityWithGraphics(
     entt::entity parent,
-    std::string_view name,
+    const std::string& name,
     glm::vec3 position,
     glm::quat orientation,
     glm::vec3 scale,
@@ -132,6 +134,48 @@ auto CreateEntityWithGraphics(
 
     g_registry.emplace<TComponentMesh>(entity, assetMeshName);
     g_registry.emplace<TComponentMaterial>(entity, assetMaterialName);
+    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(entity);
+
+    return entity;
+}
+
+auto CreateAssetEntity(
+    entt::entity parent,
+    const std::string& name,
+    glm::vec3 position,
+    glm::quat orientation,
+    glm::vec3 scale,
+    const std::string& assetName,
+    const std::string& assetMaterialNameOverride) -> entt::entity {
+
+    auto entity = CreateEntity(parent, name, position, orientation, scale);
+    auto& asset = Assets::GetAsset(assetName);
+
+    for(auto& assetInstanceData : asset.Instances) {
+
+        auto assetMeshName = asset.Meshes[assetInstanceData.MeshIndex];
+        auto assetMesh = Assets::GetAssetMeshData(assetMeshName);
+
+        std::string assetMaterialName;
+        if (!assetMaterialNameOverride.empty()) {
+            assetMaterialName = assetMaterialNameOverride;
+        } else {
+            assetMaterialName = !assetMesh.MaterialIndex
+                ? "M_Default"
+                : asset.Materials[*assetMesh.MaterialIndex];
+        }
+
+        auto& worldMatrix = assetInstanceData.WorldMatrix;
+
+        glm::vec3 scale;
+        glm::quat orientation;
+        glm::vec3 translation;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(worldMatrix, scale, orientation, translation, skew, perspective);
+
+        CreateEntityWithGraphics(entity, assetMeshName, translation, orientation, scale, assetMeshName, assetMaterialName);
+    }
 
     return entity;
 }
@@ -166,6 +210,7 @@ auto Load() -> bool {
     /// Setup Scene ////////////
 
     g_rootEntity = g_registry.create();
+    g_registry.emplace<TComponentTransform>(g_rootEntity, glm::mat4(1.0f));
 
 /*
     for (auto i = 1; i < 11; i++) {
@@ -181,11 +226,21 @@ auto Load() -> bool {
         SceneAddEntity(g_rootEntity, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
     }
 */
+    Assets::TAsset marsAsset;
+    marsAsset.Meshes.push_back("SM_Geodesic");
+    marsAsset.Materials.push_back("M_Mars");
+    marsAsset.Instances.push_back(Assets::TAssetInstanceData {
+        .WorldMatrix = glm::mat4(1.0f),
+        .MeshIndex = 0,
+    });
+    Assets::AddAsset("Mars", marsAsset);
 
-
-    auto t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
-    auto s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
-    g_entity_mars = SceneAddEntity(g_rootEntity, "SM_Geodesic", "M_Mars", t * s);
+    auto marsPosition = glm::vec3(0.0f, -6235072.0f, 0.0f);
+    auto marsScale = glm::vec3(6227558);
+    auto t = glm::translate(glm::mat4(1.0f), marsPosition);
+    auto s = glm::scale(glm::mat4(1.0f), marsScale);
+    //g_entity_mars = SceneAddEntity(g_rootEntity, "SM_Geodesic", "M_Mars", t * s);
+    g_entity_mars = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, glm::identity<glm::quat>(), marsScale, "Mars", "M_Mars");
 
     SceneAddEntity(g_rootEntity, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
     g_ship = SceneAddEntity(g_rootEntity, "SM_SillyShip", glm::translate(glm::mat4(1.0f), glm::vec3{-70.0f, -4.0f, -10.0f}), false, "");
@@ -222,7 +277,7 @@ auto Update(
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
     if (inputState.Keys[INPUT_KEY_LEFT_SHIFT].IsDown) {
-        tempCameraSpeed *= 4.0f;
+        tempCameraSpeed *= 10.0f;
     }
     if (inputState.Keys[INPUT_KEY_LEFT_ALT].IsDown) {
         tempCameraSpeed *= 4000.0f;
@@ -288,10 +343,15 @@ auto Update(
         playerCamera.Position = shipTranslation + glm::vec3(0.0f, 0.0f, -2.5f);
     }
 
+/*
     auto& marsTransform = registry.get<TComponentTransform>(g_entity_mars);
     auto mars_t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
+    auto mars_r = glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f));
     auto mars_s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
-    marsTransform = glm::rotate(mars_t * mars_s, glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f));
+    marsTransform = mars_t * mars_r * mars_s;
+*/
+    auto& marsRotation = registry.get<TComponentOrientation>(g_entity_mars);
+    marsRotation = glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f)));
 }
 
 auto GetRegistry() -> entt::registry& {

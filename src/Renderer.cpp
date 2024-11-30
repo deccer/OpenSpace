@@ -994,8 +994,25 @@ auto RendererUnload() -> void {
     RhiShutdown();
 }
 
-auto RenderEntityProperties(entt::entity entity) {
+auto RenderEntityProperties(entt::registry& registry, entt::entity entity) {
 
+    if (registry.all_of<TComponentPosition>(entity)) {
+        auto& position = registry.get<TComponentPosition>(entity);
+
+        ImGui::InputFloat3(std::format("Position##{}", (uint32_t)entity).data(), &position.x, "%.2f");
+    }
+
+    if (registry.all_of<TComponentOrientation>(entity)) {
+        auto& orientation = registry.get<TComponentOrientation>(entity);
+
+        ImGui::InputFloat4(std::format("Orientation##{}", (uint32_t)entity).data(), &orientation.x, "%.2f");
+    }
+
+    if (registry.all_of<TComponentScale>(entity)) {
+        auto& scale = registry.get<TComponentScale>(entity);
+
+        ImGui::InputFloat3(std::format("Scale##{}", (uint32_t)entity).data(), &scale.x, "%.2f");
+    }
 }
 
 auto RendererRender(
@@ -1031,7 +1048,7 @@ auto RendererRender(
      * ECS - Update Transforms
      */
     registry.view<TComponentTransform, TComponentPosition, TComponentOrientation, TComponentScale>().each([&](
-        auto& entity,
+        const auto& entity,
         auto& transformComponent,
         const auto& positionComponent,
         const auto& orientationComponent,
@@ -1042,8 +1059,7 @@ auto RendererRender(
         auto parentTransform = glm::mat4(1.0f);
         if (registry.any_of<TComponentChildOf>(entity)) {
             auto& parentComponent = registry.get<TComponentChildOf>(entity);
-            auto& parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
-            parentTransform = parentTransform;
+            parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
         }
 
         auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
@@ -1270,9 +1286,7 @@ auto RendererRender(
             ImGui::Text("rfps: %.0f", renderContext.FramesPerSecond);
             ImGui::Text("rpms: %.0f", renderContext.FramesPerSecond * 60.0f);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
-            //ImGui::Text("   f: %lu", renderContext.FrameCounter);
-            ImGui::Text("mx: %3.0f my: %3.0f", inputState.MousePosition.x, inputState.MousePosition.y);
-            ImGui::Text("dx: %3.0f dy: %3.0f", inputState.MousePositionDelta.x, inputState.MousePositionDelta.y);
+            ImGui::Text("   f: %lu", renderContext.FrameCounter);
         }
         ImGui::End();
         ImGui::PopStyleColor();
@@ -1451,7 +1465,7 @@ auto RendererRender(
         if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT " Properties")) {
 
             if (g_selectedEntity.has_value()) {
-                RenderEntityProperties(*g_selectedEntity);
+                RenderEntityProperties(registry, *g_selectedEntity);
             }
         }
         ImGui::End();
