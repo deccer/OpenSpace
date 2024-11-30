@@ -930,6 +930,12 @@ auto CreateCuboid(
     g_assetMeshDates[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
 }
 
+auto AddAsset(const std::string& assetName, const TAsset& asset) -> void {
+    if (!g_assets.contains(assetName)) {
+        g_assets[assetName] = std::move(asset);
+    }
+}
+
 auto AddDefaultAssets() -> void {
 
     AddImage("T_Default_B", "data/default/T_Default_B.png");

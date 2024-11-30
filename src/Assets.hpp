@@ -111,6 +111,7 @@ struct TAsset {
     std::vector<TAssetInstanceData> Instances;
 };
 
+auto AddAsset(const std::string& assetName, const TAsset& asset) -> void;
 auto AddAssetFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void;
 auto GetAssets() -> std::unordered_map<std::string, TAsset>&;
 auto GetAsset(const std::string& assetName) -> TAsset&;
