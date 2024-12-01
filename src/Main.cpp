@@ -23,33 +23,13 @@
 #include "WindowSettings.hpp"
 #include "Input.hpp"
 
-// - Engine -------------------------------------------------------------------
-
-struct TMeshInstance {
-    glm::mat4 WorldMatrix;
-};
-
-// - Renderer -----------------------------------------------------------------
-
-using TGpuMeshId = TId<struct GpuMeshId>;
-using TGpuSamplerId = TId<struct GpuSamplerId>;
-using TGpuMaterialId = TId<struct GpuMaterialId>;
-
-TIdGenerator<TGpuMeshId> g_gpuMeshCounter = {};
-
 // - Game ---------------------------------------------------------------------
-
-float g_cameraSpeed = 4.0f;
 
 entt::registry g_gameRegistry = {};
 
 // - Application --------------------------------------------------------------
 
 TInputState g_inputState = {};
-
-constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
-constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
-
 GLFWwindow* g_window = nullptr;
 
 bool g_sleepWhenWindowHasNoFocus = true;
