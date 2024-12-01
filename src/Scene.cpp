@@ -25,10 +25,10 @@ namespace Scene {
 
 entt::registry g_registry = {};
 
-entt::entity g_rootEntity = {};
-entt::entity g_playerEntity = {};
-entt::entity g_entity_mars = {};
-std::optional<entt::entity> g_ship = {};
+entt::entity g_rootEntity = { entt::null };
+entt::entity g_playerEntity = { entt::null };
+entt::entity g_entity_mars = { entt::null };
+entt::entity g_ship = { entt::null };
 
 bool g_playerMounted = false;
 
@@ -332,8 +332,8 @@ auto Update(
     }
 
     if (g_playerMounted) {
-        auto& parent = registry.get<TComponentParent>(*g_ship);
-        auto& parentPosition = registry.get<TComponentPosition>(*g_ship);
+        auto& parent = registry.get<TComponentParent>(g_ship);
+        auto& parentPosition = registry.get<TComponentPosition>(g_ship);
         auto& child = parent.Children.front();
         auto& shipPosition = registry.get<TComponentPosition>(child);
 

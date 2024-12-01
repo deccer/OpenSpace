@@ -155,7 +155,7 @@ bool g_sceneViewerResized = false;
 bool g_isEditor = false;
 bool g_isSrgbDisabled = false;
 
-std::optional<entt::entity> g_selectedEntity = {};
+entt::entity g_selectedEntity = { entt::null };
 
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
@@ -998,19 +998,19 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) {
     if (registry.all_of<TComponentPosition>(entity)) {
         auto& position = registry.get<TComponentPosition>(entity);
 
-        ImGui::InputFloat3(std::format("Position##{}", (uint32_t)entity).data(), &position.x, "%.2f");
+        ImGui::InputFloat3("Position", &position.x, "%.2f");
     }
 
     if (registry.all_of<TComponentOrientation>(entity)) {
         auto& orientation = registry.get<TComponentOrientation>(entity);
 
-        ImGui::InputFloat4(std::format("Orientation##{}", (uint32_t)entity).data(), &orientation.x, "%.2f");
+        ImGui::InputFloat4("Orientation", &orientation.x, "%.2f");
     }
 
     if (registry.all_of<TComponentScale>(entity)) {
         auto& scale = registry.get<TComponentScale>(entity);
 
-        ImGui::InputFloat3(std::format("Scale##{}", (uint32_t)entity).data(), &scale.x, "%.2f");
+        ImGui::InputFloat3("Scale", &scale.x, "%.2f");
     }
 }
 
@@ -1343,12 +1343,12 @@ auto RendererRender(
                     ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 4);
                 }
 
-                if (g_selectedEntity.has_value()) {
+                if (g_selectedEntity != entt::null) {
 
                     ImGuizmo::SetDrawlist();
                     ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-                    auto& transformComponent = registry.get<TComponentTransform>(*g_selectedEntity);
+                    auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
                     glm::mat4 temp = transformComponent;
 
                     static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
@@ -1391,7 +1391,7 @@ auto RendererRender(
                         currentGizmoMode,
                         glm::value_ptr(temp));
 
-                    registry.replace<TComponentTransform>(*g_selectedEntity, temp);
+                    registry.replace<TComponentTransform>(g_selectedEntity, temp);
                 }
             }
 
@@ -1463,8 +1463,10 @@ auto RendererRender(
          */
         if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT " Properties")) {
 
-            if (g_selectedEntity.has_value()) {
-                RenderEntityProperties(registry, *g_selectedEntity);
+            if (g_selectedEntity != entt::null) {
+                ImGui::PushID(static_cast<int32_t>(g_selectedEntity));
+                RenderEntityProperties(registry, g_selectedEntity);
+                ImGui::PopID();
             }
         }
         ImGui::End();
