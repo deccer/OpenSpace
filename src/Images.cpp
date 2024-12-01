@@ -1,6 +1,7 @@
 #include "Images.hpp"
 
 #include "Profiler.hpp"
+#include "Io.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -35,12 +36,7 @@ auto LoadImageFromFile(
 
     PROFILER_ZONESCOPEDN("LoadImageFromFile");
 
-    auto imageFile = fopen(filePath.c_str(), "rb");
-    if (imageFile != nullptr) {
-        auto* pixels = stbi_load_from_file(imageFile, width, height, components, 4);
-        fclose(imageFile);
-        return pixels;
-    } else {
-        return nullptr;
-    }
+    auto [imageData, imageDataSize] = ReadBinaryFromFile(filePath);
+
+    return LoadImageFromMemory(imageData.get(), imageDataSize, width, height, components);
 }
