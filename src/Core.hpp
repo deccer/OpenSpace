@@ -302,3 +302,11 @@ constexpr auto HashString(std::string_view str) -> uint32_t {
 constexpr auto operator"" _hash(const char* str, size_t) -> uint32_t {
     return HashString(str);
 }
+
+constexpr auto IndexZero =
+#ifdef _MSC_VER
+    0ull
+#else
+    0uz
+#endif
+;

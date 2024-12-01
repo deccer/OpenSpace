@@ -1,27 +1,28 @@
+#include "Core.hpp"
 #include "Assets.hpp"
 #include "Io.hpp"
 #include "Images.hpp"
 #include "Helpers.hpp"
 #include "Profiler.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
+
+#define POOLSTL_STD_SUPPLEMENT
+#include <poolstl/poolstl.hpp>
+
+#include <spdlog/spdlog.h>
 #include <mikktspace.h>
 
 #include <algorithm>
 #include <format>
 #include <ranges>
-
-#include <spdlog/spdlog.h>
 #include <unordered_map>
 #include <utility>
-
-#define POOLSTL_STD_SUPPLEMENT
-#include <poolstl/poolstl.hpp>
-
-#include <glm/gtc/type_ptr.hpp>
 
 namespace Assets {
 
@@ -112,7 +113,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
     std::vector<TAssetImageData> assetImages;
     assetImages.resize(fgAsset.images.size());
 
-    const auto imageIndices = std::ranges::iota_view{0ull, fgAsset.images.size()};
+    const auto imageIndices = std::ranges::iota_view{IndexZero, fgAsset.images.size()};
     std::for_each(
         poolstl::execution::par,
         imageIndices.begin(),
@@ -245,7 +246,7 @@ constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
 
 auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
-    const auto samplerIndices = std::ranges::iota_view{0ull, fgAsset.samplers.size()};
+    const auto samplerIndices = std::ranges::iota_view{IndexZero, fgAsset.samplers.size()};
     asset.Samplers.resize(fgAsset.samplers.size());
     std::for_each(
         samplerIndices.begin(),
@@ -276,14 +277,14 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
 
 auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
-    const auto materialIndices = std::ranges::iota_view{0ull, fgAsset.materials.size()};
+    const auto materialIndices = std::ranges::iota_view{IndexZero, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
 
     std::vector<TAssetMaterialData> assetMaterials;
     assetMaterials.resize(fgAsset.materials.size());
 
     std::for_each(
-        poolstl::execution::seq,
+        poolstl::execution::par,
         materialIndices.begin(),
         materialIndices.end(),
         [&](size_t materialIndex) -> void {
@@ -429,15 +430,6 @@ auto LoadNode(
             .WorldMatrix = transform,
             .MeshIndex = node.meshIndex.value()
         });
-        /*
-        auto [meshIndex, meshCount] = meshOffsets[node.meshIndex.value()];
-        for (auto i = 0; i < meshCount; i++) {
-            assetScene.Instances.emplace_back(TAssetInstanceData{
-                .WorldMatrix = transform,
-                .MeshIndex = meshIndex + i
-            });
-        }
-        */
     }
 
     for (auto childNodeIndex : node.children) {
@@ -679,15 +671,18 @@ auto CreateUvSphereMeshData(
 
     auto index = 0;
     const auto pi = glm::pi<float>();
+
     for (auto ring = 0; ring <= rings; ++ring) {
+
         auto theta = ring * pi / rings;
         auto sinTheta = glm::sin(theta);
         auto cosTheta = glm::cos(theta);
 
-        for (unsigned int segment = 0; segment <= segments; ++segment) {
-            float phi = segment * 2.0f * pi / segments;
-            float sinPhi = sin(phi);
-            float cosPhi = cos(phi);
+        for (auto segment = 0; segment <= segments; ++segment) {
+
+            auto phi = segment * 2.0f * pi / segments;
+            auto sinPhi = glm::sin(phi);
+            auto cosPhi = glm::cos(phi);
 
             glm::vec3 position;
             position.x = radius * cosPhi * sinTheta;
@@ -706,7 +701,7 @@ auto CreateUvSphereMeshData(
             };
 
             assetMeshData.Positions[index] = position;
-            assetMeshData.Normals[index] = normal;
+            assetMeshData.Normals[index] = glm::normalize(normal);
             assetMeshData.Uvs[index] = uv;
             assetMeshData.Tangents[index] = glm::vec4{0.0f};
             index++;
@@ -721,7 +716,6 @@ auto CreateUvSphereMeshData(
             auto first = (ring * (segments + 1)) + seg;
             auto second = first + segments + 1;
 
-            // Two triangles per quad
             assetMeshData.Indices[index + 0] = first;
             assetMeshData.Indices[index + 1] = first + 1;
             assetMeshData.Indices[index + 2] = second;
