@@ -197,7 +197,7 @@ auto Load() -> bool {
     Assets::AddAssetFromFile("fform8", "data/basic/fform_9.glb");
     Assets::AddAssetFromFile("fform9", "data/basic/fform_10.glb");
 
-    Assets::AddAssetFromFile("SM_SillyShip", "data/scenes/SillyShip/SM_Ship6.gltf");
+    Assets::AddAssetFromFile("SillyShip", "data/scenes/SillyShip/SM_Ship6.gltf");
 
     //Assets::AddAssetFromFile("SM_Cube_x1_y1_z1", "data/scenes/SM_Cube_x1_y1_z1.glb");
     //Assets::AddAssetFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
@@ -243,7 +243,8 @@ auto Load() -> bool {
     g_entity_mars = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, glm::identity<glm::quat>(), marsScale, "Mars", "M_Mars");
 
     SceneAddEntity(g_rootEntity, "SM_Cuboid_x50_y1_z50", glm::translate(glm::mat4(1.0f), glm::vec3{-50.0f, -5.0f, 0.0f}), false, "");
-    g_ship = SceneAddEntity(g_rootEntity, "SM_SillyShip", glm::translate(glm::mat4(1.0f), glm::vec3{-70.0f, -4.0f, -10.0f}), false, "");
+    g_ship = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, -4.0f, -10.0f}, glm::identity<glm::quat>(), glm::vec3{1.0f}, "SillyShip", "");
+    //g_ship = SceneAddEntity(g_rootEntity, "SM_SillyShip", , false, "");
 
     g_playerEntity = g_registry.create();
     g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
@@ -332,24 +333,13 @@ auto Update(
 
     if (g_playerMounted) {
         auto& parent = registry.get<TComponentParent>(*g_ship);
+        auto& parentPosition = registry.get<TComponentPosition>(*g_ship);
         auto& child = parent.Children.front();
-        auto& shipTransform = registry.get<TComponentTransform>(child);
-        glm::vec3 shipScale;
-        glm::vec3 shipTranslation;
-        glm::quat shipOrientation;
-        glm::vec3 shipSkew;
-        glm::vec4 perspective;
-        glm::decompose(shipTransform, shipScale, shipOrientation, shipTranslation, shipSkew, perspective);
-        playerCamera.Position = shipTranslation + glm::vec3(0.0f, 0.0f, -2.5f);
+        auto& shipPosition = registry.get<TComponentPosition>(child);
+
+        playerCamera.Position = parentPosition + shipPosition + glm::vec3(0.0f, 0.0f, 1.5f);
     }
 
-/*
-    auto& marsTransform = registry.get<TComponentTransform>(g_entity_mars);
-    auto mars_t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -6235072.0f, 0.0f));
-    auto mars_r = glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f));
-    auto mars_s = glm::scale(glm::mat4(1.0f), glm::vec3(6227558));
-    marsTransform = mars_t * mars_r * mars_s;
-*/
     auto& marsRotation = registry.get<TComponentOrientation>(g_entity_mars);
     marsRotation = glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f)));
 }
