@@ -91,6 +91,6 @@ struct TComponentCamera {
     float Pitch;
 
     float FieldOfView = 70.0f;
-    float CameraSpeed = 0.5f;
+    float CameraSpeed = 2.0f;
     float Sensitivity = 0.0015f;
 };

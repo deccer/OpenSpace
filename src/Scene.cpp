@@ -250,7 +250,7 @@ auto Load() -> bool {
         .Position = {-60.0f, -3.0f, 5.0f},
         .Orientation = glm::angleAxis(glm::radians(-90.f), glm::vec3(0, 1, 0)),
         .FieldOfView = 70.0f,
-        .CameraSpeed = 10.0f,
+        .CameraSpeed = 2.0f,
         .Sensitivity = 0.0025f,
     });
 
