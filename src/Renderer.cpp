@@ -945,14 +945,13 @@ auto RendererInitialize(
     auto cameraPosition = glm::vec3{-60.0f, -3.0f, 0.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
-    auto fieldOfView = glm::radians(70.0f);
+    auto fieldOfView = glm::radians(170.0f);
     auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-    g_globalUniforms = {
-        .ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f),
-        .ViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp),
-        .CameraPosition = glm::vec4{cameraPosition, fieldOfView},
-        .CameraDirection = glm::vec4{cameraDirection, aspectRatio}
-    };
+    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
+    g_globalUniforms.ViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp);
+    g_globalUniforms.CameraPosition = glm::vec4{cameraPosition, fieldOfView};
+    g_globalUniforms.CameraDirection = glm::vec4{cameraDirection, aspectRatio};
+
     g_globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &g_globalUniforms, GL_DYNAMIC_STORAGE_BIT);
     g_objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
@@ -1099,10 +1098,10 @@ auto RendererRender(
     auto playerCamera = registry.get<TComponentCamera>(*g_playerEntity);
 
     auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(playerCamera.FieldOfView, aspectRatio, 0.1f);
+    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(playerCamera.FieldOfView), aspectRatio, 0.1f);
     g_globalUniforms.ViewMatrix = glm::inverse(glm::translate(glm::mat4(1.0f), playerCamera.Position) * glm::mat4_cast(playerCamera.Orientation));
-    //g_globalUniforms.CameraPosition = glm::vec4(cameraComponent.Position, cameraComponent.FieldOfView);
-    //g_globalUniforms.CameraDirection = glm::vec4(cameraComponent.Orientation * glm::vec3(0.0, 0.0, -1.0), aspectRatio);
+    g_globalUniforms.CameraPosition = glm::vec4(playerCamera.Position, glm::radians(playerCamera.FieldOfView));
+    g_globalUniforms.CameraDirection = glm::vec4(playerCamera.Orientation * glm::vec3(0.0, 0.0, -1.0), aspectRatio);
     UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
 
     //
