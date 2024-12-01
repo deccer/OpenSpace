@@ -8,6 +8,7 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
+#include <mikktspace.h>
 
 #include <algorithm>
 #include <format>
@@ -595,7 +596,71 @@ auto AddImage(
     assetImage.Data.reset(pixels);
 
     g_assetImageDates[imageName] = std::move(assetImage);
+}
 
+auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
+
+    auto getNumFaces = [](const SMikkTSpaceContext* context) -> int32_t {
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        return meshData->Indices.size() / 3;
+    };
+
+    auto getNumVerticesOfFace = [](const SMikkTSpaceContext* context, const int32_t iFace) -> int32_t {
+        return 3;
+    };
+
+    auto getPosition = [](const SMikkTSpaceContext* context, float posOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+
+        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec3& pos = meshData->Positions[index];
+        posOut[0] = pos.x;
+        posOut[1] = pos.y;
+        posOut[2] = pos.z;
+    };
+
+    auto getNormal = [](const SMikkTSpaceContext* context, float normOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+
+        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec3& normal = meshData->Normals[index];
+        normOut[0] = normal.x;
+        normOut[1] = normal.y;
+        normOut[2] = normal.z;
+    };
+
+    auto getUv = [](const SMikkTSpaceContext* context, float uvOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+
+        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec2& uv = meshData->Uvs[index];
+        uvOut[0] = uv.x;
+        uvOut[1] = uv.y;
+    };
+
+    auto setTSpaceBasic = [](const SMikkTSpaceContext* context, const float tangent[], const float sign, const int32_t faceIndex, const int32_t vertIndex) {
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
+
+        glm::vec3 tan(tangent[0], tangent[1], tangent[2]);
+        meshData->Tangents[index] = glm::vec4(glm::normalize(tan), sign);
+    };
+
+    SMikkTSpaceInterface interface = {
+        .m_getNumFaces = getNumFaces,
+        .m_getNumVerticesOfFace = getNumVerticesOfFace,
+        .m_getPosition = getPosition,
+        .m_getNormal = getNormal,
+        .m_getTexCoord = getUv,
+        .m_setTSpaceBasic = setTSpaceBasic,
+    };
+
+    SMikkTSpaceContext context = {
+        .m_pInterface = &interface,
+        .m_pUserData = &assetMeshData
+    };
+
+    genTangSpaceDefault(&context);
 }
 
 auto CreateUvSphereMeshData(
@@ -671,6 +736,8 @@ auto CreateUvSphereMeshData(
 
     assetMeshData.InitialTransform = glm::mat4(1.0f);
     assetMeshData.MaterialIndex = 0;
+
+    CalculateTangents(assetMeshData);
 
     return assetMeshData;
 }

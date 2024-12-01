@@ -39,6 +39,7 @@ target_link_libraries(HowToScript
     PRIVATE EnTT
     PRIVATE mimalloc-static
     PRIVATE Jolt
+    PRIVATE mikktspace
 )
 
 target_sources(HowToScript
