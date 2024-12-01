@@ -111,7 +111,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
     std::vector<TAssetImageData> assetImages;
     assetImages.resize(fgAsset.images.size());
 
-    const auto imageIndices = std::ranges::iota_view{0ul, fgAsset.images.size()};
+    const auto imageIndices = std::ranges::iota_view{0ull, fgAsset.images.size()};
     std::for_each(
         poolstl::execution::par,
         imageIndices.begin(),
@@ -244,7 +244,7 @@ constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
 
 auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
-    const auto samplerIndices = std::ranges::iota_view{0uz, fgAsset.samplers.size()};
+    const auto samplerIndices = std::ranges::iota_view{0ull, fgAsset.samplers.size()};
     asset.Samplers.resize(fgAsset.samplers.size());
     std::for_each(
         samplerIndices.begin(),
@@ -275,7 +275,7 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
 
 auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
 
-    const auto materialIndices = std::ranges::iota_view{0uz, fgAsset.materials.size()};
+    const auto materialIndices = std::ranges::iota_view{0ull, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
 
     std::vector<TAssetMaterialData> assetMaterials;
