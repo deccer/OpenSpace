@@ -1069,7 +1069,34 @@ auto RendererRender(
         transformComponent = parentTransform * localTransform;
     });
 
-    // Resize if necessary
+    /*
+     * Update Global Uniforms
+     */
+    {
+        registry.view<TComponentCamera, TComponentTransform, TComponentPosition, TComponentOrientationEuler>().each([&](
+            const auto& entity,
+            const auto& cameraComponent,
+            auto& transformComponent,
+            const auto& positionComponent,
+            const auto& orientationEulerComponent) {
+
+            glm::quat orientation = glm::eulerAngleYX(orientationEulerComponent.Yaw, orientationEulerComponent.Pitch);
+            transformComponent = glm::translate(glm::mat4(1.0f), positionComponent) * glm::mat4_cast(orientation);
+
+            auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
+            auto cameraDirection = glm::normalize(orientation * glm::vec3(0.0, 0.0, -1.0));
+            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
+            g_globalUniforms.ViewMatrix = glm::inverse(transformComponent);
+
+            g_globalUniforms.CameraPosition = glm::vec4(positionComponent, glm::radians(cameraComponent.FieldOfView));
+            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
+            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
+        });
+    }
+
+    /*
+     * Resize if necessary
+     */
     if (g_windowFramebufferResized || g_sceneViewerResized) {
 
         PROFILER_ZONESCOPEDN("Resized");
@@ -1093,20 +1120,8 @@ auto RendererRender(
     }
 
     /*
-     * Update Global Uniforms
+     * CLEAR DEBUG LINES
      */
-    auto playerCamera = registry.get<TComponentCamera>(*g_playerEntity);
-
-    auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-    g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(playerCamera.FieldOfView), aspectRatio, 0.1f);
-    g_globalUniforms.ViewMatrix = glm::inverse(glm::translate(glm::mat4(1.0f), playerCamera.Position) * glm::mat4_cast(playerCamera.Orientation));
-    g_globalUniforms.CameraPosition = glm::vec4(playerCamera.Position, glm::radians(playerCamera.FieldOfView));
-    g_globalUniforms.CameraDirection = glm::vec4(playerCamera.Orientation * glm::vec3(0.0, 0.0, -1.0), aspectRatio);
-    UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
-
-    //
-    // CLEAR DEBUG LINES
-    //
     if (g_drawDebugLines) {
         g_debugLines.clear();
 

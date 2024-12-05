@@ -32,6 +32,12 @@ struct TComponentOrientation : public glm::quat
     TComponentOrientation(glm::quat&& m) : glm::quat(std::move(m)) {}
 };
 
+struct TComponentOrientationEuler {
+    float Pitch;
+    float Yaw;
+    float Roll;
+};
+
 struct TComponentScale : public glm::vec3
 {
     using glm::vec3::vec3;
@@ -84,13 +90,9 @@ struct TComponentPlanet {
 
 struct TComponentCamera {
 
-    glm::vec3 Position = {0.0f, 0.0f, 5.0f};
-    glm::quat Orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-
-    float Yaw;
-    float Pitch;
-
-    float FieldOfView = 170.0f;
+    float FieldOfView = 90.0f;
     float CameraSpeed = 2.0f;
     float Sensitivity = 0.0015f;
+
+    bool IsPrimary = false;
 };
