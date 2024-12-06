@@ -9,33 +9,35 @@
 #include <debugbreak.h>
 #include <spdlog/spdlog.h>
 
+#include <entt/entity/fwd.hpp>
+
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
-#include <glm/gtc/quaternion.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
 
-#include "IconsMaterialDesign.h"
-#include "IconsFontAwesome6.h"
-#include "entt/entity/fwd.hpp"
-
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 #include <fastgltf/types.hpp>
 
+#define POOLSTL_STD_SUPPLEMENT
+#include <poolstl/poolstl.hpp>
+
 #include <ranges>
 #include <utility>
 
-#define POOLSTL_STD_SUPPLEMENT
-#include <poolstl/poolstl.hpp>
+#include "IconsMaterialDesign.h"
+#include "IconsFontAwesome6.h"
 
 enum class TImGuizmoOperation
 {
@@ -291,9 +293,9 @@ auto RendererCreateGpuMesh(const Assets::TAssetMeshData& assetMeshData) -> void 
         SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", assetMeshData.Name));
         SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", assetMeshData.Name));
         glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * vertexPositions.size(),
-                             vertexPositions.data(), 0);
+                                vertexPositions.data(), 0);
         glNamedBufferStorage(buffers[1], sizeof(TGpuPackedVertexNormalTangentUvTangentSign) * vertexNormalUvTangents.size(),
-                             vertexNormalUvTangents.data(), 0);
+                                vertexNormalUvTangents.data(), 0);
         glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMeshData.Indices.size(), assetMeshData.Indices.data(), 0);
     }
 
