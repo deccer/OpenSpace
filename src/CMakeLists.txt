@@ -6,6 +6,7 @@ add_executable(HowToScript
     Io.cpp
     Images.cpp
     Helpers.cpp
+    Components.cpp
     Assets.cpp
     RHI.cpp
     Renderer.cpp

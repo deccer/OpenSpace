@@ -96,3 +96,5 @@ struct TComponentCamera {
 
     bool IsPrimary = false;
 };
+
+auto EntityChangeParent(entt::registry& registry, entt::entity entity, entt::entity parent) -> void;
