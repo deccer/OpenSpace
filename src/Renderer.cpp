@@ -1009,6 +1009,14 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) {
         ImGui::InputFloat4("Orientation", &orientation.x, "%.2f");
     }
 
+    if (registry.all_of<TComponentOrientationEuler>(entity)) {
+        auto& euler = registry.get<TComponentOrientationEuler>(entity);
+
+        ImGui::InputFloat("Pitch", &euler.Pitch, 0.01f, 0.1f, "%.2f");
+        ImGui::InputFloat("Yaw", &euler.Yaw, 0.01f, 0.1f, "%.2f");
+        ImGui::InputFloat("Roll", &euler.Roll, 0.01f, 0.1f, "%.2f");
+    }
+
     if (registry.all_of<TComponentScale>(entity)) {
         auto& scale = registry.get<TComponentScale>(entity);
 
@@ -1048,33 +1056,36 @@ auto RendererRender(
     /*
      * ECS - Update Transforms
      */
-    registry.view<TComponentTransform, TComponentPosition, TComponentOrientation, TComponentScale>().each([&](
-        const auto& entity,
-        auto& transformComponent,
-        const auto& positionComponent,
-        const auto& orientationComponent,
-        const auto& scaleComponent) {
+    {
+        PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
-        PROFILER_ZONESCOPEDN("ECS - Update Transform");
+        registry.view<TComponentTransform, TComponentPosition, TComponentOrientation, TComponentScale>().each([&](
+            const auto& entity,
+            auto& transformComponent,
+            const auto& positionComponent,
+            const auto& orientationComponent,
+            const auto& scaleComponent) {
 
-        auto parentTransform = glm::mat4(1.0f);
-        if (registry.any_of<TComponentChildOf>(entity)) {
-            auto& parentComponent = registry.get<TComponentChildOf>(entity);
-            parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
-        }
+            auto parentTransform = glm::mat4(1.0f);
+            if (registry.any_of<TComponentChildOf>(entity)) {
+                auto& parentComponent = registry.get<TComponentChildOf>(entity);
+                parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
+            }
 
-        auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
-        auto localOrientation = glm::mat4_cast(orientationComponent);
-        auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
-        auto localTransform = localTranslation * localOrientation * localScale;
+            auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
+            auto localOrientation = glm::mat4_cast(orientationComponent);
+            auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
+            auto localTransform = localTranslation * localOrientation * localScale;
 
-        transformComponent = parentTransform * localTransform;
-    });
-
+            transformComponent = parentTransform * localTransform;
+        });
+    }
     /*
      * Update Global Uniforms
      */
     {
+        PROFILER_ZONESCOPEDN("Update Global Uniforms"); 
+
         registry.view<TComponentCamera, TComponentTransform, TComponentPosition, TComponentOrientationEuler>().each([&](
             const auto& entity,
             const auto& cameraComponent,
@@ -1101,7 +1112,7 @@ auto RendererRender(
      */
     if (g_windowFramebufferResized || g_sceneViewerResized) {
 
-        PROFILER_ZONESCOPEDN("Resized");
+        PROFILER_ZONESCOPEDN("Resize If Necessary");
 
         g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * g_windowSettings.ResolutionScale, g_windowFramebufferSize.y * g_windowSettings.ResolutionScale};
         g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * g_windowSettings.ResolutionScale, g_sceneViewerSize.y * g_windowSettings.ResolutionScale};
