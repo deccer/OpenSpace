@@ -211,6 +211,9 @@ auto Load() -> bool {
     /// Setup Scene ////////////
 
     g_rootEntity = g_registry.create();
+    g_registry.emplace<TComponentName>(g_rootEntity, TComponentName {
+        .Name = "Root"
+    });
     g_registry.emplace<TComponentTransform>(g_rootEntity, glm::mat4(1.0f));
 
 /*
@@ -244,6 +247,9 @@ auto Load() -> bool {
     g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, -4.0f, -10.0f}, glm::identity<glm::quat>(), glm::vec3{1.0f}, "SillyShip", "");
 
     g_playerEntity = g_registry.create();
+    g_registry.emplace<TComponentName>(g_playerEntity, TComponentName {
+        .Name = "Player"
+    });
     g_registry.emplace<TComponentPosition>(g_playerEntity, glm::vec3{-60.0f, -3.0f, 5.0f});
     g_registry.emplace<TComponentOrientationEuler>(g_playerEntity, TComponentOrientationEuler {
         .Pitch = 0.0f,
@@ -256,6 +262,11 @@ auto Load() -> bool {
         .CameraSpeed = 2.0f,
         .Sensitivity = 0.0025f,
     });
+
+    auto& rootChildren = g_registry.get_or_emplace<TComponentParent>(g_rootEntity);
+    rootChildren.Children.push_back(g_playerEntity);
+
+    g_registry.emplace<TComponentChildOf>(g_playerEntity, g_rootEntity);
 
     return true;
 }

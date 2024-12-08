@@ -585,26 +585,27 @@ auto RendererInitialize(
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     constexpr auto fontSize = 18.0f;
 
-    io.Fonts->AddFontFromFileTTF("data/fonts/HurmitNerdFont-Regular.otf", fontSize);
+    //io.Fonts->AddFontFromFileTTF("data/fonts/HurmitNerdFont-Regular.otf", fontSize);
+    io.Fonts->AddFontFromFileTTF("data/fonts/NotoSans-Regular.ttf", fontSize);
     {
         constexpr float iconFontSize = fontSize * 4.0f / 5.0f;
-        static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
-        ImFontConfig icons_config;
-        icons_config.MergeMode = true;
-        icons_config.PixelSnapH = true;
-        icons_config.GlyphMinAdvanceX = iconFontSize;
-        icons_config.GlyphOffset.y = 0; // Hack to realign the icons
-        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_FAR, iconFontSize, &icons_config, icons_ranges);
+        static const ImWchar iconsRange[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+        ImFontConfig iconsConfig;
+        iconsConfig.MergeMode = true;
+        iconsConfig.PixelSnapH = true;
+        iconsConfig.GlyphMinAdvanceX = iconFontSize;
+        iconsConfig.GlyphOffset.y = 0;
+        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_FAR, iconFontSize, &iconsConfig, iconsRange);
     }
     {
         constexpr float iconFontSize = fontSize;
-        static const ImWchar icons_ranges[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
-        ImFontConfig icons_config;
-        icons_config.MergeMode = true;
-        icons_config.PixelSnapH = true;
-        icons_config.GlyphMinAdvanceX = iconFontSize;
-        icons_config.GlyphOffset.y = 4; // Hack to realign the icons
-        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_MD, iconFontSize, &icons_config, icons_ranges);
+        static const ImWchar iconsRange[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
+        ImFontConfig iconsConfig;
+        iconsConfig.MergeMode = true;
+        iconsConfig.PixelSnapH = true;
+        iconsConfig.GlyphMinAdvanceX = iconFontSize;
+        iconsConfig.GlyphOffset.y = 4;
+        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_MD, iconFontSize, &iconsConfig, iconsRange);
     }
     
     auto& style = ImGui::GetStyle();
@@ -995,33 +996,236 @@ auto RendererUnload() -> void {
     RhiShutdown();
 }
 
-auto RenderEntityProperties(entt::registry& registry, entt::entity entity) {
+auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> void {
+
+    auto entityName = registry.get<TComponentName>(entity);
+    if (registry.all_of<TComponentParent>(entity)) {
+
+        auto isOpen = ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_None);
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            g_selectedEntity = entity;
+        }
+        if (isOpen) {
+            auto& children = registry.get<TComponentParent>(entity).Children;
+            for (auto& child : children) {
+                RenderEntityHierarchy(registry, child);
+            }
+            ImGui::TreePop();
+        }
+    } else {
+
+        ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_Leaf);
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            g_selectedEntity = entity;
+        }
+        ImGui::TreePop();
+        
+    }
+}
+
+auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> void {
+
+    if (registry.all_of<TComponentName>(entity)) {
+
+        auto& name = registry.get<TComponentName>(entity);
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Name");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextUnformatted(name.Name.data());
+        ImGui::TableNextRow();
+    }
+
+    if (registry.all_of<TComponentChildOf>(entity)) {
+
+        auto& childOf = registry.get<TComponentChildOf>(entity);
+        auto& parentName = registry.get<TComponentName>(childOf.Parent);
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Parent");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextUnformatted(parentName.Name.data());
+        ImGui::TableNextRow();
+    }
 
     if (registry.all_of<TComponentPosition>(entity)) {
         auto& position = registry.get<TComponentPosition>(entity);
 
-        ImGui::InputFloat3("Position", &position.x, "%.2f");
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Position");
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" X");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##PositionX", &position.x, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Y");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##PositionY", &position.y, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Z");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##PositionZ", &position.z, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();                
     }
 
     if (registry.all_of<TComponentOrientation>(entity)) {
         auto& orientation = registry.get<TComponentOrientation>(entity);
 
-        ImGui::InputFloat4("Orientation", &orientation.x, "%.2f");
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Orientation");
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" X");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##OrientationX", &orientation.x, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Y");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##OrientationY", &orientation.y, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Z");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##OrientationZ", &orientation.z, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" W");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##OrientationW", &orientation.w, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
     }
 
     if (registry.all_of<TComponentOrientationEuler>(entity)) {
-        auto& euler = registry.get<TComponentOrientationEuler>(entity);
+        auto& orientationEuler = registry.get<TComponentOrientationEuler>(entity);
 
-        ImGui::InputFloat("Pitch", &euler.Pitch, 0.01f, 0.1f, "%.2f");
-        ImGui::InputFloat("Yaw", &euler.Yaw, 0.01f, 0.1f, "%.2f");
-        ImGui::InputFloat("Roll", &euler.Roll, 0.01f, 0.1f, "%.2f");
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Orientation (Euler)");
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Pitch");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##Pitch", &orientationEuler.Pitch, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Yaw");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##Yaw", &orientationEuler.Yaw, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Roll");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##Roll", &orientationEuler.Roll, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
     }
 
     if (registry.all_of<TComponentScale>(entity)) {
         auto& scale = registry.get<TComponentScale>(entity);
 
-        ImGui::InputFloat3("Scale", &scale.x, "%.2f");
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Scale");
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" X");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##ScaleX", &scale.x, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Y");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##ScaleY", &scale.y, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Z");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##ScaleZ", &scale.z, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
     }
+
+    if (registry.all_of<TComponentCamera>(entity)) {
+
+        auto& camera = registry.get<TComponentCamera>(entity);
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Camera");
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(" Field of View");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputFloat("##Fov", &camera.FieldOfView, 0.1f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();
+    }
+
+    if (registry.all_of<TComponentMesh>(entity)) {
+
+        auto& mesh = registry.get<TComponentMesh>(entity);
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Mesh");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::TextUnformatted(mesh.Mesh.data());
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();        
+    }
+
+    if (registry.all_of<TComponentMaterial>(entity)) {
+
+        auto& material = registry.get<TComponentMaterial>(entity);
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted("Material");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::TextUnformatted(material.Material.data());
+        ImGui::PopItemWidth();
+        ImGui::TableNextRow();    
+    }    
 }
 
 auto RendererRender(
@@ -1470,19 +1674,7 @@ auto RendererRender(
          */
         if (ImGui::Begin(ICON_MD_APP_REGISTRATION " Hierarchy")) {
 
-            auto entities = registry.view<TComponentName>();
-            for (auto& entity : entities) {
-
-                auto entityName = registry.get<TComponentName>(entity);
-
-                auto isOpen = ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_None);
-                if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-                    g_selectedEntity = entity;
-                }
-                if (isOpen) {
-                    ImGui::TreePop();
-                }
-            }
+            RenderEntityHierarchy(registry, static_cast<entt::entity>(0));
         }
         ImGui::End();
 
@@ -1493,7 +1685,16 @@ auto RendererRender(
 
             if (g_selectedEntity != entt::null) {
                 ImGui::PushID(static_cast<int32_t>(g_selectedEntity));
+                ImGui::BeginTable("PropertyTable", 2);
+
+                ImGui::TableSetupColumn("Property");
+                ImGui::TableSetupColumn("Value");
+                ImGui::TableHeadersRow();
+                ImGui::TableNextRow();
+
                 RenderEntityProperties(registry, g_selectedEntity);
+
+                ImGui::EndTable();
                 ImGui::PopID();
             }
         }
