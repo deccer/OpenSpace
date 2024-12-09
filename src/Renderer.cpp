@@ -18,6 +18,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 #include <imgui.h>
@@ -1080,6 +1081,7 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
         ImGui::TableNextRow();                
     }
 
+/*
     if (registry.all_of<TComponentOrientation>(entity)) {
         auto& orientation = registry.get<TComponentOrientation>(entity);
 
@@ -1119,6 +1121,7 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
         ImGui::PopItemWidth();
         ImGui::TableNextRow();
     }
+*/
 
     if (registry.all_of<TComponentOrientationEuler>(entity)) {
         auto& orientationEuler = registry.get<TComponentOrientationEuler>(entity);
@@ -1263,7 +1266,7 @@ auto RendererRender(
     {
         PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
-        registry.view<TComponentTransform, TComponentPosition, TComponentOrientation, TComponentScale>().each([&](
+        registry.view<TComponentTransform, TComponentPosition, TComponentOrientationEuler, TComponentScale>().each([&](
             const auto& entity,
             auto& transformComponent,
             const auto& positionComponent,
@@ -1277,7 +1280,7 @@ auto RendererRender(
             }
 
             auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
-            auto localOrientation = glm::mat4_cast(orientationComponent);
+            auto localOrientation = glm::eulerAngleYXZ(orientationComponent.Yaw, orientationComponent.Pitch, orientationComponent.Roll);
             auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
             auto localTransform = localTranslation * localOrientation * localScale;
 
@@ -1290,7 +1293,8 @@ auto RendererRender(
     {
         PROFILER_ZONESCOPEDN("Update Global Uniforms"); 
 
-        registry.view<TComponentCamera, TComponentTransform, TComponentPosition, TComponentOrientationEuler>().each([&](
+/*
+        registry.view<TComponentCamera, TComponentTransform, TComponentOrientationEuler>().each([&](
             const auto& entity,
             const auto& cameraComponent,
             auto& transformComponent,
@@ -1309,6 +1313,36 @@ auto RendererRender(
             g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
             UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
         });
+*/
+
+        registry.view<TComponentCamera, TComponentTransform, TComponentOrientationEuler>().each([&](
+            const auto& entity,
+            const auto& cameraComponent,
+            auto& transformComponent,
+            const auto& orientationEulerComponent) {
+
+            auto globalTransform = EntityGetGlobalTransform(registry, entity);
+            glm::vec3 globalPosition;
+            glm::vec3 globalScale;
+            glm::quat globalOrientation;
+            glm::vec4 globalPerspective;
+            glm::vec3 globalSkew;
+
+            glm::decompose(globalTransform, globalScale, globalOrientation, globalPosition, globalSkew, globalPerspective);
+
+            glm::quat orientation = glm::eulerAngleYX(orientationEulerComponent.Yaw, orientationEulerComponent.Pitch);
+            transformComponent = glm::translate(glm::mat4(1.0f), globalPosition) * glm::mat4_cast(orientation);
+
+            auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
+            auto cameraDirection = glm::normalize(orientation * glm::vec3(0.0, 0.0, -1.0));
+            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
+            g_globalUniforms.ViewMatrix = glm::inverse(transformComponent);
+
+            g_globalUniforms.CameraPosition = glm::vec4(globalPosition, glm::radians(cameraComponent.FieldOfView));
+            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
+            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
+        });
+
     }
 
     /*

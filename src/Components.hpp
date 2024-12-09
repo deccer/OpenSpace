@@ -23,6 +23,9 @@ struct TComponentPosition : public glm::vec3
     TComponentPosition(glm::vec3&& m) : glm::vec3(std::move(m)) {}
 };
 
+struct TComponentPositionBackup : TComponentPosition {};
+
+/*
 struct TComponentOrientation : public glm::quat
 {
     using glm::quat::quat;
@@ -31,6 +34,7 @@ struct TComponentOrientation : public glm::quat
     TComponentOrientation(glm::quat const& m) : glm::quat(m) {}
     TComponentOrientation(glm::quat&& m) : glm::quat(std::move(m)) {}
 };
+*/
 
 struct TComponentOrientationEuler {
     float Pitch;
@@ -98,3 +102,4 @@ struct TComponentCamera {
 };
 
 auto EntityChangeParent(entt::registry& registry, entt::entity entity, entt::entity parent) -> void;
+auto EntityGetGlobalTransform(entt::registry& registry, entt::entity entity) -> glm::mat4;
