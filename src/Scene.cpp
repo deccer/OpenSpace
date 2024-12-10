@@ -25,11 +25,15 @@ namespace Scene {
 
 entt::registry g_registry = {};
 
-entt::entity g_rootEntity = { entt::null };
-entt::entity g_landingPadEntity = { entt::null };
-entt::entity g_playerEntity = { entt::null };
-entt::entity g_marsEntity = { entt::null };
-entt::entity g_shipEntity = { entt::null };
+entt::entity g_rootEntity = entt::null;
+entt::entity g_landingPadEntity = entt::null;
+entt::entity g_playerEntity = entt::null;
+entt::entity g_marsEntity = entt::null;
+entt::entity g_shipEntity = entt::null;
+
+entt::entity g_celestialBodySun = entt::null;
+entt::entity g_celestialBodyPlanet = entt::null;
+entt::entity g_celestialBodyMoon = entt::null;
 
 bool g_playerMounted = false;
 
@@ -235,10 +239,38 @@ auto Load() -> bool {
         SceneAddEntity(g_rootEntity, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
     }
 */
+    Assets::TAsset sunAsset;
+    sunAsset.Meshes.push_back("SM_Geodesic");
+    sunAsset.Materials.push_back("M_Yellow");
+    sunAsset.Instances.push_back(Assets::TAssetInstanceData{
+        .WorldMatrix = glm::mat4(1.0f),
+        .MeshIndex = 0,
+    });
+
+    Assets::TAsset planetAsset;
+    planetAsset.Meshes.push_back("SM_Geodesic");
+    planetAsset.Materials.push_back("M_Blue");
+    planetAsset.Instances.push_back(Assets::TAssetInstanceData{
+        .WorldMatrix = glm::mat4(1.0f),
+        .MeshIndex = 0,
+    });
+
+    Assets::TAsset moonAsset;
+    moonAsset.Meshes.push_back("SM_Geodesic");
+    moonAsset.Materials.push_back("M_Gray");
+    moonAsset.Instances.push_back(Assets::TAssetInstanceData{
+        .WorldMatrix = glm::mat4(1.0f),
+        .MeshIndex = 0,
+    });
+
+    Assets::AddAsset("Sun", sunAsset);
+    Assets::AddAsset("Planet", planetAsset);
+    Assets::AddAsset("Moon", moonAsset);
+
     Assets::TAsset marsAsset;
     marsAsset.Meshes.push_back("SM_Geodesic");
     marsAsset.Materials.push_back("M_Mars");
-    marsAsset.Instances.push_back(Assets::TAssetInstanceData {
+    marsAsset.Instances.push_back(Assets::TAssetInstanceData{
         .WorldMatrix = glm::mat4(1.0f),
         .MeshIndex = 0,
     });
@@ -269,11 +301,77 @@ auto Load() -> bool {
         .CameraSpeed = 2.0f,
         .Sensitivity = 0.0025f,
     });
+    g_registry.emplace<TComponentChildOf>(g_playerEntity, g_rootEntity);
+
+
+    g_celestialBodySun = g_registry.create();
+    g_registry.emplace<TComponentName>(g_celestialBodySun, TComponentName {
+        .Name = "Sun"
+    });
+    g_registry.emplace<TComponentTransform>(g_celestialBodySun, glm::mat4(1.0f));
+    g_registry.emplace<TComponentPosition>(g_celestialBodySun, glm::vec3{-20.0f, 5.0f, 0.0f});
+    g_registry.emplace<TComponentScale>(g_celestialBodySun, glm::vec3(4.0f));
+    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodySun, TComponentOrientationEuler {
+        .Pitch = 0.0f,
+        .Yaw = 0.0f,
+        .Roll = 0.0f
+    });
+    g_registry.emplace<TComponentMesh>(g_celestialBodySun, "SM_Geodesic");
+    g_registry.emplace<TComponentMaterial>(g_celestialBodySun, "M_Yellow");
+    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodySun);
+    g_registry.emplace<TComponentChildOf>(g_celestialBodySun, TComponentChildOf{
+        .Parent = g_rootEntity
+    });
+    g_registry.emplace<TComponentParent>(g_celestialBodySun, TComponentParent{});
+
+    g_celestialBodyPlanet = g_registry.create();
+    g_registry.emplace<TComponentName>(g_celestialBodyPlanet, TComponentName {
+        .Name = "Planet"
+    });
+    g_registry.emplace<TComponentTransform>(g_celestialBodyPlanet, glm::mat4(1.0f));
+    g_registry.emplace<TComponentPosition>(g_celestialBodyPlanet, glm::vec3{19.0f, 0.0f, 0.0f});
+    g_registry.emplace<TComponentScale>(g_celestialBodyPlanet, glm::vec3(2.0f));
+    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodyPlanet, TComponentOrientationEuler {
+        .Pitch = 0.0f,
+        .Yaw = 0.0f,
+        .Roll = 0.0f
+    });
+    g_registry.emplace<TComponentMesh>(g_celestialBodyPlanet, "SM_Geodesic");
+    g_registry.emplace<TComponentMaterial>(g_celestialBodyPlanet, "M_Blue");
+    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodyPlanet);
+    g_registry.emplace<TComponentChildOf>(g_celestialBodyPlanet, TComponentChildOf{
+        .Parent = g_celestialBodySun
+    });
+    g_registry.emplace<TComponentParent>(g_celestialBodyPlanet, TComponentParent{});
+
+    g_celestialBodyMoon = g_registry.create();
+    g_registry.emplace<TComponentName>(g_celestialBodyMoon, TComponentName {
+        .Name = "Moon"
+    });
+    g_registry.emplace<TComponentTransform>(g_celestialBodyMoon, glm::mat4(1.0f));
+    g_registry.emplace<TComponentPosition>(g_celestialBodyMoon, glm::vec3{8.0f, 0.0f, 0.0f});
+    g_registry.emplace<TComponentScale>(g_celestialBodyMoon, glm::vec3(0.5f));
+    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodyMoon, TComponentOrientationEuler {
+        .Pitch = 0.0f,
+        .Yaw = 0.0f,
+        .Roll = 0.0f
+    });
+    g_registry.emplace<TComponentMesh>(g_celestialBodyMoon, "SM_Geodesic");
+    g_registry.emplace<TComponentMaterial>(g_celestialBodyMoon, "M_Gray");
+    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodyMoon);
+    g_registry.emplace<TComponentChildOf>(g_celestialBodyMoon, TComponentChildOf{
+        .Parent = g_celestialBodyPlanet
+    });
+
+    auto& sunChildren = g_registry.get<TComponentParent>(g_celestialBodySun);
+    sunChildren.Children.push_back(g_celestialBodyPlanet);
+
+    auto& planetChildren = g_registry.get<TComponentParent>(g_celestialBodyPlanet);
+    planetChildren.Children.push_back(g_celestialBodyMoon);
 
     auto& rootChildren = g_registry.get_or_emplace<TComponentParent>(g_rootEntity);
     rootChildren.Children.push_back(g_playerEntity);
-
-    g_registry.emplace<TComponentChildOf>(g_playerEntity, g_rootEntity);
+    rootChildren.Children.push_back(g_celestialBodySun);
 
     return true;
 }
@@ -377,6 +475,12 @@ auto Update(
             playerPosition = playerPositionBackup;
         }
     }
+
+    auto& sunRotation = registry.get<TComponentOrientationEuler>(g_celestialBodySun);
+    sunRotation.Yaw = renderContext.FrameCounter * 0.02f;
+
+    auto& planetRotation = registry.get<TComponentOrientationEuler>(g_celestialBodyPlanet);
+    planetRotation.Yaw = renderContext.FrameCounter * 0.16f;
 
     auto& marsRotation = registry.get<TComponentOrientationEuler>(g_marsEntity);
     auto eulerAngles = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
