@@ -577,7 +577,7 @@ auto AddImage(
 
     auto* pixels = LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
 
-    auto assetImage = TAssetImageData {
+    auto assetImage = TAssetImageData{
         .Width = width,
         .Height = height,
         .PixelType = 0,
@@ -593,17 +593,25 @@ auto AddImage(
 auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
 
     auto getNumFaces = [](const SMikkTSpaceContext* context) -> int32_t {
+
         auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
         return meshData->Indices.size() / 3;
     };
 
-    auto getNumVerticesOfFace = [](const SMikkTSpaceContext* context, const int32_t iFace) -> int32_t {
+    auto getNumVerticesOfFace = [](
+        const SMikkTSpaceContext* context,
+        const int32_t iFace) -> int32_t {
+
         return 3;
     };
 
-    auto getPosition = [](const SMikkTSpaceContext* context, float posOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+    auto getPosition = [](
+        const SMikkTSpaceContext* context,
+        float posOut[],
+        const int32_t faceIndex,
+        const int32_t vertIndex) -> void {
 
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& pos = meshData->Positions[index];
         posOut[0] = pos.x;
@@ -611,9 +619,13 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         posOut[2] = pos.z;
     };
 
-    auto getNormal = [](const SMikkTSpaceContext* context, float normOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+    auto getNormal = [](
+        const SMikkTSpaceContext* context,
+        float normOut[],
+        const int32_t faceIndex,
+        const int32_t vertIndex) -> void {
 
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& normal = meshData->Normals[index];
         normOut[0] = normal.x;
@@ -621,21 +633,31 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         normOut[2] = normal.z;
     };
 
-    auto getUv = [](const SMikkTSpaceContext* context, float uvOut[], const int32_t faceIndex, const int32_t vertIndex) -> void {
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+    auto getUv = [](
+        const SMikkTSpaceContext* context,
+        float uvOut[],
+        const int32_t faceIndex,
+        const int32_t vertIndex) -> void {
 
+        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec2& uv = meshData->Uvs[index];
         uvOut[0] = uv.x;
         uvOut[1] = uv.y;
     };
 
-    auto setTSpaceBasic = [](const SMikkTSpaceContext* context, const float tangent[], const float sign, const int32_t faceIndex, const int32_t vertIndex) {
+    auto setTSpaceBasic = [](
+        const SMikkTSpaceContext* context,
+        const float tangent[],
+        const float sign,
+        const int32_t faceIndex,
+        const int32_t vertIndex) {
+
         auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
 
-        glm::vec3 tan(tangent[0], tangent[1], tangent[2]);
-        meshData->Tangents[index] = glm::vec4(glm::normalize(tan), sign);
+        glm::vec3 t(tangent[0], tangent[1], tangent[2]);
+        meshData->Tangents[index] = glm::vec4(glm::normalize(t), sign);
     };
 
     SMikkTSpaceInterface interface = {
@@ -712,8 +734,8 @@ auto CreateUvSphereMeshData(
 
     index = 0;
     for (auto ring = 0; ring < rings; ++ring) {
-        for (auto seg = 0; seg < segments; ++seg) {
-            auto first = (ring * (segments + 1)) + seg;
+        for (auto segment = 0; segment < segments; ++segment) {
+            auto first = (ring * (segments + 1)) + segment;
             auto second = first + segments + 1;
 
             assetMeshData.Indices[index + 0] = first;
@@ -743,32 +765,32 @@ auto CreateCuboid(
     float depth,
     uint32_t segmentsX = 1,
     uint32_t segmentsY = 1,
-    uint32_t resZ = 1) -> TAssetMeshData {
+    uint32_t segmentsZ = 1) -> TAssetMeshData {
 
-    auto halfW = width / 2.0f;
-    auto halfH = height / 2.0f;
-    auto halfD = depth / 2.0f;
+    auto halfWidth = width / 2.0f;
+    auto halfHeight = height / 2.0f;
+    auto halfDepth = depth / 2.0f;
 
     TAssetMeshData assetMeshData;
     assetMeshData.Name = name;
     assetMeshData.MaterialIndex = 0;
-    assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfH, 0));
+    assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfHeight, 0));
 
     std::size_t vertOffset = 0;
 
-    // Front Face //
-    glm::vec3 normal = {0.f, 0.f, 1.f};
-    for(int iy = 0; iy < segmentsY; iy++) {
-        for(int ix = 0; ix < segmentsX; ix++) {
+    // Front Face
+    glm::vec3 normal = {0.0f, 0.0f, 1.0f};
+    for (auto iy = 0; iy < segmentsY; iy++) {
+        for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix/((float)segmentsX-1.f));
-            uv.y = 1.f - ((float)iy/((float)segmentsY-1.f));
+            uv.x = ((float)ix/((float)segmentsX - 1.0f));
+            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
 
             glm::vec3 position;
-            position.x = uv.x * width - halfW;
-            position.y = -(uv.y-1.f) * height - halfH;
-            position.z = halfD;
+            position.x = uv.x * width - halfWidth;
+            position.y = -(uv.y - 1.0f) * height - halfHeight;
+            position.z = halfDepth;
 
             assetMeshData.Positions.push_back(position);
             assetMeshData.Uvs.push_back(uv);
@@ -777,191 +799,191 @@ auto CreateCuboid(
         }
     }
 
-    for(int y = 0; y < segmentsY-1; y++) {
-        for(int x = 0; x < segmentsX-1; x++) {
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);            
+    for (auto y = 0; y < segmentsY - 1; y++) {
+        for (auto x = 0; x < segmentsX - 1; x++) {
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);            
 
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
         }
     }
 
     vertOffset = assetMeshData.Positions.size();
 
-    // Right Side Face //
-    normal = {1.f, 0.f, 0.f};
-    for(int iy = 0; iy < segmentsY; iy++) {
-        for(int ix = 0; ix < resZ; ix++) {
+    // Right Side Face
+    normal = {1.0f, 0.0f, 0.0f};
+    for (auto iy = 0; iy < segmentsY; iy++) {
+        for (auto ix = 0; ix < segmentsZ; ix++) {
 
-            glm::vec2 texcoord;
-            texcoord.x = ((float)ix/((float)resZ-1.f));
-            texcoord.y = 1.f - ((float)iy/((float)segmentsY-1.f));
+            glm::vec2 uv;
+            uv.x = ((float)ix / ((float)segmentsZ - 1.0f));
+            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
 
-            glm::vec3 vert;
-            vert.x = halfW;
-            vert.y = -(texcoord.y-1.f) * height - halfH;
-            vert.z = texcoord.x * -depth + halfD;
+            glm::vec3 position;
+            position.x = halfWidth;
+            position.y = -(uv.y - 1.0f) * height - halfHeight;
+            position.z = uv.x * -depth + halfDepth;
 
-            assetMeshData.Positions.push_back(vert);
-            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
             assetMeshData.Normals.push_back(normal);
             assetMeshData.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
-    for(int y = 0; y < segmentsY-1; y++) {
-        for(int x = 0; x < resZ-1; x++) {
-            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
-            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*resZ + x + vertOffset);            
+    for (auto y = 0; y < segmentsY - 1; y++) {
+        for (auto x = 0; x < segmentsZ - 1; x++) {
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + vertOffset);            
 
-            assetMeshData.Indices.push_back((y+1)*resZ + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
         }
     }
 
     vertOffset = assetMeshData.Positions.size();
 
-    // Left Side Face //
-    normal = {-1.f, 0.f, 0.f};
-    for(int iy = 0; iy < segmentsY; iy++) {
-        for(int ix = 0; ix < resZ; ix++) {
+    // Left Side Face
+    normal = {-1.0f, 0.0f, 0.0f};
+    for (auto iy = 0; iy < segmentsY; iy++) {
+        for (auto ix = 0; ix < segmentsZ; ix++) {
 
-            glm::vec2 texcoord;
-            texcoord.x = ((float)ix/((float)resZ-1.f));
-            texcoord.y = 1.f-((float)iy/((float)segmentsY-1.f));
+            glm::vec2 uv;
+            uv.x = ((float)ix / ((float)segmentsZ - 1.0f));
+            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
 
-            glm::vec3 vert;
-            vert.x = -halfW;
-            vert.y = -(texcoord.y-1.f) * height - halfH;
-            vert.z = texcoord.x * depth - halfD;
+            glm::vec3 position;
+            position.x = -halfWidth;
+            position.y = -(uv.y - 1.0f) * height - halfHeight;
+            position.z = uv.x * depth - halfDepth;
 
-            assetMeshData.Positions.push_back(vert);
-            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
             assetMeshData.Normals.push_back(normal);
             assetMeshData.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
-    for(int y = 0; y < segmentsY-1; y++) {
-        for(int x = 0; x < resZ-1; x++) {
-            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*resZ + x + vertOffset);            
+    for (auto y = 0; y < segmentsY - 1; y++) {
+        for (auto x = 0; x < segmentsZ - 1; x++) {
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + vertOffset);            
 
-            assetMeshData.Indices.push_back((y+1)*resZ + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*resZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*resZ + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
         }
     }
 
     vertOffset = assetMeshData.Positions.size();
 
 
-    // Back Face //
-    normal = {0.f, 0.f, -1.f};
-    for(int iy = 0; iy < segmentsY; iy++) {
-        for(int ix = 0; ix < segmentsX; ix++) {
+    // Back Face
+    normal = {0.0f, 0.0f, -1.0f};
+    for (auto iy = 0; iy < segmentsY; iy++) {
+        for (auto ix = 0; ix < segmentsX; ix++) {
 
-            glm::vec2 texcoord;
-            texcoord.x = ((float)ix/((float)segmentsX-1.f));
-            texcoord.y = 1.f-((float)iy/((float)segmentsY-1.f));
+            glm::vec2 uv;
+            uv.x = ((float)ix / ((float)segmentsX - 1.0f));
+            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
 
-            glm::vec3 vert;
-            vert.x = texcoord.x * -width + halfW;
-            vert.y = -(texcoord.y-1.f) * height - halfH;
-            vert.z = -halfD;
+            glm::vec3 position;
+            position.x = uv.x * -width + halfWidth;
+            position.y = -(uv.y - 1.0f) * height - halfHeight;
+            position.z = -halfDepth;
 
-            assetMeshData.Positions.push_back(vert);
-            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
             assetMeshData.Normals.push_back(normal);
             assetMeshData.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
-    for(int y = 0; y < segmentsY-1; y++) {
-        for(int x = 0; x < segmentsX-1; x++) {
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);            
+    for (auto y = 0; y < segmentsY - 1; y++) {
+        for (auto x = 0; x < segmentsX - 1; x++) {
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);            
 
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
         }
     }
 
     vertOffset = assetMeshData.Positions.size();
 
-    // Top Face //
-    normal = {0.f, -1.f, 0.f};
-    for(int iy = 0; iy < resZ; iy++) {
-        for(int ix = 0; ix < segmentsX; ix++) {
+    // Top Face
+    normal = {0.0f, -1.0f, 0.0f};
+    for (auto iy = 0; iy < segmentsZ; iy++) {
+        for (auto ix = 0; ix < segmentsX; ix++) {
 
-            glm::vec2 texcoord;
-            texcoord.x = ((float)ix/((float)segmentsX-1.f));
-            texcoord.y = 1.f-((float)iy/((float)resZ-1.f));
+            glm::vec2 uv;
+            uv.x = ((float)ix / ((float)segmentsX - 1.0f));
+            uv.y = 1.f - ((float)iy / ((float)segmentsZ - 1.0f));
 
-            glm::vec3 vert;
-            vert.x = texcoord.x * width - halfW;
-            vert.y = -halfH;
-            vert.z = texcoord.y * depth - halfD;
+            glm::vec3 position;
+            position.x = uv.x * width - halfWidth;
+            position.y = -halfHeight;
+            position.z = uv.y * depth - halfDepth;
 
-            assetMeshData.Positions.push_back(vert);
-            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
             assetMeshData.Normals.push_back(normal);
             assetMeshData.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
-    for(int y = 0; y < resZ-1; y++) {
-        for(int x = 0; x < segmentsX-1; x++) {
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);            
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);
+    for (auto y = 0; y < segmentsZ - 1; y++) {
+        for (auto x = 0; x < segmentsX - 1; x++) {
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);            
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);            
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
         }
     }
 
     vertOffset = assetMeshData.Positions.size();
 
-    // Bottom Face //
-    normal = {0.f, 1.f, 0.f};
-    for(int iy = 0; iy < resZ; iy++) {
-        for(int ix = 0; ix < segmentsX; ix++) {
+    // Bottom Face
+    normal = {0.0f, 1.0f, 0.0f};
+    for (auto iy = 0; iy < segmentsZ; iy++) {
+        for (auto ix = 0; ix < segmentsX; ix++) {
 
-            glm::vec2 texcoord;
-            texcoord.x = ((float)ix/((float)segmentsX-1.f));
-            texcoord.y = 1.f-((float)iy/((float)resZ-1.f));
+            glm::vec2 uv;
+            uv.x = static_cast<float>(ix) / static_cast<float>(segmentsX - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / static_cast<float>(segmentsZ - 1.0f);
 
-            glm::vec3 vert;
-            vert.x = texcoord.x * width - halfW;
-            vert.y = halfH;
-            vert.z = texcoord.y * -depth + halfD;
+            glm::vec3 position;
+            position.x = uv.x * width - halfWidth;
+            position.y = halfHeight;
+            position.z = uv.y * -depth + halfDepth;
 
-            assetMeshData.Positions.push_back(vert);
-            assetMeshData.Uvs.push_back(texcoord);
+            assetMeshData.Positions.push_back(position);
+            assetMeshData.Uvs.push_back(uv);
             assetMeshData.Normals.push_back(normal);
             assetMeshData.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
-    for(int y = 0; y < resZ-1; y++) {
-        for(int x = 0; x < segmentsX-1; x++) {
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x + vertOffset);
+    for (auto y = 0; y < segmentsZ-1; y++) {
+        for (auto x = 0; x < segmentsX-1; x++) {
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);
             
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y+1)*segmentsX + x+1 + vertOffset);
-            assetMeshData.Indices.push_back((y)*segmentsX + x+1 + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
             
         }
     }
@@ -1007,6 +1029,10 @@ auto AddDefaultAssets() -> void {
     AddImage("T_Purple", "data/default/T_Purple.png");
     AddImage("T_Orange", "data/default/T_Orange.png");
 
+    AddImage("T_Yellow", "data/default/T_Yellow.png");
+    AddImage("T_Blue", "data/default/T_Blue.png");
+    AddImage("T_Gray", "data/default/T_Gray.png");
+
     auto defaultAssetSampler = TAssetSamplerData {
         .Name = "S_L_L_C2E_C2E",
         .MagFilter = TAssetSamplerMagFilter::Linear,
@@ -1035,6 +1061,36 @@ auto AddDefaultAssets() -> void {
         },
     };
     g_assetMaterialDates["M_Orange"] = std::move(orangeMaterial);
+
+    auto yellowMaterial = TAssetMaterialData {
+        .Name = "M_Yellow",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Yellow"
+        },
+    };
+    g_assetMaterialDates["M_Yellow"] = std::move(yellowMaterial);
+
+    auto blueMaterial = TAssetMaterialData {
+        .Name = "M_Blue",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Blue"
+        },
+    };
+    g_assetMaterialDates["M_Blue"] = std::move(blueMaterial);
+
+    auto grayMaterial = TAssetMaterialData {
+        .Name = "M_Gray",
+        .BaseColorTextureChannel = TAssetMaterialChannelData {
+            .Channel = TAssetMaterialChannel::Color,
+            .SamplerName = "S_L_L_C2E_C2E",
+            .TextureName = "T_Gray"
+        },
+    };
+    g_assetMaterialDates["M_Gray"] = std::move(grayMaterial);
 
     AddImage("T_Mars_B", "data/default/2k_mars.jpg");
     auto marsMaterial = TAssetMaterialData {
