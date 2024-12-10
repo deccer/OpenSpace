@@ -105,7 +105,7 @@ auto CreateEntity(
     entt::entity parent,
     const std::string& name,
     glm::vec3 position,
-    glm::quat orientation,
+    glm::vec3 orientation,
     glm::vec3 scale) -> entt::entity {
 
     auto entity = g_registry.create();
@@ -115,7 +115,11 @@ auto CreateEntity(
     g_registry.emplace<TComponentChildOf>(entity, parent);
     g_registry.emplace<TComponentName>(entity, name);
     g_registry.emplace<TComponentPosition>(entity, position);
-    g_registry.emplace<TComponentOrientation>(entity, orientation);
+    g_registry.emplace<TComponentOrientationEuler>(entity, TComponentOrientationEuler {
+        .Pitch = orientation.x,
+        .Yaw = orientation.y,
+        .Roll = orientation.z
+    });
     g_registry.emplace<TComponentScale>(entity, scale);
     g_registry.emplace<TComponentTransform>(entity, glm::mat4(1.0f));
 
@@ -126,7 +130,7 @@ auto CreateEntityWithGraphics(
     entt::entity parent,
     const std::string& name,
     glm::vec3 position,
-    glm::quat orientation,
+    glm::vec3 orientation,
     glm::vec3 scale,
     const std::string& assetMeshName,
     const std::string& assetMaterialName) -> entt::entity {
@@ -144,7 +148,7 @@ auto CreateAssetEntity(
     entt::entity parent,
     const std::string& name,
     glm::vec3 position,
-    glm::quat orientation,
+    glm::vec3 orientation,
     glm::vec3 scale,
     const std::string& assetName,
     const std::string& assetMaterialNameOverride) -> entt::entity {
@@ -169,13 +173,14 @@ auto CreateAssetEntity(
         auto& worldMatrix = assetInstanceData.WorldMatrix;
 
         glm::vec3 scale;
-        glm::quat orientation;
+        glm::quat decomposedOrientation;
         glm::vec3 translation;
         glm::vec3 skew;
         glm::vec4 perspective;
-        glm::decompose(worldMatrix, scale, orientation, translation, skew, perspective);
+        glm::decompose(worldMatrix, scale, decomposedOrientation, translation, skew, perspective);
+        glm::vec3 orientationEuler = glm::eulerAngles(decomposedOrientation);
 
-        CreateEntityWithGraphics(entity, assetMeshName, translation, orientation, scale, assetMeshName, assetMaterialName);
+        CreateEntityWithGraphics(entity, assetMeshName, translation, orientationEuler, scale, assetMeshName, assetMaterialName);
     }
 
     return entity;
@@ -241,16 +246,18 @@ auto Load() -> bool {
 
     auto marsPosition = glm::vec3(0.0f, -6235072.0f, 0.0f);
     auto marsScale = glm::vec3(6227558);
-    g_marsEntity = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, glm::identity<glm::quat>(), marsScale, "Mars", "M_Mars");
+    auto zeroRotation = glm::vec3{0.0f};
+    g_marsEntity = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, zeroRotation, marsScale, "Mars", "M_Mars");
 
-    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::identity<glm::quat>(), glm::vec3{1.0f}, "SM_Cuboid_x50_y1_z50", "");
-    g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, -4.0f, -10.0f}, glm::identity<glm::quat>(), glm::vec3{1.0f}, "SillyShip", "");
+    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, zeroRotation, glm::vec3{1.0f}, "SM_Cuboid_x50_y1_z50", "");
+    g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, -4.0f, -10.0f}, zeroRotation, glm::vec3{1.0f}, "SillyShip", "");
 
     g_playerEntity = g_registry.create();
     g_registry.emplace<TComponentName>(g_playerEntity, TComponentName {
         .Name = "Player"
     });
     g_registry.emplace<TComponentPosition>(g_playerEntity, glm::vec3{-60.0f, -3.0f, 5.0f});
+    g_registry.emplace<TComponentPositionBackup>(g_playerEntity, glm::vec3{0.0f});
     g_registry.emplace<TComponentOrientationEuler>(g_playerEntity, TComponentOrientationEuler {
         .Pitch = 0.0f,
         .Yaw = glm::radians(-90.0f),
@@ -349,14 +356,33 @@ auto Update(
         if (g_playerMounted) {
 
             EntityChangeParent(registry, g_playerEntity, g_shipEntity);
+
+            auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
+            auto& playerPositionBackup = registry.get<TComponentPositionBackup>(g_playerEntity);
+            playerPositionBackup = (TComponentPositionBackup)glm::vec3(playerPosition);
+
+            playerPosition = glm::vec3{0.0f, 1.25f, 1.0f};
+            auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
+            playerOrientation.Pitch = 0.0f;
+            playerOrientation.Yaw = glm::radians(glm::pi<float>());
+            playerOrientation.Roll = 0.0f;
+
         } else {
 
             EntityChangeParent(registry, g_playerEntity, g_rootEntity);
+
+            auto& playerPositionBackup = registry.get<TComponentPositionBackup>(g_playerEntity);
+            auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
+
+            playerPosition = playerPositionBackup;
         }
     }
 
-    auto& marsRotation = registry.get<TComponentOrientation>(g_marsEntity);
-    marsRotation = glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f)));
+    auto& marsRotation = registry.get<TComponentOrientationEuler>(g_marsEntity);
+    auto eulerAngles = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
+    marsRotation.Pitch = eulerAngles.x;
+    marsRotation.Yaw = eulerAngles.y;
+    marsRotation.Roll = eulerAngles.z;
 }
 
 auto GetRegistry() -> entt::registry& {

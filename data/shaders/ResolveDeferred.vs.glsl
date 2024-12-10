@@ -10,8 +10,8 @@ layout (binding = 0, std140) uniform GlobalUniforms
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
-    vec4 CameraPosition;
-    vec4 CameraDirection;
+    vec4 CameraPosition; // xyz = position, w = fieldOfView
+    vec4 CameraDirection; // xyz = direction, w = aspectRatio
 } globalUniforms;
 
 vec3 skyray(vec2 uv, float fieldOfView, float aspectRatio)

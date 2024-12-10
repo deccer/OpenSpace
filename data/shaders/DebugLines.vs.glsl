@@ -13,7 +13,8 @@ layout (binding = 0, std140) uniform CameraInformation
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
-    vec4 CameraPosition;
+    vec4 CameraPosition; // xyz = position, w = fieldOfView
+    vec4 CameraDirection; // xyz = direction, w = aspectRatio
 } u_camera_information;
 
 void main()
