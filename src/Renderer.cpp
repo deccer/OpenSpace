@@ -1281,6 +1281,16 @@ auto RendererRender(
             if (registry.any_of<TComponentChildOf>(entity)) {
                 auto& parentComponent = registry.get<TComponentChildOf>(entity);
                 parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
+
+                glm::vec3 parentPosition;
+                glm::quat parentOrientation;
+                glm::vec3 parentScale;
+                glm::vec3 parentSkew;
+                glm::vec4 parentPerspective;
+
+                glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
+
+                parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
             }
 
             auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
