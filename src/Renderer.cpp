@@ -90,7 +90,7 @@ struct TAtmosphereSettings {
     float RayleighScaleHeight;
 };
 
-std::optional<entt::entity> g_playerEntity = {};
+entt::entity g_playerEntity = entt::null;
 
 TAtmosphereSettings g_atmosphereSettings = {};
 
@@ -1236,28 +1236,32 @@ auto RendererRender(
     entt::registry& registry,
     const TInputState& inputState) -> void {
 
-    if (g_playerEntity == std::nullopt) {
+    if (g_playerEntity == entt::null) {
         g_playerEntity = registry.view<TComponentCamera>().front();
     }
 
-    /*
-     * ECS - Create Gpu Resources if necessary
-     */
-    auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
-    for (auto& entity : createGpuResourcesNecessaryView) {
-
+    {
         PROFILER_ZONESCOPEDN("Create Gpu Resources");
-        auto& meshComponent = registry.get<TComponentMesh>(entity);
-        auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-        auto& assetMesh = Assets::GetAssetMeshData(meshComponent.Mesh);
-        RendererCreateGpuMesh(assetMesh);
-        RendererCreateCpuMaterial(materialComponent.Material);
+        /*
+        * ECS - Create Gpu Resources if necessary
+        */
+        auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
+        for (auto& entity : createGpuResourcesNecessaryView) {
 
-        registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
-        registry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
+            PROFILER_ZONESCOPEDN("Create Gpu Resource");
+            auto& meshComponent = registry.get<TComponentMesh>(entity);
+            auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-        registry.remove<TComponentCreateGpuResourcesNecessary>(entity);
+            auto& assetMesh = Assets::GetAssetMeshData(meshComponent.Mesh);
+            RendererCreateGpuMesh(assetMesh);
+            RendererCreateCpuMaterial(materialComponent.Material);
+
+            registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
+            registry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
+
+            registry.remove<TComponentCreateGpuResourcesNecessary>(entity);
+        }
     }
 
     /*
@@ -1293,56 +1297,23 @@ auto RendererRender(
     {
         PROFILER_ZONESCOPEDN("Update Global Uniforms"); 
 
-/*
-        registry.view<TComponentCamera, TComponentTransform, TComponentOrientationEuler>().each([&](
+        registry.view<TComponentCamera>().each([&](
             const auto& entity,
-            const auto& cameraComponent,
-            auto& transformComponent,
-            const auto& positionComponent,
-            const auto& orientationEulerComponent) {
+            const auto& cameraComponent) {
 
-            glm::quat orientation = glm::eulerAngleYX(orientationEulerComponent.Yaw, orientationEulerComponent.Pitch);
-            transformComponent = glm::translate(glm::mat4(1.0f), positionComponent) * glm::mat4_cast(orientation);
+            auto cameraMatrix = EntityGetGlobalTransform(registry, entity);
+            auto viewMatrix = glm::inverse(cameraMatrix);
+            glm::vec3 cameraPosition = cameraMatrix[3];
+            glm::vec3 cameraDirection = cameraMatrix[1];
 
             auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-            auto cameraDirection = glm::normalize(orientation * glm::vec3(0.0, 0.0, -1.0));
             g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
-            g_globalUniforms.ViewMatrix = glm::inverse(transformComponent);
+            g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
 
-            g_globalUniforms.CameraPosition = glm::vec4(positionComponent, glm::radians(cameraComponent.FieldOfView));
+            g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
             g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
             UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
         });
-*/
-
-        registry.view<TComponentCamera, TComponentTransform, TComponentOrientationEuler>().each([&](
-            const auto& entity,
-            const auto& cameraComponent,
-            auto& transformComponent,
-            const auto& orientationEulerComponent) {
-
-            auto globalTransform = EntityGetGlobalTransform(registry, entity);
-            glm::vec3 globalPosition;
-            glm::vec3 globalScale;
-            glm::quat globalOrientation;
-            glm::vec4 globalPerspective;
-            glm::vec3 globalSkew;
-
-            glm::decompose(globalTransform, globalScale, globalOrientation, globalPosition, globalSkew, globalPerspective);
-
-            glm::quat orientation = glm::eulerAngleYX(orientationEulerComponent.Yaw, orientationEulerComponent.Pitch);
-            transformComponent = glm::translate(glm::mat4(1.0f), globalPosition) * glm::mat4_cast(orientation);
-
-            auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
-            auto cameraDirection = glm::normalize(orientation * glm::vec3(0.0, 0.0, -1.0));
-            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
-            g_globalUniforms.ViewMatrix = glm::inverse(transformComponent);
-
-            g_globalUniforms.CameraPosition = glm::vec4(globalPosition, glm::radians(cameraComponent.FieldOfView));
-            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
-            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
-        });
-
     }
 
     /*
