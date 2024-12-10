@@ -14,7 +14,8 @@ layout (binding = 0, std140) uniform TGpuGlobalUniformBuffer
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
-    vec4 CameraPosition;
+    vec4 CameraPosition; // xyz = position, w = fieldOfView
+    vec4 CameraDirection; // xyz = direction, w = aspectRatio
 } u_camera_information;
 
 layout(binding = 1, std430) restrict readonly buffer TGpuVertexPositionBuffer
