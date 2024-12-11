@@ -3,6 +3,7 @@
 #include "Components.hpp"
 #include "Profiler.hpp"
 #include "Assets.hpp"
+#include "Images.hpp"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -100,6 +101,8 @@ TGraphicsPipeline g_geometryGraphicsPipeline = {};
 TFramebuffer g_resolveGeometryFramebuffer = {};
 TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
 
+TTexture g_skyBoxTexture = {};
+
 std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
 
@@ -107,6 +110,7 @@ TGpuGlobalUniforms g_globalUniforms = {};
 
 uint32_t g_globalUniformsBuffer = {};
 uint32_t g_objectsBuffer = {};
+glm::vec3 g_sunPosition = glm::vec3{100, 100, 100};
 
 bool g_drawDebugLines = true;
 std::vector<TGpuDebugLine> g_debugLines;
@@ -228,6 +232,58 @@ std::unordered_map<std::string, TGpuMesh> g_gpuMeshes = {};
 std::unordered_map<std::string, TSampler> g_gpuSamplers = {};
 std::unordered_map<std::string, TCpuMaterial> g_cpuMaterials = {};
 std::unordered_map<std::string, TGpuMaterial> g_gpuMaterials = {};
+
+auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
+
+    std::array<std::string, 6> skyBoxNames = {
+        std::format("data/sky/TC_{}_Xp.png", skyBoxName),
+        std::format("data/sky/TC_{}_Xn.png", skyBoxName),
+        std::format("data/sky/TC_{}_Yp.png", skyBoxName),
+        std::format("data/sky/TC_{}_Yn.png", skyBoxName),
+        std::format("data/sky/TC_{}_Zp.png", skyBoxName),
+        std::format("data/sky/TC_{}_Zn.png", skyBoxName),
+    };
+
+    TTextureId textureId = {};
+
+    //EnableFlipImageVertically();
+    for (auto imageIndex = 0; imageIndex < skyBoxNames.size(); imageIndex++) {
+
+        auto imageName = skyBoxNames[imageIndex];
+        int32_t imageWidth = 0;
+        int32_t imageHeight = 0;
+        int32_t imageComponents = 0;
+        auto imageData = LoadImageFromFile(imageName, &imageWidth, &imageHeight, &imageComponents);
+
+        if (imageIndex == 0) {
+            textureId = CreateTexture(TCreateTextureDescriptor{
+                .TextureType = TTextureType::TextureCube,
+                .Format = TFormat::R8G8B8A8_SRGB,
+                .Extent = TExtent3D{ static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
+                .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight))))),
+                .Layers = 6,
+                .SampleCount = TSampleCount::One,
+                .Label = skyBoxName,
+            });
+        }
+
+        UploadTexture(textureId, TUploadTextureDescriptor{
+            .Level = 0,
+            .Offset = TOffset3D{0, 0, static_cast<uint32_t>(imageIndex)},
+            .Extent = TExtent3D{static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
+            .UploadFormat = TUploadFormat::Auto,
+            .UploadType = TUploadType::Auto,
+            .PixelData = imageData
+        });
+
+        FreeImage(imageData);
+    }
+    //DisableFlipImageVertically();
+
+    GenerateMipmaps(textureId);
+
+    return textureId;
+}
 
 auto SignNotZero(glm::vec2 v) -> glm::vec2 {
 
@@ -761,6 +817,9 @@ auto RendererInitialize(
     glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
 
     Assets::AddDefaultAssets();
+
+    auto skyTextureId = LoadSkyTexture("SkyRed");
+    g_skyBoxTexture = GetTexture(skyTextureId);
 
     /*
      * Renderer - Initialize Framebuffers
@@ -1381,14 +1440,15 @@ auto RendererRender(
         BindFramebuffer(g_resolveGeometryFramebuffer);
         {
             g_resolveGeometryGraphicsPipeline.Bind();
-            //auto& samplerId = g_samplers[size_t(g_fullscreenSamplerNearestClampToEdge.Id)]
             g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
             g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
             g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
 
-            //g_resolveGeometryGraphicsPipeline.SetUniform(0, cameraComponent.GetForwardDirection());
+            auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
+            g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
+            g_resolveGeometryGraphicsPipeline.SetUniform(0, g_sunPosition);
 
             g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
         }
@@ -1661,7 +1721,7 @@ auto RendererRender(
         if (ImGui::Begin(ICON_MD_SUNNY " Atmosphere")) {
 
             auto atmosphereModified = false;
-            if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_atmosphereSunPosition), -10000.0f, 10000.0f)) {
+            if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_sunPosition), -10000.0f, 10000.0f)) {
                 atmosphereModified = true;
             }
         }
