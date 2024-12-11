@@ -138,7 +138,7 @@ bool g_sceneViewerResized = false;
 bool g_isEditor = false;
 bool g_isSrgbDisabled = false;
 
-entt::entity g_selectedEntity = { entt::null };
+entt::entity g_selectedEntity = entt::null;
 
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
@@ -400,7 +400,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
     return MakeTextureResident(textureId);
 }
 
-auto CreateTextureForMaterialChannel(const std::string& imageDataName) -> uint32_t {
+auto CreateTextureForMaterialChannel(const std::string& imageDataName, Assets::TAssetMaterialChannel channel) -> uint32_t {
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
@@ -408,7 +408,7 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName) -> uint32
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
-        .Format = TFormat::R8G8B8A8_UNORM,
+        .Format = channel == Assets::TAssetMaterialChannel::Color ? TFormat::R8G8B8A8_SRGB : TFormat::R8G8B8A8_UNORM,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
@@ -495,7 +495,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         auto& baseColor = *baseColorChannel;
         auto& baseColorSampler = Assets::GetAssetSamplerData(baseColor.SamplerName);
 
-        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName);
+        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
         auto& sampler = GetSampler(samplerId);
         cpuMaterial.BaseColorTextureSamplerId = sampler.Id;
@@ -506,7 +506,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         auto& normalTexture = *normalTextureChannel;
         auto& normalTextureSampler = Assets::GetAssetSamplerData(normalTexture.SamplerName);
 
-        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName);
+        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
         auto& sampler = GetSampler(samplerId);
         cpuMaterial.NormalTextureSamplerId = sampler.Id;
