@@ -223,6 +223,9 @@ auto Load() -> bool {
     g_registry.emplace<TComponentName>(g_rootEntity, TComponentName {
         .Name = "Root"
     });
+    g_registry.emplace<TComponentPosition>(g_rootEntity, glm::vec3{0.0f});
+    g_registry.emplace<TComponentOrientationEuler>(g_rootEntity, TComponentOrientationEuler{});
+    g_registry.emplace<TComponentScale>(g_rootEntity, glm::vec3{1.0f});
     g_registry.emplace<TComponentTransform>(g_rootEntity, glm::mat4(1.0f));
 
 /*
@@ -387,7 +390,9 @@ auto Update(
 
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
     auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
-    auto& playerCameraPosition = registry.get<TComponentPosition>(g_playerEntity);
+    auto& playerCameraPosition = g_playerMounted
+        ? registry.get<TComponentPosition>(g_shipEntity) 
+        : registry.get<TComponentPosition>(g_playerEntity);
 
     glm::quat playerCameraOrientation = glm::eulerAngleYX(playerCameraOrientationEuler.Yaw, playerCameraOrientationEuler.Pitch);
 
@@ -462,7 +467,7 @@ auto Update(
             playerPosition = glm::vec3{0.0f, 1.25f, 1.0f};
             auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
             playerOrientation.Pitch = 0.0f;
-            playerOrientation.Yaw = glm::radians(glm::pi<float>());
+            playerOrientation.Yaw = glm::radians(-glm::pi<float>());
             playerOrientation.Roll = 0.0f;
 
         } else {
@@ -480,13 +485,16 @@ auto Update(
     sunRotation.Yaw = renderContext.FrameCounter * 0.02f;
 
     auto& planetRotation = registry.get<TComponentOrientationEuler>(g_celestialBodyPlanet);
-    planetRotation.Yaw = renderContext.FrameCounter * 0.16f;
+    auto planetRotationEuler = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 2.0f, glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)))));    
+    planetRotation.Pitch = planetRotationEuler.x;
+    planetRotation.Yaw = planetRotationEuler.y;
+    planetRotation.Roll = planetRotationEuler.z;
 
     auto& marsRotation = registry.get<TComponentOrientationEuler>(g_marsEntity);
-    auto eulerAngles = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
-    marsRotation.Pitch = eulerAngles.x;
-    marsRotation.Yaw = eulerAngles.y;
-    marsRotation.Roll = eulerAngles.z;
+    auto marsRotationEuler = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
+    marsRotation.Pitch = marsRotationEuler.x;
+    marsRotation.Yaw = marsRotationEuler.y;
+    marsRotation.Roll = marsRotationEuler.z;
 }
 
 auto GetRegistry() -> entt::registry& {

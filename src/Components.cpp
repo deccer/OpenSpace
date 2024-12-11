@@ -1,6 +1,7 @@
 #include "Components.hpp"
 
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 // EntityChangeParent(registry, g_playerEntity, g_Ship) -> move player into ship
 // EntityChangeParent(registry, g_playerEntity, g_RootEntity) -> move player out of ship into world
@@ -35,6 +36,16 @@ auto EntityGetGlobalTransform(entt::registry& registry, entt::entity entity) -> 
     if (registry.any_of<TComponentChildOf>(entity)) {
         auto& parentComponent = registry.get<TComponentChildOf>(entity);
         parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
+
+        glm::vec3 parentPosition;
+        glm::quat parentOrientation;
+        glm::vec3 parentScale;
+        glm::vec3 parentSkew;
+        glm::vec4 parentPerspective;
+
+        glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
+
+        parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
     }
 
     auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);

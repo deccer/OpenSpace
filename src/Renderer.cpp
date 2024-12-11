@@ -1270,35 +1270,11 @@ auto RendererRender(
     {
         PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
-        registry.view<TComponentTransform, TComponentPosition, TComponentOrientationEuler, TComponentScale>().each([&](
+        registry.view<TComponentTransform/*, TComponentPosition, TComponentOrientationEuler, TComponentScale*/>().each([&](
             const auto& entity,
-            auto& transformComponent,
-            const auto& positionComponent,
-            const auto& orientationComponent,
-            const auto& scaleComponent) {
+            auto& transformComponent) {
 
-            auto parentTransform = glm::mat4(1.0f);
-            if (registry.any_of<TComponentChildOf>(entity)) {
-                auto& parentComponent = registry.get<TComponentChildOf>(entity);
-                parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
-
-                glm::vec3 parentPosition;
-                glm::quat parentOrientation;
-                glm::vec3 parentScale;
-                glm::vec3 parentSkew;
-                glm::vec4 parentPerspective;
-
-                glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
-
-                parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
-            }
-
-            auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
-            auto localOrientation = glm::eulerAngleYXZ(orientationComponent.Yaw, orientationComponent.Pitch, orientationComponent.Roll);
-            auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
-            auto localTransform = localTranslation * localOrientation * localScale;
-
-            transformComponent = parentTransform * localTransform;
+            transformComponent = EntityGetGlobalTransform(registry, entity);
         });
     }
     /*
