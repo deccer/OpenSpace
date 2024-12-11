@@ -17,3 +17,6 @@ auto LoadImageFromFile(
     int32_t* width,
     int32_t* height,
     int32_t* components) -> unsigned char*;
+
+auto EnableFlipImageVertically() -> void;
+auto DisableFlipImageVertically() -> void;
