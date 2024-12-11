@@ -80,32 +80,9 @@ struct TGpuGlobalLight {
     glm::vec4 Strength;
 };
 
-struct TAtmosphereSettings {
-    glm::vec4 SunPositionAndPlanetRadius;
-    glm::vec4 RayOriginAndSunIntensity;
-    glm::vec4 RayleighScatteringCoefficientAndAtmosphereRadius;
-    float MieScatteringCoefficient;
-    float MieScaleHeight;
-    float MiePreferredScatteringDirection;
-    float RayleighScaleHeight;
-};
-
 entt::entity g_playerEntity = entt::null;
 
-TAtmosphereSettings g_atmosphereSettings = {};
-
 TWindowSettings g_windowSettings = {};
-
-glm::vec3 g_atmosphereSunPosition = {10000.0f, 10000.0f, 10000.0f};
-float g_atmospherePlanetRadius = 6232.558f;
-glm::vec3 g_atmosphereRayOrigin = {0.0f, 6227.072f, 0.0f};
-float g_atmosphereSunIntensity = 15.0f;
-glm::vec3 g_atmosphereRayleighScatteringCoefficient = {0.00037f, 0.00255f, 0.00765};
-float g_atmosphereAtmosphereRadius = g_atmospherePlanetRadius + 70.0f;
-float g_atmosphereMieScatteringCoefficient = 0.0001;
-float g_atmosphereMieScaleHeight = 13.0f;
-float g_atmosphereMiePreferredScatteringDirection = 0.9f;
-float g_atmosphereRayleighScaleHeight = 6.6f;
 
 constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
@@ -143,7 +120,6 @@ TGraphicsPipeline g_fxaaGraphicsPipeline = {};
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
 
-uint32_t g_atmosphereSettingsBuffer = 0;
 bool g_isFxaaEnabled = false;
 
 glm::vec2 g_scaledFramebufferSize = {};
@@ -935,17 +911,6 @@ auto RendererInitialize(
 
     g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    auto atmosphereSettings = TAtmosphereSettings{
-        .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
-        .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
-        .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
-        .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
-        .MieScaleHeight = g_atmosphereMieScaleHeight,
-        .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
-        .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
-    };
-    g_atmosphereSettingsBuffer = CreateBuffer("AtmosphereSettings", sizeof(TAtmosphereSettings), &atmosphereSettings, GL_DYNAMIC_STORAGE_BIT);
-
     auto cameraPosition = glm::vec3{-60.0f, -3.0f, 0.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
@@ -1419,7 +1384,6 @@ auto RendererRender(
             //auto& samplerId = g_samplers[size_t(g_fullscreenSamplerNearestClampToEdge.Id)]
             g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
             g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
-            g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_atmosphereSettingsBuffer, 3);
             g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
@@ -1699,46 +1663,6 @@ auto RendererRender(
             auto atmosphereModified = false;
             if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_atmosphereSunPosition), -10000.0f, 10000.0f)) {
                 atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Planet Radius", &g_atmospherePlanetRadius, 1.0f, 7000.0f)) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat3("Ray Origin", glm::value_ptr(g_atmosphereRayOrigin), -10000.0f, 10000.0f)) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Sun Intensity", &g_atmosphereSunIntensity, 0.1f, 40.0f)) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat3("Coefficients", glm::value_ptr(g_atmosphereRayleighScatteringCoefficient), 0.0f, 0.01f, "%.5f")) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Mie Scattering Coeff", &g_atmosphereMieScatteringCoefficient, 0.001f, 0.1f, "%.5f")) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Mie Scale Height", &g_atmosphereMieScaleHeight, 0.01f, 6000.0f, "%.2f")) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Mie Scattering Direction", &g_atmosphereMiePreferredScatteringDirection, -1.0f, 1.0f, "%.001f")) {
-                atmosphereModified = true;
-            }
-            if (ImGui::SliderFloat("Rayleigh Scale Height", &g_atmosphereRayleighScaleHeight, -1000, 1000, "%0.01f")) {
-                atmosphereModified = true;
-            }
-
-            if (atmosphereModified) {
-
-                g_atmosphereSettings = TAtmosphereSettings{
-                    .SunPositionAndPlanetRadius = glm::vec4(g_atmosphereSunPosition, g_atmospherePlanetRadius),
-                    .RayOriginAndSunIntensity = glm::vec4(g_atmosphereRayOrigin, g_atmosphereSunIntensity),
-                    .RayleighScatteringCoefficientAndAtmosphereRadius = glm::vec4(g_atmosphereRayleighScatteringCoefficient, g_atmosphereAtmosphereRadius),
-                    .MieScatteringCoefficient = g_atmosphereMieScatteringCoefficient,
-                    .MieScaleHeight = g_atmosphereMieScaleHeight,
-                    .MiePreferredScatteringDirection = g_atmosphereMiePreferredScatteringDirection,
-                    .RayleighScaleHeight = g_atmosphereRayleighScaleHeight
-                };
-                UpdateBuffer(g_atmosphereSettingsBuffer, 0, sizeof(TAtmosphereSettings), &g_atmosphereSettings);
-
-                atmosphereModified = false;
             }
         }
         ImGui::End();
