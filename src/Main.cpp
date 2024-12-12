@@ -1,3 +1,9 @@
+#include "Profiler.hpp"
+#include "Scene.hpp"
+#include "Renderer.hpp"
+#include "WindowSettings.hpp"
+#include "Input.hpp"
+
 //#include <mimalloc.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -6,6 +12,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <thread>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -15,13 +22,6 @@
 #include <imgui.h>
 
 #include <entt/entt.hpp>
-
-#include "Core.hpp"
-#include "Profiler.hpp"
-#include "Scene.hpp"
-#include "Renderer.hpp"
-#include "WindowSettings.hpp"
-#include "Input.hpp"
 
 // - Game ---------------------------------------------------------------------
 
@@ -310,7 +310,9 @@ auto main(
         previousTimeInSeconds = currentTimeInSeconds;
     }
 
-    /// Cleanup Resources //////
+    /*
+     * Cleanup Resources
+     */
 
     Scene::Unload();
     RendererUnload();
