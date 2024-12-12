@@ -1,6 +1,6 @@
-add_custom_target(CopyData ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data)
-
-set(USE_PROFILER ON FORCE)
+add_custom_target(CopyData ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
+)
 
 add_executable(HowToScript
     Io.cpp
@@ -13,7 +13,9 @@ add_executable(HowToScript
     Scene.cpp
     Main.cpp
 )
-add_dependencies(HowToScript CopyData)
+add_dependencies(HowToScript
+    CopyData
+)
 
 target_compile_definitions(HowToScript
     PRIVATE GLM_FORCE_CXX2A

@@ -109,6 +109,7 @@ FetchContent_Declare(
 message("Fetching spdlog")
 FetchContent_MakeAvailable(spdlog)
 
+if(USE_PROFILER)
 #- tracy --------------------------------------------------------------------------------------------------------------
 
 FetchContent_Declare(
@@ -124,6 +125,7 @@ set(TRACY_ONLY_IPV4 ON CACHE BOOL "IPv4 only")
 #set(TRACY_NO_SYSTEM_TRACING ON CACHE BOOL "Disable System Tracing")
 message("Fetching tracy")
 FetchContent_MakeAvailable(tracy)
+endif()
 
 #- imgui --------------------------------------------------------------------------------------------------------------
 

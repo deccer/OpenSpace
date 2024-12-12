@@ -18,5 +18,7 @@ endif()
 #  )
 #endif()
 
+set(USE_PROFILER OFF CACHE BOOL "Use Profiler")
+
 add_subdirectory(libs)
 add_subdirectory(src)
