@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <filesystem>
 
+namespace Image {
+
 auto FreeImage(void* pixels) -> void;
 
 auto LoadImageFromMemory(
@@ -20,3 +22,5 @@ auto LoadImageFromFile(
 
 auto EnableFlipImageVertically() -> void;
 auto DisableFlipImageVertically() -> void;
+
+}

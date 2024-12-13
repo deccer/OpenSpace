@@ -165,7 +165,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
             int32_t width = 0;
             int32_t height = 0;
             int32_t components = 0;
-            auto* pixels = LoadImageFromMemory(imageData.EncodedData.get(), imageData.EncodedDataSize, &width, &height, &components);
+            auto* pixels = Image::LoadImageFromMemory(imageData.EncodedData.get(), imageData.EncodedDataSize, &width, &height, &components);
 
             assetImage.Name = imageData.Name;
             assetImage.Width = width;
@@ -575,7 +575,7 @@ auto AddImage(
     auto dataCopy = std::make_unique<std::byte[]>(fileDataSize);
     std::copy_n(static_cast<const std::byte*>(fileData.get()), fileDataSize, dataCopy.get());
 
-    auto* pixels = LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
+    auto* pixels = Image::LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
 
     auto assetImage = TAssetImageData{
         .Width = width,

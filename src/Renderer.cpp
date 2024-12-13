@@ -253,7 +253,7 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
         int32_t imageWidth = 0;
         int32_t imageHeight = 0;
         int32_t imageComponents = 0;
-        auto imageData = LoadImageFromFile(imageName, &imageWidth, &imageHeight, &imageComponents);
+        auto imageData = Image::LoadImageFromFile(imageName, &imageWidth, &imageHeight, &imageComponents);
 
         if (imageIndex == 0) {
             textureId = CreateTexture(TCreateTextureDescriptor{
@@ -276,7 +276,7 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
             .PixelData = imageData
         });
 
-        FreeImage(imageData);
+        Image::FreeImage(imageData);
     }
     //DisableFlipImageVertically();
 

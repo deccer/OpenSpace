@@ -6,13 +6,13 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-auto FreeImage(void* pixels) -> void {
+auto Image::FreeImage(void* pixels) -> void {
     if (pixels != nullptr) {
         stbi_image_free(pixels);
     }
 }
 
-auto LoadImageFromMemory(
+auto Image::LoadImageFromMemory(
     std::byte* encodedData,
     size_t encodedDataSize,
     int32_t* width,
@@ -28,7 +28,7 @@ auto LoadImageFromMemory(
         4);
 }
 
-auto LoadImageFromFile(
+auto Image::LoadImageFromFile(
     const std::filesystem::path& filePath,
     int32_t* width,
     int32_t* height,
@@ -41,10 +41,10 @@ auto LoadImageFromFile(
     return LoadImageFromMemory(imageData.get(), imageDataSize, width, height, components);
 }
 
-auto EnableFlipImageVertically() -> void {
+auto Image::EnableFlipImageVertically() -> void {
     stbi_set_flip_vertically_on_load(1);
 }
 
-auto DisableFlipImageVertically() -> void {
+auto Image::DisableFlipImageVertically() -> void {
     stbi_set_flip_vertically_on_load(0);
 }
