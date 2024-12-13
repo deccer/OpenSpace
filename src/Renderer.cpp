@@ -368,6 +368,52 @@ auto GetGpuMaterial(const std::string& assetMaterialName) -> TGpuMaterial& {
     return g_gpuMaterials[assetMaterialName];
 }
 
+auto ConvolveTextureCube(TTextureId textureId) -> std::expected<TTextureId, std::string> {
+
+    auto convolveComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
+        .Label = "ConvolveTexture",
+        .ComputeShaderFilePath = "data/shaders/ConvolveTexture.cs.glsl",
+    });
+
+    if (!convolveComputePipelineResult) {
+        return std::unexpected(convolveComputePipelineResult.error());
+    }
+
+    auto& environmentTexture = GetTexture(textureId);
+
+    auto convolveComputePipeline = *convolveComputePipelineResult;
+
+    auto width = 128;
+    auto height = 128;
+    auto format = TFormat::R16G16B16A16_FLOAT;
+    
+    auto convolvedTextureId = CreateTexture(TCreateTextureDescriptor{
+        .TextureType = TTextureType::TextureCube,
+        .Format = format,
+        .Extent = TExtent3D(width, height, 1),
+        .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(width), static_cast<float>(height))))),
+        .Layers = 1,
+        .SampleCount = TSampleCount::One,
+        .Label = std::format("TextureCube-{}x{}-Irradiance", width, height),
+    });
+
+    auto& convolvedTexture = GetTexture(convolvedTextureId);
+
+    auto groupX = static_cast<uint32_t>(width / 32);
+    auto groupY = static_cast<uint32_t>(height / 32);
+    auto groupZ = 6u;
+
+    convolveComputePipeline.Bind();
+    convolveComputePipeline.BindTexture(0, environmentTexture.Id);
+    convolveComputePipeline.BindImage(0, convolvedTexture.Id, 0, 0, TMemoryAccess::WriteOnly, format);
+    convolveComputePipeline.Dispatch(groupX, groupY, groupZ);
+
+    convolveComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
+    GenerateMipmaps(convolvedTextureId);
+
+    return convolvedTextureId;
+}
+
 auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName) -> int64_t {
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
@@ -819,7 +865,12 @@ auto RendererInitialize(
     Assets::AddDefaultAssets();
 
     auto skyTextureId = LoadSkyTexture("SkyRed");
-    g_skyBoxTexture = GetTexture(skyTextureId);
+    auto convolveSkyTextureResult = ConvolveTextureCube(skyTextureId);
+    if (!convolveSkyTextureResult) {
+        spdlog::error("Unable to convolve sky surface texture {}", convolveSkyTextureResult.error());
+        return false;
+    }
+    g_skyBoxTexture = GetTexture(/**convolveSkyTextureResult*/skyTextureId);
 
     /*
      * Renderer - Initialize Framebuffers

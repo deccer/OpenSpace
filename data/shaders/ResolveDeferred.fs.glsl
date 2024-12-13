@@ -35,9 +35,11 @@ void main()
         return;
     }
 
-    vec3 color = vec3(1, 1, 1);
+    vec3 reflection = normalize(reflect(v_sky_ray, normal));
 
-    float sun_n_dot_l = clamp(dot(normal, normalize(u_sun_position)), 0.0, 1.0);
+    vec3 color = texture(s_texture_sky, reflection).rgb;
 
-    o_color = vec4((albedo.rgb * sun_n_dot_l), 1.0);
+    float sun_n_dot_l = clamp(dot(normal, -normalize(u_sun_position)), 0.0, 1.0);
+
+    o_color = vec4((color) + (albedo.rgb * sun_n_dot_l), 1.0);
 }

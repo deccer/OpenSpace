@@ -145,6 +145,15 @@ constexpr auto SampleCountToGL(TSampleCount sampleCount) -> uint32_t {
     }
 }
 
+constexpr auto MemoryAccessToGL(TMemoryAccess memoryAccess) -> uint32_t {
+    switch (memoryAccess) {
+        case TMemoryAccess::ReadOnly: return GL_READ_ONLY;
+        case TMemoryAccess::WriteOnly: return GL_WRITE_ONLY;
+        case TMemoryAccess::ReadWrite: return GL_READ_WRITE;
+        default: std::unreachable();
+    }
+}
+
 auto FormatToGL(TFormat format) -> uint32_t {
     switch (format) {
         case TFormat::R8_UNORM: return GL_R8;
@@ -780,6 +789,21 @@ auto TPipeline::BindTexture(int32_t bindingIndex, uint32_t texture) const  -> vo
 auto TPipeline::BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const  -> void {
     glBindTextureUnit(bindingIndex, texture);
     glBindSampler(bindingIndex, sampler);
+}
+
+auto TPipeline::BindImage(
+    uint32_t bindingIndex,
+    uint32_t texture,
+    int32_t level,
+    int32_t layer,
+    TMemoryAccess memoryAccess,
+    TFormat format) -> void {
+
+    glBindImageTexture(bindingIndex, texture, level, GL_TRUE, layer, MemoryAccessToGL(memoryAccess), FormatToGL(format));
+}
+
+auto TPipeline::InsertMemoryBarrier(TMemoryBarrierMask memoryBarrierMask) -> void {
+    glMemoryBarrier(static_cast<uint32_t>(memoryBarrierMask));
 }
 
 auto TPipeline::SetUniform(int32_t location, float value) const -> void {
@@ -1550,6 +1574,14 @@ auto TGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t eleme
     }
 
     glDrawElementsInstanced(PrimitiveTopology, elementCount, GL_UNSIGNED_INT, nullptr, instanceCount);
+}
+
+auto TComputePipeline::Dispatch(
+    int32_t workGroupSizeX,
+    int32_t workGroupSizeY,
+    int32_t workGroupSizeZ) -> void {
+
+    glDispatchCompute(workGroupSizeX, workGroupSizeY, workGroupSizeZ);
 }
 
 auto RhiInitialize() -> void {

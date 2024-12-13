@@ -267,6 +267,12 @@ struct TTexture {
     TTextureType TextureType;
 };
 
+enum class TMemoryAccess {
+    ReadOnly,
+    WriteOnly,
+    ReadWrite
+};
+
 enum class TFramebufferAttachmentLoadOperation {
     Load,
     Clear,
@@ -422,6 +428,28 @@ enum class TColorMaskBits {
 };
 DECLARE_FLAG_TYPE(TColorMask, TColorMaskBits, uint32_t)
 
+enum class TMemoryBarrierMaskBits : uint32_t
+{
+    VertexAttribArray = 1,
+    ElementArray = 2,
+    Uniform = 4,
+    TextureFetch = 8,
+    ShaderGlobalAccess = 16,
+    ShaderImageAccess = 32,
+    Command = 64,
+    PixelBuffer = 128,
+    TextureUpdate = 256,
+    BufferUpdate = 512,
+    Framebuffer = 1024,
+    TransformFeedback = 2048,
+    AtomicCounter = 4096,
+    ShaderStorage = 8192,
+    ClientMappedBuffer = 16384,
+    QueryBuffer = 32768,
+    All = 4294967295,
+};
+DECLARE_FLAG_TYPE(TMemoryBarrierMask, TMemoryBarrierMaskBits, uint32_t)
+
 struct TOutputMergerState {
     TColorMask ColorMask = TColorMaskBits::R | TColorMaskBits::G | TColorMaskBits::B | TColorMaskBits::A;
     TBlendState BlendState = {};
@@ -454,6 +482,8 @@ struct TPipeline {
     auto BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) const -> void;
     auto BindTexture(int32_t bindingIndex, uint32_t texture) const -> void;
     auto BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const -> void;
+    auto BindImage(uint32_t bindingIndex, uint32_t image, int32_t level, int32_t layer, TMemoryAccess memoryAccess, TFormat format) -> void;
+    auto InsertMemoryBarrier(TMemoryBarrierMask memoryBarrierMask) -> void;
     auto SetUniform(int32_t location, float value) const -> void;
     auto SetUniform(int32_t location, int32_t value) const -> void;
     auto SetUniform(int32_t location, uint32_t value) const -> void;
@@ -501,7 +531,10 @@ struct TGraphicsPipeline : public TPipeline {
 };
 
 struct TComputePipeline : public TPipeline {
-
+    auto Dispatch(
+        int32_t workGroupSizeX,
+        int32_t workGroupSizeY,
+        int32_t workGroupSizeZ) -> void;
 };
 
 struct TSampler {
