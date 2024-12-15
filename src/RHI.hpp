@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <variant>
@@ -612,6 +613,7 @@ auto DeletePipeline(TPipeline& pipeline) -> void;
 
 auto GetTexture(TTextureId id) -> TTexture&;
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId;
+auto CreateTexture2DFromFile(const std::filesystem::path& filePath, TFormat format) -> TTextureId;
 auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& updateTextureDescriptor) -> void;
 auto MakeTextureResident(const TTextureId& textureId) -> uint64_t;
 auto GenerateMipmaps(const TTextureId& textureId) -> void;

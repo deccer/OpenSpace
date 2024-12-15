@@ -1,5 +1,6 @@
 #include "RHI.hpp"
 #include "Profiler.hpp"
+#include "Images.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -850,6 +851,37 @@ auto GetTexture(TTextureId id) -> TTexture& {
 
     assert(id != TTextureId::Invalid);
     return g_textures[size_t(id)];
+}
+
+auto CreateTexture2DFromFile(const std::filesystem::path& filePath, TFormat format) -> TTextureId {
+
+    int32_t imageWidth = 0;
+    int32_t imageHeight = 0;
+    int32_t imageComponents = 0;
+    auto imageData = Image::LoadImageFromFile(filePath, &imageWidth, &imageHeight, &imageComponents);
+
+    auto textureId = CreateTexture(TCreateTextureDescriptor{
+        .TextureType = TTextureType::Texture2D,
+        .Format = format,
+        .Extent = TExtent3D{ static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
+        .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight))))),
+        .Layers = 0,
+        .SampleCount = TSampleCount::One,
+        .Label = filePath.filename(),
+    });
+
+    UploadTexture(textureId, TUploadTextureDescriptor{
+        .Level = 0,
+        .Offset = TOffset3D{0, 0, 0},
+        .Extent = TExtent3D{static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
+        .UploadFormat = TUploadFormat::Auto,
+        .UploadType = TUploadType::Auto,
+        .PixelData = imageData
+    });
+
+    Image::FreeImage(imageData);
+
+    return textureId;
 }
 
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
