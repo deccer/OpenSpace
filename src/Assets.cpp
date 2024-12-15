@@ -883,7 +883,6 @@ auto CreateCuboid(
 
     vertOffset = assetMeshData.Positions.size();
 
-
     // Back Face
     normal = {0.0f, 0.0f, -1.0f};
     for (auto iy = 0; iy < segmentsY; iy++) {
@@ -920,7 +919,7 @@ auto CreateCuboid(
     vertOffset = assetMeshData.Positions.size();
 
     // Top Face
-    normal = {0.0f, -1.0f, 0.0f};
+    normal = {0.0f, 1.0f, 0.0f};
     for (auto iy = 0; iy < segmentsZ; iy++) {
         for (auto ix = 0; ix < segmentsX; ix++) {
 
@@ -955,7 +954,7 @@ auto CreateCuboid(
     vertOffset = assetMeshData.Positions.size();
 
     // Bottom Face
-    normal = {0.0f, 1.0f, 0.0f};
+    normal = {0.0f, -1.0f, 0.0f};
     for (auto iy = 0; iy < segmentsZ; iy++) {
         for (auto ix = 0; ix < segmentsX; ix++) {
 
