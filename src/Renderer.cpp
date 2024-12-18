@@ -26,6 +26,12 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
+#include "CompressedFont-JetBrainsMono-Regular.inl"
+#include "CompressedFont-MaterialDesign.inl"
+#include "CompressedFont-RobotoBold.inl"
+#include "CompressedFont-RobotoMedium.inl"
+#include "CompressedFont-RobotoRegular.inl"
+#include "imgui_internal.h"
 
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/core.hpp>
@@ -38,8 +44,7 @@
 #include <ranges>
 #include <utility>
 
-#include "IconsMaterialDesign.h"
-#include "IconsFontAwesome6.h"
+#include "IconsMaterialDesignIcons.h"
 
 enum class TImGuizmoOperation
 {
@@ -102,6 +107,10 @@ TFramebuffer g_resolveGeometryFramebuffer = {};
 TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
 
 TTexture g_skyBoxTexture = {};
+TTexture g_iconBullet = {};
+TTexture g_iconCircle = {};
+TTexture g_iconSphere = {};
+TTexture g_iconSphereSolid = {};
 
 std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
@@ -664,7 +673,46 @@ auto RendererInitialize(
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     constexpr auto fontSize = 18.0f;
 
+    ImFontConfig fontConfig;
+    fontConfig.MergeMode = false;
+    fontConfig.PixelSnapH  = true;
+    fontConfig.OversampleH = 1;
+    fontConfig.OversampleV = 1;
+    fontConfig.GlyphMinAdvanceX = 4.0f;
+    fontConfig.SizePixels = 12.0f;
+
+    static const ImWchar fontRanges[] = {
+        0x0020,
+        0x00FF,
+        0x0400,
+        0x044F,
+        0,
+    };
+
+    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize, &fontConfig, fontRanges);
+    {
+        static const ImWchar iconRange[] = {
+            ICON_MIN_MDI,
+            ICON_MAX_MDI,
+            0
+        };
+        ImFontConfig iconsConfig;
+        iconsConfig.MergeMode = true;
+        iconsConfig.PixelSnapH = true;
+        iconsConfig.GlyphOffset.y = 1.0f;
+        iconsConfig.OversampleH = 1;
+        iconsConfig.OversampleV = 1;
+        iconsConfig.GlyphMinAdvanceX = 4.0f;
+        iconsConfig.SizePixels = 12.0f;
+
+        io.Fonts->AddFontFromMemoryCompressedTTF(MaterialDesign_compressed_data, MaterialDesign_compressed_size, fontSize, &iconsConfig, iconRange);
+    }
+    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoBold_compressed_data, RobotoBold_compressed_size, fontSize + 2.0f, &fontConfig, fontRanges);
+    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
+        
+
     //io.Fonts->AddFontFromFileTTF("data/fonts/HurmitNerdFont-Regular.otf", fontSize);
+    /*
     io.Fonts->AddFontFromFileTTF("data/fonts/NotoSans-Regular.ttf", fontSize);
     {
         constexpr float iconFontSize = fontSize * 4.0f / 5.0f;
@@ -678,13 +726,20 @@ auto RendererInitialize(
     }
     {
         constexpr float iconFontSize = fontSize;
-        static const ImWchar iconsRange[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
+        static const ImWchar iconsRange[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
         ImFontConfig iconsConfig;
         iconsConfig.MergeMode = true;
         iconsConfig.PixelSnapH = true;
         iconsConfig.GlyphMinAdvanceX = iconFontSize;
         iconsConfig.GlyphOffset.y = 4;
         io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_MD, iconFontSize, &iconsConfig, iconsRange);
+    }
+    */
+
+    io.Fonts->TexGlyphPadding = 1;
+    for(int fontConfigIndex = 0; fontConfigIndex < io.Fonts->ConfigData.Size; fontConfigIndex++) {
+        ImFontConfig* fontConfig = (ImFontConfig*)&io.Fonts->ConfigData[fontConfigIndex];
+        fontConfig->RasterizerMultiply = 1.0f;
     }
     
     auto& style = ImGui::GetStyle();
@@ -863,6 +918,18 @@ auto RendererInitialize(
     glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
 
     Assets::AddDefaultAssets();
+
+    auto iconBulletId = CreateTexture2DFromFile("data/icons/icon_bullet.png", TFormat::R8G8B8A8_SRGB);
+    auto iconCameraId = CreateTexture2DFromFile("data/icons/icon_camera.png", TFormat::R8G8B8A8_SRGB);
+    auto iconChromaId = CreateTexture2DFromFile("data/icons/icon_chroma.png", TFormat::R8G8B8A8_SRGB);
+    auto iconCircleId = CreateTexture2DFromFile("data/icons/icon_circle_blue.png", TFormat::R8G8B8A8_SRGB);
+    auto iconSphereId = CreateTexture2DFromFile("data/icons/icon_sphere.png", TFormat::R8G8B8A8_SRGB);
+    auto iconSphereSolidId = CreateTexture2DFromFile("data/icons/icon_sphere_solid.png", TFormat::R8G8B8A8_SRGB);
+
+    g_iconBullet = GetTexture(iconBulletId);
+    g_iconCircle = GetTexture(iconCircleId);
+    g_iconSphere = GetTexture(iconSphereId);
+    g_iconSphereSolid = GetTexture(iconSphereSolidId);
 
     auto skyTextureId = LoadSkyTexture("SkyRed");
     auto convolveSkyTextureResult = ConvolveTextureCube(skyTextureId);
@@ -1075,234 +1142,220 @@ auto RendererUnload() -> void {
 auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> void {
 
     auto entityName = registry.get<TComponentName>(entity);
+    auto* icon = (char*)ICON_MDI_CUBE;
+    ImGui::PushID(static_cast<int32_t>(entity));
+
+    auto treeNodeFlags = g_selectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0;
+    treeNodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
+
     if (registry.all_of<TComponentParent>(entity)) {
 
-        auto isOpen = ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_None);
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-            g_selectedEntity = entity;
+        bool isOpen = false;
+        bool isRootEntity = false;
+        if (entity == static_cast<entt::entity>(0)) {
+            isOpen = true;
+            isRootEntity = true;
+        } else {
+            isOpen = ImGui::TreeNodeEx(std::format("{}##{}", icon, HashString(entityName.Name)).data(), treeNodeFlags);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(entityName.Name.data());
+
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                g_selectedEntity = entity;
+            }
         }
         if (isOpen) {
             auto& children = registry.get<TComponentParent>(entity).Children;
             for (auto& child : children) {
                 RenderEntityHierarchy(registry, child);
             }
-            ImGui::TreePop();
+            if (!isRootEntity) {
+                ImGui::TreePop();
+            }
         }
     } else {
 
-        ImGui::TreeNodeEx(std::format("{}##{}", entityName.Name, HashString(entityName.Name)).data(), ImGuiTreeNodeFlags_Leaf);
+        treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+        ImGui::TreeNodeEx(std::format("{}##{}", icon, HashString(entityName.Name)).data(), treeNodeFlags);
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
             g_selectedEntity = entity;
         }
+        ImGui::SameLine();
+        ImGui::TextUnformatted(entityName.Name.data());
+
         ImGui::TreePop();
         
     }
+
+    ImGui::PopID();
+}
+
+auto RenderTransformComponent(const char* name, glm::vec3& vector, float width, float defaultElementValue) {
+    const float labelIndentation = ImGui::GetFontSize();
+    bool updated = false;
+
+    auto& style = ImGui::GetStyle();
+
+    const auto showFloat = [&](int axis, float* value)
+    {
+        const float labelFloatSpacing = ImGui::GetFontSize();
+        const float step = 0.01f;
+        static const std::string format = "%.4f";
+
+        ImGui::AlignTextToFramePadding();
+        if(ImGui::Button(axis == 0 ? "X  " : axis == 1 ? "Y  " : "Z  "))
+        {
+            *value  = defaultElementValue;
+            updated = true;
+        }
+
+        ImGui::SameLine(labelFloatSpacing);
+        ImVec2 posPostLabel = ImGui::GetCursorScreenPos();
+
+        ImGui::PushItemWidth(width);
+        ImGui::PushID(static_cast<int>(ImGui::GetCursorPosX() + ImGui::GetCursorPosY()));
+
+        if(ImGui::InputFloat("##no_label", value, std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max(), format.c_str())) {
+            updated = true;
+        }
+
+        ImGui::PopID();
+        ImGui::PopItemWidth();
+
+        static const ImU32 colourX = IM_COL32(168, 46, 2, 255);
+        static const ImU32 colourY = IM_COL32(112, 162, 22, 255);
+        static const ImU32 colourZ = IM_COL32(51, 122, 210, 255);
+
+        const ImVec2 size = ImVec2(ImGui::GetFontSize() / 4.0f, ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f);
+        posPostLabel = ImVec2(posPostLabel.x - 1.0f, posPostLabel.y + 0.0f); // ImGui::GetStyle().FramePadding.y / 2.0f);
+        ImRect axisColorRectangle = ImRect(posPostLabel.x, posPostLabel.y, posPostLabel.x + size.x, posPostLabel.y + size.y);
+        ImGui::GetWindowDrawList()->AddRectFilled(axisColorRectangle.Min, axisColorRectangle.Max, axis == 0 ? colourX : axis == 1 ? colourY : colourZ);
+    };
+
+    ImGui::BeginGroup();
+    ImGui::Indent(labelIndentation);
+    ImGui::TextUnformatted(name);
+    ImGui::Unindent(labelIndentation);
+    showFloat(0, &vector.x);
+    showFloat(1, &vector.y);
+    showFloat(2, &vector.z);
+    ImGui::EndGroup();
+
+    return updated;
 }
 
 auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> void {
 
     if (registry.all_of<TComponentName>(entity)) {
 
-        auto& name = registry.get<TComponentName>(entity);
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Name", ImGuiTreeNodeFlags_Leaf)) {
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Name");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::TextUnformatted(name.Name.data());
-        ImGui::TableNextRow();
+            ImGui::Indent(8.0f);
+            auto& name = registry.get<TComponentName>(entity);
+
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::InputText("##Name", name.Name.data(), name.Name.size());
+            ImGui::PopItemWidth();
+
+            ImGui::Unindent();
+        }
     }
 
     if (registry.all_of<TComponentChildOf>(entity)) {
 
-        auto& childOf = registry.get<TComponentChildOf>(entity);
-        auto& parentName = registry.get<TComponentName>(childOf.Parent);
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Parent");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::TextUnformatted(parentName.Name.data());
-        ImGui::TableNextRow();
+            ImGui::Indent(8.0f);
+            auto& childOf = registry.get<TComponentChildOf>(entity);
+            auto& parentName = registry.get<TComponentName>(childOf.Parent);
+
+            ImGui::TextUnformatted(parentName.Name.data());
+            ImGui::Unindent();
+        }
     }
 
-    if (registry.all_of<TComponentPosition>(entity)) {
-        auto& position = registry.get<TComponentPosition>(entity);
+    if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Transform", ImGuiTreeNodeFlags_Leaf || ImGuiTreeNodeFlags_FramePadding)) {
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Position");
-        ImGui::TableNextRow();
+        ImGui::AlignTextToFramePadding();
+        float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;                
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" X");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##PositionX", &position.x, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+        ImGui::Indent();
+        if (registry.all_of<TComponentPosition>(entity)) {
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Y");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##PositionY", &position.y, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            auto& position = registry.get<TComponentPosition>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Z");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##PositionZ", &position.z, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();                
-    }
+            glm::vec3 tempPosition = position;
 
-/*
-    if (registry.all_of<TComponentOrientation>(entity)) {
-        auto& orientation = registry.get<TComponentOrientation>(entity);
+            ImGui::PushID((void*)&position);
+            if (RenderTransformComponent("Position", tempPosition, itemWidth, 0.0f)) {
+                position = tempPosition;
+            }
+            ImGui::PopID();
+        }
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Orientation");
-        ImGui::TableNextRow();
+        if (registry.all_of<TComponentOrientationEuler>(entity)) {
+            auto& eulerAngles = registry.get<TComponentOrientationEuler>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" X");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##OrientationX", &orientation.x, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            glm::vec3 tempRotation = {eulerAngles.Pitch, eulerAngles.Yaw, eulerAngles.Roll};
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Y");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##OrientationY", &orientation.y, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            ImGui::SameLine();
+            ImGui::PushID((void*)&eulerAngles);
+            if (RenderTransformComponent("Rotation", tempRotation, itemWidth, 0.0f)) {
+                eulerAngles.Pitch = tempRotation.x;
+                eulerAngles.Yaw = tempRotation.y;
+                eulerAngles.Roll = tempRotation.z;
+            }
+            ImGui::PopID();
+        }
+        if (registry.all_of<TComponentScale>(entity)) {
+            auto& scale = registry.get<TComponentScale>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Z");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##OrientationZ", &orientation.z, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            glm::vec3 tempScale = scale;
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" W");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##OrientationW", &orientation.w, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-    }
-*/
-
-    if (registry.all_of<TComponentOrientationEuler>(entity)) {
-        auto& orientationEuler = registry.get<TComponentOrientationEuler>(entity);
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Orientation (Euler)");
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Pitch");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##Pitch", &orientationEuler.Pitch, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Yaw");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##Yaw", &orientationEuler.Yaw, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Roll");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##Roll", &orientationEuler.Roll, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-    }
-
-    if (registry.all_of<TComponentScale>(entity)) {
-        auto& scale = registry.get<TComponentScale>(entity);
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Scale");
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" X");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##ScaleX", &scale.x, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Y");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##ScaleY", &scale.y, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Z");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##ScaleZ", &scale.z, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            ImGui::SameLine();
+            ImGui::PushID((void*)&scale);
+            if (RenderTransformComponent("Scale", tempScale, itemWidth, 0.0f)) {
+                scale = tempScale;
+            }
+            ImGui::PopID();
+        }
+        ImGui::Unindent();
     }
 
     if (registry.all_of<TComponentCamera>(entity)) {
 
-        auto& camera = registry.get<TComponentCamera>(entity);
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Camera", ImGuiTreeNodeFlags_Leaf)) {
+            auto& camera = registry.get<TComponentCamera>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Camera");
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted(" Field of View");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::InputFloat("##Fov", &camera.FieldOfView, 0.1f, 1.0f, "%.2f");
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();
+            ImGui::Indent();
+            ImGui::Unindent();
+        }
     }
 
     if (registry.all_of<TComponentMesh>(entity)) {
 
-        auto& mesh = registry.get<TComponentMesh>(entity);
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Mesh", ImGuiTreeNodeFlags_Leaf)) {
+            auto& mesh = registry.get<TComponentMesh>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Mesh");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::TextUnformatted(mesh.Mesh.data());
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();        
+            ImGui::Indent(8.0f);
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::TextUnformatted(mesh.Mesh.data());
+            ImGui::PopItemWidth();
+            ImGui::Unindent();
+        }
     }
 
     if (registry.all_of<TComponentMaterial>(entity)) {
 
-        auto& material = registry.get<TComponentMaterial>(entity);
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Material", ImGuiTreeNodeFlags_Leaf)) {
+            auto& material = registry.get<TComponentMaterial>(entity);
 
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextUnformatted("Material");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::PushItemWidth(-1.0f);
-        ImGui::TextUnformatted(material.Material.data());
-        ImGui::PopItemWidth();
-        ImGui::TableNextRow();    
+            ImGui::Indent(8.0f);
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::TextUnformatted(material.Material.data());
+            ImGui::PopItemWidth();
+            ImGui::Unindent();
+        }
     }    
 }
 
@@ -1345,7 +1398,7 @@ auto RendererRender(
     {
         PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
-        registry.view<TComponentTransform/*, TComponentPosition, TComponentOrientationEuler, TComponentScale*/>().each([&](
+        registry.view<TComponentTransform>().each([&](
             const auto& entity,
             auto& transformComponent) {
 
@@ -1606,7 +1659,7 @@ auto RendererRender(
          * UI - Scene Viewer
          */
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        if (ImGui::Begin(ICON_MD_GRID_VIEW " Scene")) {
+        if (ImGui::Begin((char*)ICON_MDI_GRID " Scene")) {
             auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
             if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                 g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
@@ -1633,7 +1686,7 @@ auto RendererRender(
                 g_sceneViewerImagePosition = ImGui::GetCursorPos();
                 ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(g_sceneViewerImagePosition);
-                if (ImGui::CollapsingHeader(ICON_MD_IMAGESEARCH_ROLLER "Display")) {
+                if (ImGui::CollapsingHeader((char*)ICON_MDI_MONITOR "Display")) {
                     ImGui::RadioButton("Final", &g_sceneViewerTextureIndex, 0);
                     ImGui::RadioButton("Depth", &g_sceneViewerTextureIndex, 1);
                     ImGui::RadioButton("Geometry Colors", &g_sceneViewerTextureIndex, 2);
@@ -1701,7 +1754,7 @@ auto RendererRender(
         ImGui::PopStyleVar();
         ImGui::End();
 
-        if (ImGui::Begin(ICON_MD_SETTINGS " Settings")) {
+        if (ImGui::Begin((char*)ICON_MDI_SETTINGS " Settings")) {
             if (ImGui::SliderFloat("Resolution Scale", &g_windowSettings.ResolutionScale, 0.05f, 4.0f, "%.2f")) {
 
                 g_sceneViewerResized = g_isEditor;
@@ -1714,7 +1767,7 @@ auto RendererRender(
         /*
          * UI - Assets Viewer
          */
-        if (ImGui::Begin(ICON_MD_DATA_OBJECT " Assets")) {
+        if (ImGui::Begin((char*)ICON_MDI_LIBRARY_SHELVES " Assets")) {
             auto& assets = Assets::GetAssets();
             ImGui::BeginTable("##Assets", 2, ImGuiTableFlags_RowBg);
             ImGui::TableSetupColumn("Asset");
@@ -1725,7 +1778,7 @@ auto RendererRender(
                 ImGui::TextUnformatted(assetName.data());
                 ImGui::TableSetColumnIndex(1);
                 ImGui::PushID(assetName.data());
-                if (ImGui::Button(ICON_MD_ADD_BOX " Create")) {
+                if (ImGui::Button((char*)ICON_MDI_PLUS_BOX " Create")) {
 
                 }
                 ImGui::PopID();
@@ -1738,7 +1791,7 @@ auto RendererRender(
         /*
          * UI - Scene Hierarchy
          */
-        if (ImGui::Begin(ICON_MD_APP_REGISTRATION " Hierarchy")) {
+        if (ImGui::Begin((char*)ICON_MDI_TREE " Hierarchy")) {
 
             RenderEntityHierarchy(registry, static_cast<entt::entity>(0));
         }
@@ -1747,20 +1800,20 @@ auto RendererRender(
         /*
          * UI - Properties
          */
-        if (ImGui::Begin(ICON_MD_ALIGN_HORIZONTAL_LEFT " Properties")) {
+        if (ImGui::Begin((char*)ICON_MDI_CERTIFICATE " Properties")) {
 
             if (g_selectedEntity != entt::null) {
                 ImGui::PushID(static_cast<int32_t>(g_selectedEntity));
-                ImGui::BeginTable("PropertyTable", 2);
+                //ImGui::BeginTable("PropertyTable", 2);
 
-                ImGui::TableSetupColumn("Property");
-                ImGui::TableSetupColumn("Value");
-                ImGui::TableHeadersRow();
-                ImGui::TableNextRow();
+                //ImGui::TableSetupColumn("Property");
+                //ImGui::TableSetupColumn("Value");
+                //ImGui::TableHeadersRow();
+                //ImGui::TableNextRow();
 
                 RenderEntityProperties(registry, g_selectedEntity);
 
-                ImGui::EndTable();
+                //ImGui::EndTable();
                 ImGui::PopID();
             }
         }
@@ -1769,7 +1822,7 @@ auto RendererRender(
         /*
         * UI - Atmosphere Settings
         */
-        if (ImGui::Begin(ICON_MD_SUNNY " Atmosphere")) {
+        if (ImGui::Begin((char*)ICON_MDI_CLOUD " Atmosphere")) {
 
             auto atmosphereModified = false;
             if (ImGui::SliderFloat3("Sun Position", glm::value_ptr(g_sunPosition), -10000.0f, 10000.0f)) {
