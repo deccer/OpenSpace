@@ -37,9 +37,9 @@ entt::entity g_celestialBodyMoon = entt::null;
 
 bool g_playerMounted = false;
 
-const glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
-const glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
-const glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
+constexpr glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
+constexpr glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
+constexpr glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
 
 auto SceneAddEntity(
     std::optional<entt::entity> parent,
@@ -390,20 +390,21 @@ auto Update(
 
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
     auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
-    auto& playerCameraPosition = g_playerMounted
-        ? registry.get<TComponentPosition>(g_shipEntity) 
-        : registry.get<TComponentPosition>(g_playerEntity);
+    auto& playerCameraPosition = registry.get<TComponentPosition>(g_playerEntity);
+
+    auto& shipPosition = registry.get<TComponentPosition>(g_shipEntity);
+    auto& shipOrientationEuler = registry.get<TComponentOrientationEuler>(g_shipEntity);
 
     glm::quat playerCameraOrientation = glm::eulerAngleYX(playerCameraOrientationEuler.Yaw, playerCameraOrientationEuler.Pitch);
 
-    glm::vec3 forward = playerCameraOrientation * glm::vec3(0, 0, -1);
+    glm::vec3 forward = playerCameraOrientation * -g_unitZ;
     forward.y = 0;
     forward = glm::normalize(forward);
 
-    glm::vec3 right = playerCameraOrientation * glm::vec3(1, 0, 0);
+    glm::vec3 right = playerCameraOrientation * g_unitX;
     right = glm::normalize(right);
 
-    glm::vec3 up = playerCameraOrientation * glm::vec3(0, 1, 0);
+    glm::vec3 up = playerCameraOrientation * g_unitY;
     up = glm::normalize(up);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
@@ -448,9 +449,16 @@ auto Update(
 
     if (inputState.MouseButtons[INPUT_MOUSE_BUTTON_RIGHT].IsDown) {
 
-        playerCameraOrientationEuler.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity;
-        playerCameraOrientationEuler.Pitch -= inputState.MousePositionDelta.y * playerCamera.Sensitivity;
-        playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
+        if ((g_playerMounted && inputState.Keys[INPUT_KEY_LEFT_SHIFT].IsDown) || 
+            (g_playerMounted == false)) {
+
+            playerCameraOrientationEuler.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity;
+            playerCameraOrientationEuler.Pitch -= inputState.MousePositionDelta.y * playerCamera.Sensitivity;
+            playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
+        } else {
+
+            shipOrientationEuler.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity * 0.1f;
+        }
     }
 
     if (inputState.Keys[INPUT_KEY_M].JustPressed) {
@@ -467,7 +475,7 @@ auto Update(
             playerPosition = glm::vec3{0.0f, 1.25f, 1.0f};
             auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
             playerOrientation.Pitch = 0.0f;
-            playerOrientation.Yaw = glm::radians(-glm::pi<float>());
+            playerOrientation.Yaw = glm::pi<float>();
             playerOrientation.Roll = 0.0f;
 
         } else {
