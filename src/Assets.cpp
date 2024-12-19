@@ -2,7 +2,6 @@
 #include "Assets.hpp"
 #include "Io.hpp"
 #include "Images.hpp"
-#include "Helpers.hpp"
 #include "Profiler.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -38,6 +37,17 @@ std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
 std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerDates = {};
 std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
 std::unordered_map<std::string, TAssetMeshData> g_assetMeshDates = {};
+
+auto GetSafeResourceName(
+    const char* const baseName,
+    const char* const text,
+    const char* const resourceType,
+    const std::size_t resourceIndex) -> std::string {
+
+    return (text == nullptr) || strlen(text) == 0
+           ? std::format("{}-{}-{}", baseName, resourceType, resourceIndex)
+           : std::format("{}-{}", baseName, text);
+}
 
 auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {

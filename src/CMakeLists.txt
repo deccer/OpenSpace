@@ -5,7 +5,6 @@ add_custom_target(CopyData ALL
 add_executable(HowToScript
     Io.cpp
     Images.cpp
-    Helpers.cpp
     Components.cpp
     Assets.cpp
     RHI.cpp
