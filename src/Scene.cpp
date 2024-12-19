@@ -485,10 +485,10 @@ auto Update(
     sunRotation.Yaw = renderContext.FrameCounter * 0.02f;
 
     auto& planetRotation = registry.get<TComponentOrientationEuler>(g_celestialBodyPlanet);
-    auto planetRotationEuler = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 2.0f, glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)))));    
-    planetRotation.Pitch = planetRotationEuler.x;
-    planetRotation.Yaw = planetRotationEuler.y;
-    planetRotation.Roll = planetRotationEuler.z;
+
+    planetRotation.Pitch = glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.3f;
+    planetRotation.Yaw = glm::radians(static_cast<float>(renderContext.FrameCounter)) * 1.1f;
+    planetRotation.Roll = 0;
 
     auto& marsRotation = registry.get<TComponentOrientationEuler>(g_marsEntity);
     auto marsRotationEuler = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
