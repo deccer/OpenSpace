@@ -278,11 +278,11 @@ auto main(
 
         frameTimes[renderContext.FrameCounter % frameTimes.size()] = framesPerSecond;
         if (accumulatedTimeInSeconds >= updateIntervalInSeconds) {
-            auto sum = 0.0f;
+            auto summedFrameTime = 0.0f;
             for (auto i = 0; i < frameTimes.size(); i++) {
-                sum += frameTimes[i];
+                summedFrameTime += frameTimes[i];
             }
-            averageFramesPerSecond = sum / frameTimes.size();
+            averageFramesPerSecond = summedFrameTime / frameTimes.size();
             accumulatedTimeInSeconds = 0.0f;
         }
 
