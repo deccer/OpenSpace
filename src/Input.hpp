@@ -144,10 +144,8 @@
 #define INPUT_MOUSE_BUTTON_RIGHT     INPUT_MOUSE_BUTTON_2
 #define INPUT_MOUSE_BUTTON_MIDDLE    INPUT_MOUSE_BUTTON_3
 
-struct TInputState
-{
-    struct TKey
-    {
+struct TInputState {
+    struct TKey {
         bool IsDown;
         bool JustPressed;
         bool JustReleased;
@@ -158,3 +156,4 @@ struct TInputState
     glm::vec2 MousePosition;
     glm::vec2 ScrollDelta;
 };
+
