@@ -44,13 +44,6 @@ auto OnWindowKey(
     const int32_t action,
     [[maybe_unused]] int32_t mods) -> void {
 
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-    if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
-        RendererToggleEditorMode();
-    }
-
     if (action == GLFW_REPEAT) { 
         return;
     }
@@ -62,6 +55,13 @@ auto OnWindowKey(
     else if (action == GLFW_RELEASE) {
         g_inputState.Keys[key].JustReleased = true;
         g_inputState.Keys[key].IsDown = false;
+    }
+
+    if (g_inputState.Keys[INPUT_KEY_ESCAPE].JustPressed) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+    if (g_inputState.Keys[INPUT_KEY_F1].JustPressed) {
+        RendererToggleEditorMode();
     }
 }
 
@@ -268,7 +268,7 @@ auto main(
 
         glfwPollEvents();
         TInputState inputState = g_inputState;
-        ResetInputState();        
+        ResetInputState();
 
         PROFILER_ZONESCOPEDN("Frame");
         auto currentTimeInSeconds = glfwGetTime();

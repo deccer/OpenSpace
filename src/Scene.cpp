@@ -453,7 +453,7 @@ auto Update(
         playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
     }
 
-    if (inputState.Keys[INPUT_KEY_M].IsDown) {
+    if (inputState.Keys[INPUT_KEY_M].JustPressed) {
         g_playerMounted = !g_playerMounted;
 
         if (g_playerMounted) {
