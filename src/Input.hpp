@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Key.hpp"
 #include <glm/vec2.hpp>
 #include <array>
 
@@ -145,11 +146,6 @@
 #define INPUT_MOUSE_BUTTON_MIDDLE    INPUT_MOUSE_BUTTON_3
 
 struct TInputState {
-    struct TKey {
-        bool IsDown;
-        bool JustPressed;
-        bool JustReleased;
-    };
     std::array<TKey, INPUT_KEY_LAST> Keys;
     std::array<TKey, INPUT_MOUSE_BUTTON_LAST> MouseButtons;
     glm::vec2 MousePositionDelta;
