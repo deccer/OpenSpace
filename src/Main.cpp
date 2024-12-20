@@ -3,6 +3,7 @@
 #include "Renderer.hpp"
 #include "WindowSettings.hpp"
 #include "Input.hpp"
+#include "Controls.hpp"
 
 //#include <mimalloc.h>
 #include <glm/vec2.hpp>
@@ -132,6 +133,22 @@ auto ResetInputState() -> void {
     }
     g_inputState.MousePositionDelta = glm::vec2(0.0f);
     g_inputState.ScrollDelta = glm::vec2(0.0f);
+}
+
+auto MapInputStateToControlState(
+    const TInputState& inputState,
+    TControlState& controlState) -> void {
+
+    controlState.Fast = inputState.Keys[INPUT_KEY_LEFT_SHIFT];
+    controlState.Faster = inputState.Keys[INPUT_KEY_LEFT_ALT];
+    controlState.Slow = inputState.Keys[INPUT_KEY_LEFT_CONTROL];
+
+    controlState.MoveForward = inputState.Keys[INPUT_KEY_W];
+    controlState.MoveBackward = inputState.Keys[INPUT_KEY_S];    
+    controlState.MoveLeft = inputState.Keys[INPUT_KEY_A];
+    controlState.MoveRight = inputState.Keys[INPUT_KEY_D];
+    controlState.MoveUp = inputState.Keys[INPUT_KEY_Q];
+    controlState.MoveDown = inputState.Keys[INPUT_KEY_Z];
 }
 
 auto main(
@@ -264,11 +281,14 @@ auto main(
     TRenderContext renderContext = {};
     renderContext.Window = g_window;
 
+    TControlState controlState = {};
+
     while (!glfwWindowShouldClose(g_window)) {
 
         glfwPollEvents();
         TInputState inputState = g_inputState;
         ResetInputState();
+        MapInputStateToControlState(inputState, controlState);
 
         PROFILER_ZONESCOPEDN("Frame");
         auto currentTimeInSeconds = glfwGetTime();
@@ -291,8 +311,8 @@ auto main(
         renderContext.AverageFramesPerSecond = averageFramesPerSecond;
 
         auto& registry = Scene::GetRegistry();
-        Scene::Update(renderContext, registry, inputState);
-        RendererRender(renderContext, registry, inputState);
+        Scene::Update(renderContext, registry, controlState);
+        RendererRender(renderContext, registry);
 
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");
