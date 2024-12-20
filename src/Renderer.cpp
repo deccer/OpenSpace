@@ -1361,8 +1361,7 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
 
 auto RendererRender(
     TRenderContext& renderContext,
-    entt::registry& registry,
-    const TInputState& inputState) -> void {
+    entt::registry& registry) -> void {
 
     if (g_playerEntity == entt::null) {
         g_playerEntity = registry.view<TComponentCamera>().front();

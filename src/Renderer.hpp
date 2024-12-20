@@ -1,7 +1,6 @@
 #pragma once
 
 #include "WindowSettings.hpp"
-#include "Input.hpp"
 
 #include <entt/entt.hpp>
 #include <glm/vec2.hpp>
@@ -27,8 +26,7 @@ auto RendererInitialize(
 auto RendererUnload() -> void;
 auto RendererRender(
     TRenderContext& renderContext,
-    entt::registry& registry,
-    const TInputState& inputState) -> void;
+    entt::registry& registry) -> void;
 auto RendererResizeWindowFramebuffer(
     int32_t width,
     int32_t height) -> void;
