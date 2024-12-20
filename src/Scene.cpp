@@ -386,7 +386,7 @@ auto Unload() -> void {
 auto Update(
     TRenderContext& renderContext,
     entt::registry& registry,
-    const TInputState& inputState) -> void {
+    const TControlState& controlState) -> void {
 
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
     auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
@@ -408,13 +408,13 @@ auto Update(
     up = glm::normalize(up);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
-    if (inputState.Keys[INPUT_KEY_LEFT_SHIFT].IsDown) {
+    if (controlState.Fast.IsDown) {
         tempCameraSpeed *= 10.0f;
     }
-    if (inputState.Keys[INPUT_KEY_LEFT_ALT].IsDown) {
+    if (controlState.Faster.IsDown) {
         tempCameraSpeed *= 4000.0f;
     }
-    if (inputState.Keys[INPUT_KEY_LEFT_CONTROL].IsDown) {
+    if (controlState.Slow.IsDown) {
         tempCameraSpeed *= 0.125f;
     }
 
@@ -422,46 +422,48 @@ auto Update(
     right *= tempCameraSpeed;
     up *= tempCameraSpeed;
 
-    if (inputState.Keys[INPUT_KEY_W].IsDown) {
+    if (controlState.MoveForward.IsDown) {
 
         playerCameraPosition += forward;
     }
-    if (inputState.Keys[INPUT_KEY_S].IsDown) {
+    if (controlState.MoveBackward.IsDown) {
 
         playerCameraPosition -= forward;
     }
-    if (inputState.Keys[INPUT_KEY_D].IsDown) {
+    if (controlState.MoveRight.IsDown) {
 
         playerCameraPosition += right;
     }
-    if (inputState.Keys[INPUT_KEY_A].IsDown) {
+    if (controlState.MoveLeft.IsDown) {
 
         playerCameraPosition -= right;
     }
-    if (inputState.Keys[INPUT_KEY_Q].IsDown) {
+    if (controlState.MoveUp.IsDown) {
 
         playerCameraPosition += up;
     }
-    if (inputState.Keys[INPUT_KEY_Z].IsDown) {
+    if (controlState.MoveDown.IsDown) {
 
         playerCameraPosition -= up;
     }
 
-    if (inputState.MouseButtons[INPUT_MOUSE_BUTTON_RIGHT].IsDown) {
-
-        if ((g_playerMounted && inputState.Keys[INPUT_KEY_LEFT_SHIFT].IsDown) || 
-            (g_playerMounted == false)) {
-
-            playerCameraOrientationEuler.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity;
-            playerCameraOrientationEuler.Pitch -= inputState.MousePositionDelta.y * playerCamera.Sensitivity;
+    if (g_playerMounted) {
+        if (controlState.CursorMode.IsDown) {
+            playerCameraOrientationEuler.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
+            playerCameraOrientationEuler.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
             playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
         } else {
-
-            shipOrientationEuler.Yaw -= inputState.MousePositionDelta.x * playerCamera.Sensitivity * 0.1f;
+            shipOrientationEuler.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity * 0.1f;
+        }
+    } else {
+        if (controlState.FreeLook) {
+            playerCameraOrientationEuler.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
+            playerCameraOrientationEuler.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
+            playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
         }
     }
 
-    if (inputState.Keys[INPUT_KEY_M].JustPressed) {
+    if (controlState.ToggleMount.JustPressed) {
         g_playerMounted = !g_playerMounted;
 
         if (g_playerMounted) {

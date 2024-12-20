@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Renderer.hpp"
-#include "Input.hpp"
+#include "Controls.hpp"
 
 #include <entt/entt.hpp>
 #include <glm/mat4x4.hpp>
@@ -13,7 +13,7 @@ auto Unload() -> void;
 auto Update(
     TRenderContext& renderContext,
     entt::registry& registry,
-    const TInputState& inputState) -> void;
+    const TControlState& inputState) -> void;
 auto GetRegistry() -> entt::registry&;
 
 }

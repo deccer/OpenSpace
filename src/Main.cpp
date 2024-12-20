@@ -149,6 +149,12 @@ auto MapInputStateToControlState(
     controlState.MoveRight = inputState.Keys[INPUT_KEY_D];
     controlState.MoveUp = inputState.Keys[INPUT_KEY_Q];
     controlState.MoveDown = inputState.Keys[INPUT_KEY_Z];
+
+    controlState.CursorMode = inputState.Keys[INPUT_KEY_LEFT_SHIFT];
+    controlState.CursorDelta = inputState.MousePositionDelta;
+    controlState.ToggleMount = inputState.Keys[INPUT_KEY_M];
+
+    controlState.FreeLook = inputState.MouseButtons[INPUT_MOUSE_BUTTON_RIGHT].IsDown;
 }
 
 auto main(

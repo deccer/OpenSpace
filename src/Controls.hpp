@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Key.hpp"
+#include <glm/vec2.hpp>
 
 struct TControlState {
 
@@ -14,4 +15,9 @@ struct TControlState {
     TKey MoveRight;
     TKey MoveUp;
     TKey MoveDown;
+
+    TKey CursorMode;
+    bool FreeLook;
+    glm::vec2 CursorDelta;
+    TKey ToggleMount;
 };
