@@ -93,6 +93,10 @@ TWindowSettings g_windowSettings = {};
 constexpr ImVec2 g_imvec2UnitX = ImVec2(1, 0);
 constexpr ImVec2 g_imvec2UnitY = ImVec2(0, 1);
 ImGuiContext* g_imguiContext = nullptr;
+ImFont* g_fontRobotoRegular = nullptr;
+ImFont* g_fontRobotoRegularSmaller = nullptr;
+ImFont* g_fontRobotoBold = nullptr;
+ImFont* g_fontJetbrainsMonoRegular = nullptr;
 
 int32_t g_sceneViewerTextureIndex = {};
 ImVec2 g_sceneViewerImagePosition = {};
@@ -674,12 +678,12 @@ auto RendererInitialize(
     constexpr auto fontSize = 18.0f;
 
     ImFontConfig fontConfig;
-    fontConfig.MergeMode = false;
-    fontConfig.PixelSnapH  = true;
+    fontConfig.PixelSnapH = true;
+    fontConfig.SizePixels = 12.0f;
     fontConfig.OversampleH = 1;
     fontConfig.OversampleV = 1;
     fontConfig.GlyphMinAdvanceX = 4.0f;
-    fontConfig.SizePixels = 12.0f;
+    fontConfig.MergeMode = false;
 
     static const ImWchar fontRanges[] = {
         0x0020,
@@ -689,7 +693,7 @@ auto RendererInitialize(
         0,
     };
 
-    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize, &fontConfig, fontRanges);
+    g_fontRobotoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize, &fontConfig, fontRanges);
     {
         static const ImWchar iconRange[] = {
             ICON_MIN_MDI,
@@ -707,37 +711,12 @@ auto RendererInitialize(
 
         io.Fonts->AddFontFromMemoryCompressedTTF(MaterialDesign_compressed_data, MaterialDesign_compressed_size, fontSize, &iconsConfig, iconRange);
     }
-    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoBold_compressed_data, RobotoBold_compressed_size, fontSize + 2.0f, &fontConfig, fontRanges);
-    io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
-        
-
-    //io.Fonts->AddFontFromFileTTF("data/fonts/HurmitNerdFont-Regular.otf", fontSize);
-    /*
-    io.Fonts->AddFontFromFileTTF("data/fonts/NotoSans-Regular.ttf", fontSize);
-    {
-        constexpr float iconFontSize = fontSize * 4.0f / 5.0f;
-        static const ImWchar iconsRange[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
-        ImFontConfig iconsConfig;
-        iconsConfig.MergeMode = true;
-        iconsConfig.PixelSnapH = true;
-        iconsConfig.GlyphMinAdvanceX = iconFontSize;
-        iconsConfig.GlyphOffset.y = 0;
-        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_FAR, iconFontSize, &iconsConfig, iconsRange);
-    }
-    {
-        constexpr float iconFontSize = fontSize;
-        static const ImWchar iconsRange[] = {ICON_MIN_MD, ICON_MAX_MD, 0};
-        ImFontConfig iconsConfig;
-        iconsConfig.MergeMode = true;
-        iconsConfig.PixelSnapH = true;
-        iconsConfig.GlyphMinAdvanceX = iconFontSize;
-        iconsConfig.GlyphOffset.y = 4;
-        io.Fonts->AddFontFromFileTTF("data/fonts/" FONT_ICON_FILE_NAME_MD, iconFontSize, &iconsConfig, iconsRange);
-    }
-    */
+    g_fontRobotoBold = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoBold_compressed_data, RobotoBold_compressed_size, fontSize + 2.0f, &fontConfig, fontRanges);
+    g_fontRobotoRegularSmaller = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
+    g_fontJetbrainsMonoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMono_Regular_compressed_data, JetBrainsMono_Regular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
 
     io.Fonts->TexGlyphPadding = 1;
-    for(int fontConfigIndex = 0; fontConfigIndex < io.Fonts->ConfigData.Size; fontConfigIndex++) {
+    for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->ConfigData.Size; fontConfigIndex++) {
         ImFontConfig* fontConfig = (ImFontConfig*)&io.Fonts->ConfigData[fontConfigIndex];
         fontConfig->RasterizerMultiply = 1.0f;
     }
@@ -1371,8 +1350,8 @@ auto RendererRender(
         PROFILER_ZONESCOPEDN("Create Gpu Resources");
 
         /*
-        * ECS - Create Gpu Resources if necessary
-        */
+         * ECS - Create Gpu Resources if necessary
+         */
         auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
         for (auto& entity : createGpuResourcesNecessaryView) {
 
@@ -1394,6 +1373,7 @@ auto RendererRender(
     /*
      * ECS - Update Transforms
      */
+    
     {
         PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
@@ -1626,6 +1606,7 @@ auto RendererRender(
         ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBackgroundColor);
         if (ImGui::Begin("#InGameStatistics", nullptr, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoDecoration)) {
 
+            ImGui::PushFont(g_fontJetbrainsMonoRegular);
             ImGui::TextColored(ImVec4{0.9f, 0.7f, 0.0f, 1.0f}, "F1 to toggle editor");
             ImGui::SeparatorText("Frame Statistics");
 
@@ -1636,6 +1617,7 @@ auto RendererRender(
             ImGui::Text("rpms: %.0f", renderContext.FramesPerSecond * 60.0f);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
             ImGui::Text("   f: %lu", renderContext.FrameCounter);
+            ImGui::PopFont();
         }
         ImGui::End();
         ImGui::PopStyleColor();
@@ -1803,24 +1785,15 @@ auto RendererRender(
 
             if (g_selectedEntity != entt::null) {
                 ImGui::PushID(static_cast<int32_t>(g_selectedEntity));
-                //ImGui::BeginTable("PropertyTable", 2);
-
-                //ImGui::TableSetupColumn("Property");
-                //ImGui::TableSetupColumn("Value");
-                //ImGui::TableHeadersRow();
-                //ImGui::TableNextRow();
-
                 RenderEntityProperties(registry, g_selectedEntity);
-
-                //ImGui::EndTable();
                 ImGui::PopID();
             }
         }
         ImGui::End();
 
         /*
-        * UI - Atmosphere Settings
-        */
+         * UI - Atmosphere Settings
+         */
         if (ImGui::Begin((char*)ICON_MDI_CLOUD " Atmosphere")) {
 
             auto atmosphereModified = false;
@@ -1845,7 +1818,9 @@ auto RendererRender(
     }
 }
 
-auto RendererResizeWindowFramebuffer(int32_t width, int32_t height) -> void {
+auto RendererResizeWindowFramebuffer(
+    int32_t width,
+    int32_t height) -> void {
 
     g_windowFramebufferSize = glm::ivec2{width, height};
     g_windowFramebufferResized = true;
