@@ -68,7 +68,7 @@ auto OnWindowKey(
 
 auto OnWindowCursorEntered(
     [[maybe_unused]] GLFWwindow* window,
-    int entered) -> void {
+    int32_t entered) -> void {
 
     g_windowHasFocus = entered == GLFW_TRUE;
 }
@@ -113,8 +113,8 @@ auto OnWindowMouseScroll(
 
 auto OnWindowFramebufferSizeChanged(
     [[maybe_unused]] GLFWwindow* window,
-    const int width,
-    const int height) -> void {
+    const int32_t width,
+    const int32_t height) -> void {
 
     RendererResizeWindowFramebuffer(width, height);
 }
@@ -291,12 +291,13 @@ auto main(
 
     while (!glfwWindowShouldClose(g_window)) {
 
+        PROFILER_ZONESCOPEDN("Frame");
+
         glfwPollEvents();
         TInputState inputState = g_inputState;
         ResetInputState();
         MapInputStateToControlState(inputState, controlState);
 
-        PROFILER_ZONESCOPEDN("Frame");
         auto currentTimeInSeconds = glfwGetTime();
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
         auto framesPerSecond = 1.0f / deltaTimeInSeconds;
