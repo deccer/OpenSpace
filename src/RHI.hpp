@@ -479,8 +479,22 @@ struct TPipeline {
     uint32_t Id;
 
     virtual auto Bind() -> void;
-    auto BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) const -> void;
-    auto BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) const -> void;
+    auto BindBufferAsUniformBuffer(
+        uint32_t buffer,
+        int32_t bindingIndex) const -> void;
+    auto BindBufferAsUniformBuffer(
+        uint32_t buffer,
+        int32_t bindingIndex,
+        int64_t offset,
+        int64_t size) const -> void;
+    auto BindBufferAsShaderStorageBuffer(
+        uint32_t buffer,
+        int32_t bindingIndex) const -> void;
+    auto BindBufferAsShaderStorageBuffer(
+        uint32_t buffer,
+        int32_t bindingIndex,
+        int64_t offset,
+        int64_t size) const -> void;
     auto BindTexture(int32_t bindingIndex, uint32_t texture) const -> void;
     auto BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const -> void;
     auto BindImage(uint32_t bindingIndex, uint32_t image, int32_t level, int32_t layer, TMemoryAccess memoryAccess, TFormat format) -> void;

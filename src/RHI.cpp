@@ -731,10 +731,12 @@ auto SetDebugLabel(
 }
 
 auto PushDebugGroup(const std::string_view label) -> void {
+
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(label.size()), label.data());
 }
 
 auto PopDebugGroup() -> void {
+
     glPopDebugGroup();
 }
 
@@ -772,22 +774,54 @@ auto DeletePipeline(TPipeline& pipeline) -> void {
 }
 
 auto TPipeline::Bind() -> void {
+
     glUseProgram(Id);
 }
 
-auto TPipeline::BindBufferAsUniformBuffer(uint32_t buffer, int32_t bindingIndex) const -> void {
+auto TPipeline::BindBufferAsUniformBuffer(
+    uint32_t buffer,
+    int32_t bindingIndex) const -> void {
+
     glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, buffer);
 }
 
-auto TPipeline::BindBufferAsShaderStorageBuffer(uint32_t buffer, int32_t bindingIndex) const -> void {
+auto TPipeline::BindBufferAsUniformBuffer(
+    uint32_t buffer,
+    int32_t bindingIndex,
+    int64_t offset,
+    int64_t size) const -> void {
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, bindingIndex, buffer, offset, size);
+}
+
+auto TPipeline::BindBufferAsShaderStorageBuffer(
+    uint32_t buffer,
+    int32_t bindingIndex) const -> void {
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer);
 }
 
-auto TPipeline::BindTexture(int32_t bindingIndex, uint32_t texture) const  -> void {
+auto TPipeline::BindBufferAsShaderStorageBuffer(
+    uint32_t buffer,
+    int32_t bindingIndex,
+    int64_t offset,
+    int64_t size) const -> void {
+
+    glBindBufferRange(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer, offset, size);
+}
+
+auto TPipeline::BindTexture(
+    int32_t bindingIndex,
+    uint32_t texture) const  -> void {
+
     glBindTextureUnit(bindingIndex, texture);
 }
 
-auto TPipeline::BindTextureAndSampler(int32_t bindingIndex, uint32_t texture, uint32_t sampler) const  -> void {
+auto TPipeline::BindTextureAndSampler(
+    int32_t bindingIndex,
+    uint32_t texture,
+    uint32_t sampler) const  -> void {
+
     glBindTextureUnit(bindingIndex, texture);
     glBindSampler(bindingIndex, sampler);
 }
