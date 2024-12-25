@@ -26,11 +26,11 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
-#include "CompressedFont-JetBrainsMono-Regular.inl"
-#include "CompressedFont-MaterialDesign.inl"
-#include "CompressedFont-RobotoBold.inl"
-#include "CompressedFont-RobotoMedium.inl"
-#include "CompressedFont-RobotoRegular.inl"
+#include "Fonts/CompressedFont-JetBrainsMono-Regular.inl"
+#include "Fonts/CompressedFont-MaterialDesign.inl"
+#include "Fonts/CompressedFont-RobotoBold.inl"
+#include "Fonts/CompressedFont-RobotoMedium.inl"
+#include "Fonts/CompressedFont-RobotoRegular.inl"
 #include "imgui_internal.h"
 
 #include <fastgltf/glm_element_traits.hpp>
