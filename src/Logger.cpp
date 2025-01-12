@@ -8,7 +8,7 @@
 constexpr std::string_view LogLevelToString(TLogLevel level) {
     switch (level) {
         case TLogLevel::Verbose: return "\033[97;1mverbose\033[0m";
-        case TLogLevel::Debug: return "\033[33;1mdebug\033[0m";
+        case TLogLevel::Debug: return "\033[35;1mdebug\033[0m";
         case TLogLevel::Info:  return "\033[94;1minfo\033[0m";
         case TLogLevel::Warning:  return "\033[93;1mwarn\033[0m";
         case TLogLevel::Error: return "\033[91;1merror\033[0m";
@@ -47,7 +47,7 @@ auto TLogger::Log(TLogLevel logLevel, const std::string_view message) -> void {
     std::tm localTime = *std::localtime(&time);
 
     std::ostringstream oss;
-    oss << std::put_time(&localTime, "%Y-%m-%d %H-%M-%S");
+    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
 
     std::print("[{0}] [{1}] {2}!\n", oss.str(), LogLevelToString(logLevel), message);
 }
