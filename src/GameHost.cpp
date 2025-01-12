@@ -107,9 +107,7 @@ auto TGameHost::LoadGameModule() -> bool {
 
     TLogger::Debug("Game Module Loaded");
 
-    //dlerror(); // clear any dl related errors;
-
-    auto createGameDelegate = (TCreateGameDelegate*)GetModuleSymbol(_gameModule, "CreateGame");
+    auto createGameDelegate = reinterpret_cast<TCreateGameDelegate*>(GetModuleSymbol(_gameModule, "CreateGame"));
     if (createGameDelegate == nullptr) {
         TLogger::Error(std::format("Unable to load create game delegate: {}", dlerror()));
         UnloadModule(_gameModule);
