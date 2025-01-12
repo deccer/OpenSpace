@@ -399,10 +399,10 @@ FodyWeavers.xsd
 
 # CMake
 build/
-cmake-build-debug/
-cmake-build-release/
+cmake-build-*
 .idea/
 
 .vscode/
 
 data/scenes/
+
