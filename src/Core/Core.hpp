@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "Types.hpp"
 #include <string_view>
 
 #define nameof(name) #name

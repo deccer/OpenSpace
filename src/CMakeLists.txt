@@ -5,7 +5,7 @@ add_custom_target(CopyData ALL
 # ---- LOGGER ----
 
 add_library(Logger SHARED
-    Logger.cpp
+    Core/Logger.cpp
 )
 
 # ---- GAME ----
@@ -44,7 +44,7 @@ target_link_libraries(Game
 # --- GAMEHOST ---
 
 add_executable(GameHost
-    Io.cpp
+    Core/Io.cpp
     Images.cpp
     GameHost.cpp
     Main.cpp

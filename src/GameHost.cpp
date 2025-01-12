@@ -1,7 +1,7 @@
 #include "GameHost.hpp"
 #include "IGame.hpp"
-#include "Module.hpp"
-#include "Logger.hpp"
+#include "Core/Module.hpp"
+#include "Core/Logger.hpp"
 
 #include <dlfcn.h>
 

@@ -1,7 +1,7 @@
 #include "Images.hpp"
 
-#include "Profiler.hpp"
-#include "Io.hpp"
+#include "Core/Profiler.hpp"
+#include "Core/Io.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>

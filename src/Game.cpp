@@ -1,6 +1,6 @@
 #include "Game.hpp"
 
-#include "Logger.hpp"
+#include "Core/Logger.hpp"
 #include <format>
 
 float timer = 0.0f;

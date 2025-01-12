@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cstdint>
+#include "Core/Types.hpp"
+
 #include <filesystem>
 
 namespace Image {

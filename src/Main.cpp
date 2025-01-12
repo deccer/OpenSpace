@@ -1,5 +1,4 @@
-#include <cstdint>
-
+#include "Core/Types.hpp"
 #include "GameHost.hpp"
 
 auto main(

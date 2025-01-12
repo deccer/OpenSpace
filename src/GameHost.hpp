@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Module.hpp"
+#include "Core/Module.hpp"
 #include <string>
 
 struct GLFWwindow;
