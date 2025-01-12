@@ -74,7 +74,6 @@ target_link_libraries(GameHost
     PRIVATE imguizmo
     PRIVATE stb
     PRIVATE debugbreak
-    #PRIVATE spdlog::spdlog
     PRIVATE poolSTL::poolSTL
     #PRIVATE tbb
     PRIVATE fastgltf

@@ -1,7 +1,6 @@
 include(FetchContent)
 
 include(debugbreak.cmake)
-#include(spdlog.cmake)
 include(glfw.cmake)
 include(glad.cmake)
 include(glm.cmake)
