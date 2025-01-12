@@ -13,6 +13,7 @@ enum class TLogLevel {
 
 class TLogger {
 public:
+    static auto SetMinLogLevel(TLogLevel logLevel) -> void;
     static auto Verbose(std::string_view message) -> void;
     static auto Debug(std::string_view message) -> void;
     static auto Info(std::string_view message) -> void;
@@ -21,4 +22,6 @@ public:
     static auto Fatal(std::string_view message) -> void;
 private:
     static auto Log(TLogLevel logLevel, std::string_view message) -> void;
+
+    static TLogLevel _logLevel;
 };

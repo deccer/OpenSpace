@@ -76,7 +76,7 @@ target_link_libraries(GameHost
     PRIVATE debugbreak
     #PRIVATE spdlog::spdlog
     PRIVATE poolSTL::poolSTL
-    PRIVATE tbb
+    #PRIVATE tbb
     PRIVATE fastgltf
     PRIVATE EnTT
     #PRIVATE mimalloc-static

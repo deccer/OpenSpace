@@ -19,6 +19,7 @@ std::filesystem::file_time_type g_lastModifiedTime;
 
 auto TGameHost::Run() -> void {
 
+    TLogger::SetMinLogLevel(TLogLevel::Warning);
     _gameModuleFilePath = "./libGame.so";
 
     glfwSetErrorCallback([](int32_t errorCode, const char* errorDescription) -> void {

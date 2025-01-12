@@ -14,7 +14,7 @@ auto TGame::Load() -> bool {
 auto TGame::Update(TGameContext& gameContext) -> void {
     timer += gameContext.DeltaTime;
     if (timer >= duration) {
-        TLogger::Info(std::format("Hello from Game v6 {}", gameContext.DeltaTime));
+        TLogger::Fatal(std::format("Hello from Game v10 {}", gameContext.DeltaTime));
         timer = 0.0f;
     }
 }

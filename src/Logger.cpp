@@ -5,6 +5,8 @@
 #include <print>
 #include <sstream>
 
+TLogLevel TLogger::_logLevel = TLogLevel::Info;
+
 constexpr std::string_view LogLevelToString(TLogLevel level) {
     switch (level) {
         case TLogLevel::Verbose: return "\033[97;1mverbose\033[0m";
@@ -15,6 +17,10 @@ constexpr std::string_view LogLevelToString(TLogLevel level) {
         case TLogLevel::Fatal: return "\033[97;101mfatal\033[0m";
         default: return "unknown";
     }
+}
+
+auto TLogger::SetMinLogLevel(TLogLevel logLevel) -> void {
+    _logLevel = logLevel;
 }
 
 auto TLogger::Verbose(const std::string_view message) -> void {
@@ -42,6 +48,10 @@ auto TLogger::Fatal(const std::string_view message) -> void {
 }
 
 auto TLogger::Log(TLogLevel logLevel, const std::string_view message) -> void {
+
+    if (_logLevel > logLevel) {
+        return;
+    }
 
     std::time_t time = std::time(nullptr);
     std::tm localTime = *std::localtime(&time);
