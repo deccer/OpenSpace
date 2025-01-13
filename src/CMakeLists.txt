@@ -17,6 +17,7 @@ add_executable(GameHost
     Core/Io.cpp
     Images.cpp
     GameHost.cpp
+    Renderer/Renderer.cpp
     Main.cpp
 )
 add_dependencies(GameHost
