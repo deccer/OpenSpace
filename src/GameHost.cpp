@@ -1,25 +1,46 @@
 #include "GameHost.hpp"
-#include "Game/IGame.hpp"
-#include "Core/Module.hpp"
 #include "Core/Logger.hpp"
-
-#include <dlfcn.h>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
-#include <sys/stat.h>
 #include <chrono>
-#include <filesystem>
 
 using TCreateGameDelegate = IGame*();
 using TClock = std::chrono::high_resolution_clock;
-using TFileTime = std::filesystem::file_time_type;
-
-TFileTime g_lastModifiedTime;
 
 auto TGameHost::Run() -> void {
 
+    if (!Initialize()) {
+        TLogger::Error("Unable to initialize GameHost");
+        return;
+    }
+
+    TGameContext gameContext = {};
+
+    _gameModuleLastModifiedTime = last_write_time(std::filesystem::path(_gameModuleFilePath.data()));
+    if (!LoadGameModule()) {
+        TLogger::Error("Unable to load game module during load");
+        return;
+    }
+
+    auto previousTime = TClock::now();
+    while (!glfwWindowShouldClose(_window)) {
+        auto currentTime = TClock::now();
+        gameContext.DeltaTime = std::chrono::duration<float>(currentTime - previousTime).count();
+        previousTime = currentTime;
+
+        glfwPollEvents();
+
+        Update(gameContext);
+
+        glfwSwapBuffers(_window);
+    }
+
+    Unload();
+}
+
+auto TGameHost::Initialize() -> bool {
     TLogger::SetMinLogLevel(TLogLevel::Warning);
     _gameModuleFilePath = "./libGame.so";
 
@@ -28,7 +49,7 @@ auto TGameHost::Run() -> void {
     });
     if (glfwInit() == GLFW_FALSE) {
         TLogger::Error("Unable to initialize glfw");
-        return;
+        return false;
     }
 
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -36,7 +57,7 @@ auto TGameHost::Run() -> void {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
     glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);    
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
@@ -46,57 +67,51 @@ auto TGameHost::Run() -> void {
     _window = glfwCreateWindow(1920, 1080, "OpenSpace", nullptr, nullptr);
     if (_window == nullptr) {
         TLogger::Error("Unable to create window");
-        return;
+        return false;
     }
 
     glfwMakeContextCurrent(_window);
     if (gladLoadGL(glfwGetProcAddress) == GL_FALSE) {
         TLogger::Error("Unable to load opengl functions");
-        return;
+        return false;
     }
 
-    TGameContext gameContext = {};
+    return true;
+}
 
-    g_lastModifiedTime = last_write_time(std::filesystem::path(_gameModuleFilePath.data()));
-    if (!LoadGameModule()) {
-        TLogger::Error("Unable to load game module during load");
-        return;
-    }
+auto TGameHost::Load() -> bool {
+    return true;
+}
 
-    float gameLibraryChangedCheckInterval = 1.0f;
-    float gameLibraryChangedTimeSinceLastCheck = 0.0f;
-
-    auto previousTime = TClock::now();
-    while (!glfwWindowShouldClose(_window)) {
-        auto currentTime = TClock::now();
-        gameContext.DeltaTime = std::chrono::duration<float>(currentTime - previousTime).count();
-        previousTime = currentTime;
-
-        gameLibraryChangedTimeSinceLastCheck += gameContext.DeltaTime;
-        if (gameLibraryChangedTimeSinceLastCheck >= gameLibraryChangedCheckInterval) {
-            if (CheckIfGameModuleNeedsReloading()) {
-                UnloadGameModule();
-                LoadGameModule();
-            }
-    
-            gameLibraryChangedTimeSinceLastCheck = 0.0f;
-        }
-
-
-        glfwPollEvents();
-
-        if (_game != nullptr) {
-            _game->Update(gameContext);
-        }
-
-        glfwSwapBuffers(_window);
-    }
+auto TGameHost::Unload() -> void {
 
     UnloadGameModule();
 
     glfwDestroyWindow(_window);
     glfwTerminate();
 }
+
+auto TGameHost::Render() -> void {
+
+}
+
+auto TGameHost::Update(TGameContext& gameContext) -> void {
+
+    _gameModuleChangedTimeSinceLastCheck += gameContext.DeltaTime;
+    if (_gameModuleChangedTimeSinceLastCheck >= _gameModuleChangedCheckInterval) {
+        if (CheckIfGameModuleNeedsReloading()) {
+            UnloadGameModule();
+            LoadGameModule();
+        }
+
+        _gameModuleChangedTimeSinceLastCheck = 0.0f;
+    }
+
+    if (_game != nullptr) {
+        _game->Update(gameContext);
+    }
+}
+
 
 auto TGameHost::LoadGameModule() -> bool {
 
@@ -174,8 +189,8 @@ auto TGameHost::CheckIfGameModuleNeedsReloading() -> bool {
 
         std::error_code errorCode;
         auto currentModifiedTime = std::filesystem::last_write_time(std::filesystem::path(_gameModuleFilePath.data()), errorCode);
-        if (currentModifiedTime != g_lastModifiedTime) {
-            g_lastModifiedTime = currentModifiedTime;
+        if (currentModifiedTime != _gameModuleLastModifiedTime) {
+            _gameModuleLastModifiedTime = currentModifiedTime;
             TLogger::Debug("Detected change in game library. Reloading...");
             return true;
         }

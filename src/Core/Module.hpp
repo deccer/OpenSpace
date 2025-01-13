@@ -6,7 +6,7 @@
 #include <windows.h>
 #endif
 
-using ModuleHandle = HMODULE;
+using TModuleHandle = HMODULE;
 #define LoadModule(name) LoadLibraryA(name.data())
 #define GetModuleSymbol GetProcAddress
 #define UnloadModule FreeLibrary
@@ -15,7 +15,7 @@ using ModuleHandle = HMODULE;
 
 #include <dlfcn.h>
 
-using ModuleHandle = void*;
+using TModuleHandle = void*;
 #define LoadModule(name) dlopen(name.data(), RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND)
 #define GetModuleSymbol dlsym
 #define UnloadModule dlclose
