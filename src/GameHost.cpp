@@ -1,5 +1,5 @@
 #include "GameHost.hpp"
-#include "IGame.hpp"
+#include "Game/IGame.hpp"
 #include "Core/Module.hpp"
 #include "Core/Logger.hpp"
 
@@ -14,8 +14,9 @@
 
 using TCreateGameDelegate = IGame*();
 using TClock = std::chrono::high_resolution_clock;
+using TFileTime = std::filesystem::file_time_type;
 
-std::filesystem::file_time_type g_lastModifiedTime;
+TFileTime g_lastModifiedTime;
 
 auto TGameHost::Run() -> void {
 
@@ -54,13 +55,13 @@ auto TGameHost::Run() -> void {
         return;
     }
 
-    g_lastModifiedTime = std::filesystem::last_write_time(std::filesystem::path(_gameModuleFilePath.data()));
+    TGameContext gameContext = {};
+
+    g_lastModifiedTime = last_write_time(std::filesystem::path(_gameModuleFilePath.data()));
     if (!LoadGameModule()) {
         TLogger::Error("Unable to load game module during load");
         return;
     }
-
-    TGameContext gameContext = {};
 
     float gameLibraryChangedCheckInterval = 1.0f;
     float gameLibraryChangedTimeSinceLastCheck = 0.0f;
