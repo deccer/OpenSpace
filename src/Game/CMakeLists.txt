@@ -1,5 +1,6 @@
 
 add_library(Game SHARED
+    Scene.cpp
     Game.cpp
 )
 
@@ -10,8 +11,8 @@ add_dependencies(Game
 set_target_properties(Game PROPERTIES PREFIX "")
 
 add_custom_command(TARGET Game POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/libGame.so
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Game> ${CMAKE_CURRENT_BINARY_DIR}/libGame.so
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/../libGame.so
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Game> ${CMAKE_CURRENT_BINARY_DIR}/../libGame.so
     COMMAND ${CMAKE_COMMAND} -E rm -f $<TARGET_FILE:Game>
 )
 
@@ -29,4 +30,5 @@ target_compile_definitions(Game
 target_link_libraries(Game
     PRIVATE Logger
     PRIVATE glad
+    PUBLIC EnTT
 )

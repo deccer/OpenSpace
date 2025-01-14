@@ -17,7 +17,7 @@ struct TControlState {
     TKey MoveDown;
 
     TKey CursorMode;
-    bool FreeLook;
+    bool IsFreeLook;
     glm::vec2 CursorDelta;
     TKey ToggleMount;
 };

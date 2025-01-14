@@ -1,14 +1,17 @@
 #include "Game.hpp"
 
 #include "../Core/Logger.hpp"
-#include <format>
+#include "Scene.hpp"
 
-#include <glad/gl.h>
+#include <format>
 
 float timer = 0.0f;
 float duration = 1.0f;
 
 auto TGame::Load() -> bool {
+
+    _scene = new TScene();
+
     TLogger::Warning("Loading Game");
     return true;
 }
@@ -19,13 +22,16 @@ auto TGame::Update(TGameContext& gameContext) -> void {
         TLogger::Warning(std::format("Hello from Game v12 {}", gameContext.DeltaTime));
         timer = 0.0f;
     }
-
-    glClearColor(0.2f, 0.6f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
 }
 
 auto TGame::Unload() -> void {
+
+    delete _scene;
     TLogger::Warning("Unloading Game");
+}
+
+auto TGame::GetScene() -> TScene* {
+    return _scene;
 }
 
 extern "C" auto CreateGame() -> IGame* {

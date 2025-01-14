@@ -1,4 +1,5 @@
 #include "Renderer.hpp"
+#include "../Game/Scene.hpp"
 
 TRenderer::TRenderer() {
 }
@@ -15,6 +16,6 @@ auto TRenderer::Unload() -> void {
 
 }
 
-auto TRenderer::Render() -> void {
+auto TRenderer::Render(TRenderContext& renderContext, TScene* scene) -> void {
 
 }
