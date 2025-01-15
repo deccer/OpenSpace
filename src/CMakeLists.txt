@@ -64,9 +64,9 @@ if(UNIX AND NOT APPLE)
     )
 endif()
 
-if(USE_PROFILER)
+if(OPENSPACE_USE_PROFILER)
     target_compile_definitions(GameHost
-        PRIVATE USE_PROFILER
+        PRIVATE OPENSPACE_USE_PROFILER
     )
     target_link_libraries(GameHost
         PRIVATE TracyClient

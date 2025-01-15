@@ -16,7 +16,7 @@ if(!${MSVC})
 endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(USE_PROFILER OFF CACHE BOOL "Use Profiler")
+set(OPENSPACE_USE_PROFILER OFF CACHE BOOL "Use Profiler")
 
 add_subdirectory(libs)
 add_subdirectory(src)
