@@ -153,3 +153,4 @@ struct TInputState {
     glm::vec2 ScrollDelta;
 };
 
+auto KeyCodeToInputKey(int32_t keyCode) -> int32_t;

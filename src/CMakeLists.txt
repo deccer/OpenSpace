@@ -16,6 +16,7 @@ add_subdirectory(Game)
 add_executable(GameHost
     Core/Io.cpp
     Images.cpp
+    Input/Input.cpp
     GameHost.cpp
     Renderer/Renderer.cpp
     Main.cpp
@@ -38,7 +39,8 @@ target_compile_definitions(GameHost
 )
 
 target_link_libraries(GameHost
-    PRIVATE glfw
+    #PRIVATE glfw
+    PRIVATE SDL2::SDL2-static
     PRIVATE glad
     PRIVATE glm
     PRIVATE imgui

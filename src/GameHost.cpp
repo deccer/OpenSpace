@@ -5,133 +5,12 @@
 #include "Input/Controls.hpp"
 
 #include <glad/gl.h>
-#include <GLFW/glfw3.h>
+#include <SDL2/SDL.h>
 
 #include <chrono>
 
 using TCreateGameDelegate = IGame*();
 using TClock = std::chrono::high_resolution_clock;
-
-class TGameHostAccess {
-public:
-    static auto OnWindowKey(
-        [[maybe_unused]] GLFWwindow* window,
-        const int32_t key,
-        [[maybe_unused]] int32_t scancode,
-        const int32_t action,
-        [[maybe_unused]] int32_t mods) -> void {
-
-        const auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-        if (action == GLFW_REPEAT) {
-            return;
-        }
-        if (action == GLFW_PRESS)
-        {
-            gameHost->_inputState->Keys[key].JustPressed = true;
-            gameHost->_inputState->Keys[key].IsDown = true;
-        }
-        else if (action == GLFW_RELEASE) {
-            gameHost->_inputState->Keys[key].JustReleased = true;
-            gameHost->_inputState->Keys[key].IsDown = false;
-        }
-
-        if (gameHost->_inputState->Keys[INPUT_KEY_ESCAPE].JustPressed) {
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-        if (gameHost->_inputState->Keys[INPUT_KEY_F1].JustPressed) {
-            //RendererToggleEditorMode();
-        }
-    }
-
-    static auto OnWindowCursorEntered(
-        [[maybe_unused]] GLFWwindow* window,
-        const int32_t entered) -> void {
-
-        auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-        if (entered) {
-            gameHost->OnWindowFocusGained();
-        } else {
-            gameHost->OnWindowFocusLost();
-        }
-    }
-
-    static auto OnWindowMouseMove(
-        [[maybe_unused]] GLFWwindow* window,
-        const double mousePositionX,
-        const double mousePositionY) -> void {
-
-        const auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-
-        const glm::vec2 mousePosition = {mousePositionX, mousePositionY};
-        const auto mousePositionDelta = mousePosition - gameHost->_inputState->MousePosition;
-
-        gameHost->_inputState->MousePositionDelta += mousePositionDelta;
-        gameHost->_inputState->MousePosition = mousePosition;
-    }
-
-    static auto OnWindowMouseClick(
-        [[maybe_unused]] GLFWwindow* window,
-        const int32_t button,
-        const int32_t action,
-        [[maybe_unused]] int32_t modifier) {
-
-        const auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-
-        if (action == GLFW_PRESS)
-        {
-            gameHost->_inputState->MouseButtons[button].JustPressed = true;
-            gameHost->_inputState->MouseButtons[button].IsDown = true;
-        }
-        else if (action == GLFW_RELEASE)
-        {
-            gameHost->_inputState->MouseButtons[button].JustReleased = true;
-            gameHost->_inputState->MouseButtons[button].IsDown = false;
-        }
-    }
-
-    static auto OnWindowMouseScroll(
-        [[maybe_unused]] GLFWwindow* window,
-        const double offsetX,
-        const double offsetY) {
-
-        const auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-        gameHost->_inputState->ScrollDelta += glm::vec2(offsetX, offsetY);
-    }
-
-    static auto OnWindowFramebufferSizeChanged(
-        [[maybe_unused]] GLFWwindow* window,
-        const int32_t width,
-        const int32_t height) -> void {
-
-        auto* gameHost = reinterpret_cast<TGameHost*>(glfwGetWindowUserPointer(window));
-        if (gameHost == nullptr) {
-            TLogger::Fatal("TGameHostAccess::OnWindowKey: window is null");
-            return;
-        }
-
-        gameHost->OnResizeWindowFramebuffer(width, height);
-    }
-};
 
 auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
 
@@ -157,17 +36,17 @@ auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
     }
 
     auto previousTime = TClock::now();
-    while (!glfwWindowShouldClose(_window)) {
+    while (_gameContext->IsRunning) {
         auto currentTime = TClock::now();
         gameContext.DeltaTime = std::chrono::duration<float>(currentTime - previousTime).count();
         previousTime = currentTime;
 
-        glfwPollEvents();
+        HandleEvents();
 
         Update(gameContext);
         Render(renderContext);
 
-        glfwSwapBuffers(_window);
+        SDL_GL_SwapWindow(_window);
     }
 
     Unload();
@@ -179,77 +58,78 @@ auto TGameHost::Initialize() -> bool {
 
     _inputState = new TInputState();
     _controlState = new TControlState();
-    _gameContext = new TGameContext();
 
-    glfwSetErrorCallback([](int32_t errorCode, const char* errorDescription) -> void {
-        TLogger::Error(std::format("Glfw error {} {}", errorCode, errorDescription));
-    });
-    if (glfwInit() == GLFW_FALSE) {
-        TLogger::Error("Unable to initialize glfw");
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+        TLogger::Error("Unable to initialize SDL2");
         return false;
     }
 
+    auto windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
     const auto isWindowWindowed = _windowSettings->WindowStyle == TWindowStyle::Windowed;
-    glfwWindowHint(GLFW_DECORATED, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
-    glfwWindowHint(GLFW_RESIZABLE, isWindowWindowed ? GLFW_TRUE : GLFW_FALSE);
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
-    glfwWindowHint(GLFW_CONTEXT_ROBUSTNESS, GLFW_NO_ROBUSTNESS);
-    if (_windowSettings->IsDebug) {
-        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    if (isWindowWindowed) {
+        windowFlags |= SDL_WINDOW_RESIZABLE;
+    } else {
+        windowFlags |= _windowSettings->WindowStyle == TWindowStyle::FullscreenExclusive
+            ? SDL_WINDOW_FULLSCREEN
+            : SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
-
-    const auto primaryMonitor = glfwGetPrimaryMonitor();
-    if (primaryMonitor == nullptr) {
-        TLogger::Error("Glfw: Unable to get the primary monitor");
-        return false;
-    }
-
-    const auto* primaryMonitorVideoMode = glfwGetVideoMode(primaryMonitor);
-    const auto screenWidth = primaryMonitorVideoMode->width;
-    const auto screenHeight = primaryMonitorVideoMode->height;
 
     const auto windowWidth = _windowSettings->ResolutionWidth;
     const auto windowHeight = _windowSettings->ResolutionHeight;
+    const auto windowLeft = isWindowWindowed ? SDL_WINDOWPOS_CENTERED : 0;
+    const auto windowTop = isWindowWindowed ? SDL_WINDOWPOS_CENTERED : 0;
 
-    const auto monitor = _windowSettings->WindowStyle == TWindowStyle::FullscreenExclusive
-        ? primaryMonitor
-        : nullptr;
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_MINOR_VERSION, 6);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_PROFILE_MASK, SDL_GLprofile::SDL_GL_CONTEXT_PROFILE_CORE);
 
-    _window = glfwCreateWindow(windowWidth, windowHeight, "OpenSpace", monitor, nullptr);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_ACCELERATED_VISUAL, SDL_TRUE);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_DOUBLEBUFFER, SDL_TRUE);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, SDL_TRUE);
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_RELEASE_BEHAVIOR, SDL_GLcontextReleaseFlag::SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
+    auto contextFlags = SDL_GLcontextFlag::SDL_GL_CONTEXT_RESET_ISOLATION_FLAG | SDL_GLcontextFlag::SDL_GL_CONTEXT_ROBUST_ACCESS_FLAG;
+    if (_windowSettings->IsDebug) {
+        contextFlags |= SDL_GLcontextFlag::SDL_GL_CONTEXT_DEBUG_FLAG;
+    }
+    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_FLAGS, contextFlags);
+
+    _window = SDL_CreateWindow(
+        "Tenebrae",
+        windowLeft,
+        windowTop,
+        windowWidth,
+        windowHeight,
+        windowFlags);
     if (_window == nullptr) {
         TLogger::Error("Unable to create window");
         return false;
     }
 
-    glfwSetWindowUserPointer(_window, this);
-
-    int32_t monitorLeft = 0;
-    int32_t monitorTop = 0;
-    glfwGetMonitorPos(primaryMonitor, &monitorLeft, &monitorTop);
-    if (isWindowWindowed) {
-        glfwSetWindowPos(_window, screenWidth / 2 - windowWidth / 2 + monitorLeft, screenHeight / 2 - windowHeight / 2 + monitorTop);
-    } else {
-        glfwSetWindowPos(_window, monitorLeft, monitorTop);
+    _windowContext = SDL_GL_CreateContext(_window);
+    if (_windowContext == nullptr) {
+        SDL_DestroyWindow(_window);
+        _window = nullptr;
+        SDL_Quit();
+        TLogger::Error(std::format("Unable to create context {}", SDL_GetError()));
+        return false;
     }
 
-    glfwSetKeyCallback(_window, TGameHostAccess::OnWindowKey);
-    glfwSetCursorEnterCallback(_window, TGameHostAccess::OnWindowCursorEntered);
-    glfwSetCursorPosCallback(_window, TGameHostAccess::OnWindowMouseMove);
-    glfwSetMouseButtonCallback(_window, TGameHostAccess::OnWindowMouseClick);
-    glfwSetScrollCallback(_window, TGameHostAccess::OnWindowMouseScroll);
-    glfwSetFramebufferSizeCallback(_window, TGameHostAccess::OnWindowFramebufferSizeChanged);
-
-    glfwMakeContextCurrent(_window);
-    if (gladLoadGL(glfwGetProcAddress) == GL_FALSE) {
+    SDL_GL_MakeCurrent(_window, _windowContext);
+    if (gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress) == GL_FALSE) {
         TLogger::Error("Unable to load opengl functions");
         return false;
     }
+
+    _gameContext = new TGameContext {
+        .IsRunning = true,
+        .IsPaused = false,
+        .DeltaTime = 0.0f,
+        .ElapsedTime = 0.0f,
+        .FramebufferSize = { windowWidth, windowHeight },
+        .ScaledFramebufferSize = { windowWidth * _windowSettings->ResolutionScale, windowHeight * _windowSettings->ResolutionScale },
+        .FramebufferResized = true,
+    };
 
     _renderer = new TRenderer();
 
@@ -258,7 +138,7 @@ auto TGameHost::Initialize() -> bool {
 
 auto TGameHost::Load() -> bool {
 
-    if (!_renderer->Load(_)) {
+    if (!_renderer->Load()) {
         TLogger::Error("Unable to load renderer");
         return false;
     }
@@ -274,17 +154,11 @@ auto TGameHost::Unload() -> void {
         _renderer = nullptr;
     }
 
-    glfwSetKeyCallback(_window, nullptr);
-    glfwSetCursorEnterCallback(_window, nullptr);
-    glfwSetCursorPosCallback(_window, nullptr);
-    glfwSetMouseButtonCallback(_window, nullptr);
-    glfwSetScrollCallback(_window, nullptr);
-    glfwSetFramebufferSizeCallback(_window, nullptr);
-
     UnloadGameModule();
 
-    glfwDestroyWindow(_window);
-    glfwTerminate();
+    SDL_GL_DeleteContext(_windowContext);
+    SDL_DestroyWindow(_window);
+    SDL_Quit();
 
     delete _inputState;
     _inputState = nullptr;
@@ -315,6 +189,91 @@ auto TGameHost::Update(TGameContext& gameContext) -> void {
 
     if (_game != nullptr) {
         _game->Update(gameContext);
+    }
+}
+
+auto TGameHost::HandleEvents() -> void {
+    SDL_Event event = {};
+    SDL_PollEvent(&event);
+    if (event.type == SDL_QUIT) {
+        _gameContext->IsRunning = false;
+    }
+
+    if (event.type == SDL_WINDOWEVENT) {
+        if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+            int32_t framebufferWidth = 0;
+            int32_t framebufferHeight = 0;
+            SDL_GL_GetDrawableSize(_window, &framebufferWidth, &framebufferHeight);
+            if (framebufferWidth * framebufferHeight > 0) {
+                OnResizeWindowFramebuffer(framebufferWidth, framebufferHeight);
+            }
+        }
+
+        if (event.window.event == SDL_WINDOWEVENT_ENTER) {
+            OnWindowFocusGained();
+        }
+
+        if (event.window.event == SDL_WINDOWEVENT_LEAVE) {
+            OnWindowFocusLost();
+        }
+    }
+
+    if (event.type == SDL_KEYDOWN) {
+
+        if (event.key.repeat == 1) {
+            return;
+        }
+
+        auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+        _inputState->Keys[inputKey].JustPressed = true;
+        _inputState->Keys[inputKey].IsDown = true;
+
+        if (_inputState->Keys[INPUT_KEY_LEFT].JustPressed) {
+            _gameContext->IsRunning = false;
+        }
+
+        if (_inputState->Keys[INPUT_KEY_F1].JustPressed) {
+            //RendererToggleEditorMode();
+        }
+    }
+
+    if (event.type == SDL_KEYUP) {
+
+        auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+        _inputState->Keys[inputKey].JustReleased = true;
+        _inputState->Keys[inputKey].IsDown = false;
+
+    }
+
+    if (event.type == SDL_TEXTEDITING) {
+
+    }
+
+    if (event.type == SDL_TEXTINPUT) {
+
+    }
+
+    if (event.type == SDL_MOUSEMOTION) {
+
+        const glm::vec2 mousePosition = {event.motion.x, event.motion.y};
+        const auto mousePositionDelta = mousePosition - _inputState->MousePosition;
+
+        _inputState->MousePositionDelta += mousePositionDelta;
+        _inputState->MousePosition = mousePosition;
+    }
+
+    if (event.type == SDL_MOUSEBUTTONDOWN) {
+        _inputState->MouseButtons[event.button.button].JustPressed = true;
+        _inputState->MouseButtons[event.button.button].IsDown = true;
+    }
+
+    if (event.type == SDL_MOUSEBUTTONUP) {
+        _inputState->MouseButtons[event.button.button].JustReleased = true;
+        _inputState->MouseButtons[event.button.button].IsDown = false;
+    }
+
+    if (event.type == SDL_MOUSEWHEEL) {
+        _inputState->ScrollDelta += glm::vec2(event.wheel.mouseX, event.wheel.mouseY);
     }
 }
 
@@ -412,6 +371,9 @@ auto TGameHost::OnResizeWindowFramebuffer(
     const int32_t framebufferWidth,
     const int32_t framebufferHeight) -> void {
 
+    _gameContext->FramebufferSize = glm::vec2(framebufferWidth, framebufferHeight);
+    _gameContext->ScaledFramebufferSize = glm::vec2(framebufferWidth * _windowSettings->ResolutionScale, framebufferHeight * _windowSettings->ResolutionScale);
+    _gameContext->FramebufferResized = true;
 }
 
 auto TGameHost::OnWindowFocusGained() -> void {

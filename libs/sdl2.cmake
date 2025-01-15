@@ -1,0 +1,26 @@
+FetchContent_Declare(
+        SDL2
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+        GIT_TAG release-2.30.10
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+message("Fetching SDL2")
+set(SDL2_DISABLE_INSTALL ON)
+set(SDL2_DISABLE_SDL2MAIN ON)
+set(SDL2_DISABLE_UNINSTALL ON)
+set(SDL_TESTS OFF)
+
+set(SDL_ASAN OFF)
+
+set(SDL_DUMMYVIDEO OFF)
+
+set(SDL_OPENGLES OFF)
+set(SDL_RENDER_METAL OFF)
+set(SDL_RENDER_D3D OFF)
+
+set(SDL_RPI OFF)
+
+set(SDL2IMAGE_INSTALL OFF)
+set(BUILD_SHARED_LIBS FALSE)
+FetchContent_MakeAvailable(SDL2)

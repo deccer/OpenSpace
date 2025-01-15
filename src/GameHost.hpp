@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <string>
 
-struct GLFWwindow;
+struct SDL_Window;
 struct TWindowSettings;
 struct TInputState;
 struct TControlState;
@@ -19,11 +19,10 @@ public:
     auto Run(TWindowSettings* windowSettings) -> void;
 
 private:
-    friend class TGameHostAccess;
-
     auto Initialize() -> bool;
     auto Load() -> bool;
     auto Unload() -> void;
+    auto HandleEvents() -> void;
 
     auto Render(TRenderContext& renderContext) -> void;
     auto Update(TGameContext& gameContext) -> void;
@@ -39,7 +38,8 @@ private:
     TWindowSettings* _windowSettings = nullptr;
     TGameContext* _gameContext = nullptr;
 
-    GLFWwindow* _window = nullptr;
+    SDL_Window* _window = nullptr;
+    void* _windowContext = nullptr;
     IGame* _game = nullptr;
     TModuleHandle _gameModule = nullptr;
     std::string _gameModuleFilePath = {};
