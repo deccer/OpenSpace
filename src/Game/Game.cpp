@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "GameContext.hpp"
 
 #include "../Core/Logger.hpp"
 #include "Scene.hpp"
@@ -16,10 +17,10 @@ auto TGame::Load() -> bool {
     return true;
 }
 
-auto TGame::Update(TGameContext& gameContext) -> void {
-    timer += gameContext.DeltaTime;
+auto TGame::Update(TGameContext* gameContext) -> void {
+    timer += gameContext->DeltaTime;
     if (timer >= duration) {
-        TLogger::Warning(std::format("Hello from Game v12 {}", gameContext.DeltaTime));
+        TLogger::Warning(std::format("Hello from Game v17 {}", gameContext->DeltaTime));
         timer = 0.0f;
     }
 }

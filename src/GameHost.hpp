@@ -9,6 +9,8 @@
 
 struct SDL_Window;
 struct TWindowSettings;
+
+struct TGameContext;
 struct TInputState;
 struct TControlState;
 
@@ -25,7 +27,7 @@ private:
     auto HandleEvents() -> void;
 
     auto Render(TRenderContext& renderContext) -> void;
-    auto Update(TGameContext& gameContext) -> void;
+    auto Update() -> void;
 
     auto LoadGameModule() -> bool;
     auto UnloadGameModule() -> void;
@@ -33,9 +35,11 @@ private:
     auto CheckIfGameModuleNeedsReloading() -> bool;
 #endif
 
+    auto OnResizeWindowFramebuffer(int32_t framebufferWidth, int32_t framebufferHeight) -> void;
     auto OnWindowFocusGained() -> void;
     auto OnWindowFocusLost() -> void;
-    auto OnResizeWindowFramebuffer(int32_t framebufferWidth, int32_t framebufferHeight) -> void;
+    auto MapInputStateToControlState(TInputState* inputState) -> void;
+    auto ResetInputState() -> void;
 
     TWindowSettings* _windowSettings = nullptr;
     TGameContext* _gameContext = nullptr;

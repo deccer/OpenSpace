@@ -5,7 +5,7 @@
 class TGame : public IGame {
 public:
     auto Load() -> bool override;
-    auto Update(TGameContext& gameContext) -> void override;
+    auto Update(TGameContext* gameContext) -> void override;
     auto Unload() -> void override;
 
     auto GetScene() -> TScene* override;

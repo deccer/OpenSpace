@@ -151,6 +151,5 @@ struct TInputState {
     glm::vec2 MousePositionDelta;
     glm::vec2 MousePosition;
     glm::vec2 ScrollDelta;
+    bool IsModified = true;
 };
-
-auto KeyCodeToInputKey(int32_t keyCode) -> int32_t;

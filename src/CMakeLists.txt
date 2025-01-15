@@ -16,7 +16,6 @@ add_subdirectory(Game)
 add_executable(GameHost
     Core/Io.cpp
     Images.cpp
-    Input/Input.cpp
     GameHost.cpp
     Renderer/Renderer.cpp
     Main.cpp
