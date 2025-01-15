@@ -177,6 +177,7 @@ auto TGameHost::Render(TRenderContext& renderContext) -> void {
 
 auto TGameHost::Update(TGameContext& gameContext) -> void {
 
+#ifdef OPENSPACE_HOTRELOAD_GAME_ENABLED
     _gameModuleChangedTimeSinceLastCheck += gameContext.DeltaTime;
     if (_gameModuleChangedTimeSinceLastCheck >= _gameModuleChangedCheckInterval) {
         if (CheckIfGameModuleNeedsReloading()) {
@@ -186,6 +187,7 @@ auto TGameHost::Update(TGameContext& gameContext) -> void {
 
         _gameModuleChangedTimeSinceLastCheck = 0.0f;
     }
+#endif
 
     if (_game != nullptr) {
         _game->Update(gameContext);
@@ -195,6 +197,7 @@ auto TGameHost::Update(TGameContext& gameContext) -> void {
 auto TGameHost::HandleEvents() -> void {
     SDL_Event event = {};
     SDL_PollEvent(&event);
+
     if (event.type == SDL_QUIT) {
         _gameContext->IsRunning = false;
     }
@@ -224,7 +227,7 @@ auto TGameHost::HandleEvents() -> void {
             return;
         }
 
-        auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+        const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
         _inputState->Keys[inputKey].JustPressed = true;
         _inputState->Keys[inputKey].IsDown = true;
 
@@ -239,7 +242,7 @@ auto TGameHost::HandleEvents() -> void {
 
     if (event.type == SDL_KEYUP) {
 
-        auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+        const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
         _inputState->Keys[inputKey].JustReleased = true;
         _inputState->Keys[inputKey].IsDown = false;
 

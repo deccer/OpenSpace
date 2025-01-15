@@ -44,8 +44,10 @@ private:
     TModuleHandle _gameModule = nullptr;
     std::string _gameModuleFilePath = {};
     TFileTime _gameModuleLastModifiedTime = {};
+#ifdef OPENSPACE_HOTRELOAD_GAME_ENABLED
     float _gameModuleChangedCheckInterval = 1.0f;
     float _gameModuleChangedTimeSinceLastCheck = 0.0f;
+#endif
 
     TInputState* _inputState = nullptr;
     TControlState* _controlState = nullptr;

@@ -17,6 +17,7 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(OPENSPACE_USE_PROFILER OFF CACHE BOOL "Use Profiler")
+set(OPENSPACE_HOTRELOAD_GAME_ENABLED OFF CACHE BOOL "Enable Game library hot reload")
 
 add_subdirectory(libs)
 add_subdirectory(src)
