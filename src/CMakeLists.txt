@@ -72,3 +72,8 @@ if(OPENSPACE_USE_PROFILER)
         PRIVATE TracyClient
     )
 endif()
+if(OPENSPACE_HOTRELOAD_GAME_ENABLED)
+    target_compile_definitions(GameHost
+        PRIVATE OPENSPACE_HOTRELOAD_GAME_ENABLED
+    )
+endif()

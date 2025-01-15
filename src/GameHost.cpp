@@ -326,6 +326,7 @@ auto TGameHost::UnloadGameModule() -> void {
     }
 }
 
+#ifdef OPENSPACE_HOTRELOAD_GAME_ENABLED
 auto TGameHost::CheckIfGameModuleNeedsReloading() -> bool {
 
     try {
@@ -369,6 +370,7 @@ auto TGameHost::CheckIfGameModuleNeedsReloading() -> bool {
         return false;
     }
 }
+#endif
 
 auto TGameHost::OnResizeWindowFramebuffer(
     const int32_t framebufferWidth,

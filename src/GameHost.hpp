@@ -29,7 +29,9 @@ private:
 
     auto LoadGameModule() -> bool;
     auto UnloadGameModule() -> void;
+#ifdef OPENSPACE_HOTRELOAD_GAME_ENABLED
     auto CheckIfGameModuleNeedsReloading() -> bool;
+#endif
 
     auto OnWindowFocusGained() -> void;
     auto OnWindowFocusLost() -> void;
