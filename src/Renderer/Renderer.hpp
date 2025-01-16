@@ -1,17 +1,26 @@
 #pragma once
 
-struct TRenderContext {
-
-};
+struct TGameContext;
+struct TRenderContext;
 
 class TScene;
+
+struct ImGuiContext;
 
 class TRenderer {
 public:
     TRenderer();
     virtual ~TRenderer();
 
-    auto Load() -> bool;
-    auto Render(TRenderContext& renderContext, TScene* scene) -> void;
+    auto Load(
+        void* window,
+        void* windowContext) -> bool;
+    auto Render(
+        TGameContext* gameContext,
+        TRenderContext* renderContext,
+        TScene* scene) -> void;
     auto Unload() -> void;
+
+private:
+    ImGuiContext* _imguiContext;
 };

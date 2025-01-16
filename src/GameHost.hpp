@@ -11,6 +11,7 @@ struct SDL_Window;
 struct TWindowSettings;
 
 struct TGameContext;
+struct TRenderContext;
 struct TInputState;
 struct TControlState;
 
@@ -26,7 +27,7 @@ private:
     auto Unload() -> void;
     auto HandleEvents() -> void;
 
-    auto Render(TRenderContext& renderContext) -> void;
+    auto Render() -> void;
     auto Update() -> void;
 
     auto LoadGameModule() -> bool;
@@ -43,6 +44,7 @@ private:
 
     TWindowSettings* _windowSettings = nullptr;
     TGameContext* _gameContext = nullptr;
+    TRenderContext* _renderContext = nullptr;
 
     SDL_Window* _window = nullptr;
     void* _windowContext = nullptr;

@@ -21,13 +21,13 @@ else()
             ${imgui_SOURCE_DIR}/imgui_widgets.cpp
             ${imgui_SOURCE_DIR}/imgui_tables.cpp
             ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp)
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp)
 
         target_include_directories(imgui PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
-            ${glfw_SOURCE_DIR}/include)
+            ${sdl2_SOURCE_DIR}/include)
 
-        target_link_libraries(imgui PRIVATE glfw)
+        target_link_libraries(imgui PUBLIC SDL2::SDL2-static)
     endif()
 endif()

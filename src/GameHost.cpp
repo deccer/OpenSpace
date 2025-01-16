@@ -1,5 +1,6 @@
 #include "GameHost.hpp"
 #include "Game/GameContext.hpp"
+#include "Renderer/RenderContext.hpp"
 #include "WindowSettings.hpp"
 #include "Core/Logger.hpp"
 #include "Input/Input.hpp"
@@ -7,6 +8,7 @@
 
 #include <glad/gl.h>
 #include <SDL2/SDL.h>
+#include <imgui_impl_sdl2.h>
 
 #include <chrono>
 #include <utility>
@@ -137,7 +139,10 @@ auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
         return;
     }
 
-    TRenderContext renderContext = {};
+    if (!Load()) {
+        TLogger::Error("Unable to load GameHost");
+        return;
+    }
 
     if (!std::filesystem::exists(_gameModuleFilePath.data())) {
         TLogger::Error(std::format("Unable to load game module file from {}. It doesn't exist.", _gameModuleFilePath));
@@ -149,11 +154,32 @@ auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
         return;
     }
 
+    std::vector<float> frameTimes(512, 60.0f);
+    auto accumulatedTimeInSeconds = 0.0;
+    auto averageFramesPerSecond = 0.0f;
+    auto updateIntervalInSeconds = 1.0f;
+
     auto previousTime = TClock::now();
     while (_gameContext->IsRunning) {
         auto currentTime = TClock::now();
         _gameContext->DeltaTime = std::chrono::duration<float>(currentTime - previousTime).count();
+        auto framesPerSecond = 1.0f / _gameContext->DeltaTime;
         previousTime = currentTime;
+
+        accumulatedTimeInSeconds += _gameContext->DeltaTime;
+
+        frameTimes[_gameContext->FrameCounter % frameTimes.size()] = framesPerSecond;
+        if (accumulatedTimeInSeconds >= updateIntervalInSeconds) {
+            auto summedFrameTime = 0.0f;
+            for (auto i = 0; i < frameTimes.size(); i++) {
+                summedFrameTime += frameTimes[i];
+            }
+            averageFramesPerSecond = summedFrameTime / frameTimes.size();
+            accumulatedTimeInSeconds = 0.0f;
+        }
+
+        _gameContext->FramesPerSecond = static_cast<float>(framesPerSecond);
+        _gameContext->AverageFramesPerSecond = averageFramesPerSecond;
 
         HandleEvents();
         TInputState inputState = *_inputState;
@@ -164,9 +190,11 @@ auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
         }
 
         Update();
-        Render(renderContext);
+        Render();
 
         SDL_GL_SwapWindow(_window);
+
+        _gameContext->FrameCounter++;
     }
 
     Unload();
@@ -203,12 +231,12 @@ auto TGameHost::Initialize() -> bool {
     SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_PROFILE_MASK, SDL_GLprofile::SDL_GL_CONTEXT_PROFILE_CORE);
 
-    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_ACCELERATED_VISUAL, SDL_TRUE);
+    //SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_ACCELERATED_VISUAL, SDL_TRUE);
     SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_DOUBLEBUFFER, SDL_TRUE);
     SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, SDL_TRUE);
-    SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_RELEASE_BEHAVIOR, SDL_GLcontextReleaseFlag::SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
-    auto contextFlags = SDL_GLcontextFlag::SDL_GL_CONTEXT_RESET_ISOLATION_FLAG | SDL_GLcontextFlag::SDL_GL_CONTEXT_ROBUST_ACCESS_FLAG;
+    //SDL_GL_SetAttribute(SDL_GLattr::SDL_GL_CONTEXT_RELEASE_BEHAVIOR, SDL_GLcontextReleaseFlag::SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
+    auto contextFlags = 0; //SDL_GLcontextFlag::SDL_GL_CONTEXT_RESET_ISOLATION_FLAG | SDL_GLcontextFlag::SDL_GL_CONTEXT_ROBUST_ACCESS_FLAG;
     if (_windowSettings->IsDebug) {
         contextFlags |= SDL_GLcontextFlag::SDL_GL_CONTEXT_DEBUG_FLAG;
     }
@@ -251,6 +279,7 @@ auto TGameHost::Initialize() -> bool {
         .FramebufferResized = true,
     };
 
+    _renderContext = new TRenderContext();
     _renderer = new TRenderer();
 
     return true;
@@ -258,7 +287,7 @@ auto TGameHost::Initialize() -> bool {
 
 auto TGameHost::Load() -> bool {
 
-    if (!_renderer->Load()) {
+    if (!_renderer->Load(static_cast<void*>(_window), _windowContext)) {
         TLogger::Error("Unable to load renderer");
         return false;
     }
@@ -272,6 +301,11 @@ auto TGameHost::Unload() -> void {
         _renderer->Unload();
         delete _renderer;
         _renderer = nullptr;
+    }
+
+    if (_renderContext != nullptr) {
+        delete _renderContext;
+        _renderContext = nullptr;
     }
 
     UnloadGameModule();
@@ -290,9 +324,12 @@ auto TGameHost::Unload() -> void {
     _gameContext = nullptr;
 }
 
-auto TGameHost::Render(TRenderContext& renderContext) -> void {
+auto TGameHost::Render() -> void {
 
-    _renderer->Render(renderContext, _game->GetScene());
+    _renderer->Render(
+        _gameContext,
+        _renderContext,
+        _game->GetScene());
 }
 
 auto TGameHost::Update() -> void {
@@ -316,95 +353,95 @@ auto TGameHost::Update() -> void {
 
 auto TGameHost::HandleEvents() -> void {
     SDL_Event event = {};
-    SDL_PollEvent(&event);
-
-    if (event.type == SDL_QUIT) {
-        _gameContext->IsRunning = false;
-    }
-
-    if (event.type == SDL_WINDOWEVENT) {
-        if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-            int32_t framebufferWidth = 0;
-            int32_t framebufferHeight = 0;
-            SDL_GL_GetDrawableSize(_window, &framebufferWidth, &framebufferHeight);
-            if (framebufferWidth * framebufferHeight > 0) {
-                OnResizeWindowFramebuffer(framebufferWidth, framebufferHeight);
-            }
-        }
-
-        if (event.window.event == SDL_WINDOWEVENT_ENTER) {
-            OnWindowFocusGained();
-        }
-
-        if (event.window.event == SDL_WINDOWEVENT_LEAVE) {
-            OnWindowFocusLost();
-        }
-    }
-
-    if (event.type == SDL_KEYDOWN) {
-
-        if (event.key.repeat == 1) {
-            return;
-        }
-
-        const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
-        _inputState->Keys[inputKey].JustPressed = true;
-        _inputState->Keys[inputKey].IsDown = true;
-        _inputState->IsModified = true;
-
-        if (_inputState->Keys[INPUT_KEY_ESCAPE].JustPressed) {
+    while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        if (event.type == SDL_QUIT) {
             _gameContext->IsRunning = false;
         }
 
-        if (_inputState->Keys[INPUT_KEY_F1].JustPressed) {
-            //RendererToggleEditorMode();
+        if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                int32_t framebufferWidth = 0;
+                int32_t framebufferHeight = 0;
+                SDL_GL_GetDrawableSize(_window, &framebufferWidth, &framebufferHeight);
+                if (framebufferWidth * framebufferHeight > 0) {
+                    OnResizeWindowFramebuffer(framebufferWidth, framebufferHeight);
+                }
+            }
+
+            if (event.window.event == SDL_WINDOWEVENT_ENTER) {
+                OnWindowFocusGained();
+            }
+
+            if (event.window.event == SDL_WINDOWEVENT_LEAVE) {
+                OnWindowFocusLost();
+            }
+        }
+
+        if (event.type == SDL_KEYDOWN) {
+
+            if (event.key.repeat == 1) {
+                return;
+            }
+
+            const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+            _inputState->Keys[inputKey].JustPressed = true;
+            _inputState->Keys[inputKey].IsDown = true;
+            _inputState->IsModified = true;
+
+            if (_inputState->Keys[INPUT_KEY_ESCAPE].JustPressed) {
+                _gameContext->IsRunning = false;
+            }
+
+            if (_inputState->Keys[INPUT_KEY_F1].JustPressed) {
+                //RendererToggleEditorMode();
+            }
+        }
+
+        if (event.type == SDL_KEYUP) {
+
+            const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
+            _inputState->Keys[inputKey].JustReleased = true;
+            _inputState->Keys[inputKey].IsDown = false;
+            _inputState->IsModified = true;
+        }
+
+        if (event.type == SDL_TEXTEDITING) {
+
+        }
+
+        if (event.type == SDL_TEXTINPUT) {
+
+        }
+
+        if (event.type == SDL_MOUSEMOTION) {
+
+            const glm::vec2 mousePosition = {event.motion.x, event.motion.y};
+            const auto mousePositionDelta = mousePosition - _inputState->MousePosition;
+
+            _inputState->MousePositionDelta += mousePositionDelta;
+            _inputState->MousePosition = mousePosition;
+            _inputState->IsModified = true;
+        }
+
+        if (event.type == SDL_MOUSEBUTTONDOWN) {
+            _inputState->MouseButtons[event.button.button].JustPressed = true;
+            _inputState->MouseButtons[event.button.button].IsDown = true;
+            _inputState->IsModified = true;
+        }
+
+        if (event.type == SDL_MOUSEBUTTONUP) {
+            _inputState->MouseButtons[event.button.button].JustReleased = true;
+            _inputState->MouseButtons[event.button.button].IsDown = false;
+            _inputState->IsModified = true;
+        }
+
+        if (event.type == SDL_MOUSEWHEEL) {
+            _inputState->ScrollDelta += glm::vec2(event.wheel.mouseX, event.wheel.mouseY);
+            _inputState->IsModified = true;
         }
     }
-
-    if (event.type == SDL_KEYUP) {
-
-        const auto inputKey = KeyCodeToInputKey(event.key.keysym.sym);
-        _inputState->Keys[inputKey].JustReleased = true;
-        _inputState->Keys[inputKey].IsDown = false;
-        _inputState->IsModified = true;
-    }
-
-    if (event.type == SDL_TEXTEDITING) {
-
-    }
-
-    if (event.type == SDL_TEXTINPUT) {
-
-    }
-
-    if (event.type == SDL_MOUSEMOTION) {
-
-        const glm::vec2 mousePosition = {event.motion.x, event.motion.y};
-        const auto mousePositionDelta = mousePosition - _inputState->MousePosition;
-
-        _inputState->MousePositionDelta += mousePositionDelta;
-        _inputState->MousePosition = mousePosition;
-        _inputState->IsModified = true;
-    }
-
-    if (event.type == SDL_MOUSEBUTTONDOWN) {
-        _inputState->MouseButtons[event.button.button].JustPressed = true;
-        _inputState->MouseButtons[event.button.button].IsDown = true;
-        _inputState->IsModified = true;
-    }
-
-    if (event.type == SDL_MOUSEBUTTONUP) {
-        _inputState->MouseButtons[event.button.button].JustReleased = true;
-        _inputState->MouseButtons[event.button.button].IsDown = false;
-        _inputState->IsModified = true;
-    }
-
-    if (event.type == SDL_MOUSEWHEEL) {
-        _inputState->ScrollDelta += glm::vec2(event.wheel.mouseX, event.wheel.mouseY);
-        _inputState->IsModified = true;
-    }
 }
-
 
 auto TGameHost::LoadGameModule() -> bool {
 
@@ -516,7 +553,22 @@ auto TGameHost::OnWindowFocusLost() -> void {
 
 auto TGameHost::MapInputStateToControlState(TInputState* inputState) -> void {
 
+    _controlState->Fast = inputState->Keys[INPUT_KEY_LEFT_SHIFT];
+    _controlState->Faster = inputState->Keys[INPUT_KEY_LEFT_ALT];
+    _controlState->Slow = inputState->Keys[INPUT_KEY_LEFT_CONTROL];
+
     _controlState->MoveForward = inputState->Keys[INPUT_KEY_W];
+    _controlState->MoveBackward = inputState->Keys[INPUT_KEY_S];
+    _controlState->MoveLeft = inputState->Keys[INPUT_KEY_A];
+    _controlState->MoveRight = inputState->Keys[INPUT_KEY_D];
+    _controlState->MoveUp = inputState->Keys[INPUT_KEY_Q];
+    _controlState->MoveDown = inputState->Keys[INPUT_KEY_Z];
+
+    _controlState->CursorMode = inputState->Keys[INPUT_KEY_LEFT_SHIFT];
+    _controlState->CursorDelta = inputState->MousePositionDelta;
+    _controlState->ToggleMount = inputState->Keys[INPUT_KEY_M];
+
+    _controlState->IsFreeLook = inputState->MouseButtons[INPUT_MOUSE_BUTTON_RIGHT].IsDown;
 }
 
 auto TGameHost::ResetInputState() -> void {
