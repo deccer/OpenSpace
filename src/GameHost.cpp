@@ -456,7 +456,12 @@ auto TGameHost::LoadGameModule() -> bool {
 
     auto createGameDelegate = reinterpret_cast<TCreateGameDelegate*>(GetModuleSymbol(_gameModule, "CreateGame"));
     if (createGameDelegate == nullptr) {
+#if WIN32
+        TLogger::Error(std::format("Unable to load create game delegate: {}", GetLastError()));
+#else
+
         TLogger::Error(std::format("Unable to load create game delegate: {}", dlerror()));
+#endif
         UnloadModule(_gameModule);
         UnloadModule(_gameModule);
         return false;

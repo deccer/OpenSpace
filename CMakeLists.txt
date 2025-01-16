@@ -13,7 +13,13 @@ if(!${MSVC})
     set(CMAKE_CXX_LINKER_LAUNCHER "/usr/bin/ccache")
     set(CMAKE_LINKER_TYPE MOLD)
     #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ftime-report")
+else()
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.12.25835)
+        set(CMAKE_CXX20_STANDARD_COMPILE_OPTION "-std:c++latest")
+        set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION "-std:c++latest")
+    endif()
 endif()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(OPENSPACE_USE_PROFILER OFF CACHE BOOL "Use Profiler")
