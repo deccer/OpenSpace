@@ -38,7 +38,6 @@ target_compile_definitions(GameHost
 )
 
 target_link_libraries(GameHost
-    #PRIVATE glfw
     PRIVATE SDL2::SDL2-static
     PRIVATE glad
     PRIVATE glm
