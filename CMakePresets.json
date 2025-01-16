@@ -2,8 +2,8 @@
    "version": 2,
    "configurePresets": [
       {
-         "name": "MSVC-Debug",
-         "displayName": "MSVC - Debug",
+         "name": "Debug-MSVC",
+         "displayName": "Debug - MSVC",
          "description": "Target Windows with the Visual Studio development environment.",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
@@ -24,8 +24,8 @@
          }
       },
       {
-         "name": "MSVC-Release",
-         "displayName": "MSVC - Release",
+         "name": "Release-MSVC",
+         "displayName": "Release - MSVC",
          "description": "Target Windows with the Visual Studio development environment.",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
@@ -46,8 +46,8 @@
          }
       },
       {
-         "name": "Clang-Debug",
-         "displayName": "Clang - Debug",
+         "name": "Debug-Clang",
+         "displayName": "Debug - Clang",
          "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
@@ -59,8 +59,8 @@
          }
       },
       {
-         "name": "Clang-Release",
-         "displayName": "Clang - Release",
+         "name": "Release-Clang",
+         "displayName": "Release - Clang",
          "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
@@ -72,8 +72,8 @@
          }
       },
       {
-         "name": "Gcc-Debug",
-         "displayName": "Gcc - Debug",
+         "name": "Debug-Gcc",
+         "displayName": "Debug - Gcc",
          "description": "Using compilers: C = /usr/bin/gcc, CXX = /usr/bin/g++",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
@@ -85,8 +85,8 @@
          }
       },
       {
-         "name": "Gcc-Release",
-         "displayName": "Gcc - Release",
+         "name": "Release-Gcc",
+         "displayName": "Release - Gcc",
          "description": "Using compilers: C = /usr/bin/gcc, CXX = /usr/bin/g++",
          "generator": "Ninja",
          "binaryDir": "${sourceDir}/build/${presetName}",
