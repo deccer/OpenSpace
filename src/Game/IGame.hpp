@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Core/Types.hpp"
+
 struct TGameContext;
 
 class TScene;
@@ -11,5 +13,5 @@ struct IGame {
     virtual auto Update(TGameContext* gameContext) -> void = 0;
     virtual auto Unload() -> void = 0;
 
-    virtual auto GetScene() -> TScene* = 0;
+    virtual auto GetScene() -> TReference<TScene> = 0;
 };

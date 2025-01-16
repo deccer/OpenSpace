@@ -312,6 +312,7 @@ auto TGameHost::Unload() -> void {
 
     SDL_GL_DeleteContext(_windowContext);
     SDL_DestroyWindow(_window);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
     SDL_Quit();
 
     delete _inputState;

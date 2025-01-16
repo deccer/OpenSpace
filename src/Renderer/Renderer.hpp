@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Core/Types.hpp"
+
 struct TGameContext;
 struct TRenderContext;
 
@@ -18,7 +20,7 @@ public:
     auto Render(
         TGameContext* gameContext,
         TRenderContext* renderContext,
-        TScene* scene) -> void;
+        TReference<TScene> scene) -> void;
     auto Unload() -> void;
 
 private:

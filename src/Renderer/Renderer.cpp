@@ -61,7 +61,7 @@ auto TRenderer::Unload() -> void {
 auto TRenderer::Render(
     TGameContext* gameContext,
     TRenderContext* renderContext,
-    TScene* scene) -> void {
+    TReference<TScene> scene) -> void {
 
 
     glViewport(0, 0, 1920, 1080);

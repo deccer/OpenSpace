@@ -11,7 +11,7 @@ float duration = 1.0f;
 
 auto TGame::Load() -> bool {
 
-    _scene = new TScene();
+    _scene = CreateReference<TScene>();
 
     TLogger::Warning("Loading Game");
     return true;
@@ -27,11 +27,11 @@ auto TGame::Update(TGameContext* gameContext) -> void {
 
 auto TGame::Unload() -> void {
 
-    delete _scene;
+    _scene.reset();
     TLogger::Warning("Unloading Game");
 }
 
-auto TGame::GetScene() -> TScene* {
+auto TGame::GetScene() -> TReference<TScene> {
     return _scene;
 }
 
