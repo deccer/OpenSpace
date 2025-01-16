@@ -31,4 +31,5 @@ target_link_libraries(Game
     PRIVATE Logger
     PRIVATE glad
     PUBLIC EnTT
+    PUBLIC glm
 )
