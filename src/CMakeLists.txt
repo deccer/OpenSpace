@@ -52,6 +52,7 @@ target_link_libraries(GameHost
     #PRIVATE mimalloc-static
     #PRIVATE Jolt
     PRIVATE mikktspace
+    PRIVATE soloud
 
     PRIVATE Logger
 )
