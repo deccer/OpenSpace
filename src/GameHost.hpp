@@ -44,7 +44,10 @@ private:
 
     TWindowSettings* _windowSettings = nullptr;
     TGameContext* _gameContext = nullptr;
-    TRenderContext* _renderContext = nullptr;
+    TReference<TRenderContext> _renderContext = nullptr;
+    TReference<TRenderer> _renderer = nullptr;
+    TInputState* _inputState = nullptr;
+    TControlState* _controlState = nullptr;
 
     SDL_Window* _window = nullptr;
     void* _windowContext = nullptr;
@@ -56,9 +59,4 @@ private:
     float _gameModuleChangedCheckInterval = 1.0f;
     float _gameModuleChangedTimeSinceLastCheck = 0.0f;
 #endif
-
-    TInputState* _inputState = nullptr;
-    TControlState* _controlState = nullptr;
-
-    TRenderer* _renderer = nullptr;
 };
