@@ -10,6 +10,10 @@
 #include <SDL2/SDL.h>
 #include <imgui_impl_sdl2.h>
 
+#include <soloud.h>
+#include <soloud_speech.h>
+#include <soloud_thread.h>
+
 #include <chrono>
 #include <utility>
 
@@ -279,8 +283,8 @@ auto TGameHost::Initialize() -> bool {
         .FramebufferResized = true,
     };
 
-    _renderContext = new TRenderContext();
-    _renderer = new TRenderer();
+    _renderContext = CreateReference<TRenderContext>();
+    _renderer = CreateReference<TRenderer>();
 
     return true;
 }
@@ -292,6 +296,29 @@ auto TGameHost::Load() -> bool {
         return false;
     }
 
+    SoLoud::Soloud soloud;  // SoLoud engine core
+    SoLoud::Speech speech;  // A sound source (speech, in this case)
+    // Configure sound source
+    speech.setText("This will be the greatest open world space em em oh ever.");
+    speech.setParams(700, 9.0f, 0.6f, 1);
+
+    // initialize SoLoud.
+    soloud.init();
+
+    // Play the sound source (we could do this several times if we wanted)
+    soloud.play(speech);
+
+    // Wait until sounds have finished
+    while (soloud.getActiveVoiceCount() > 0)
+    {
+        // Still going, sleep for a bit
+        SoLoud::Thread::sleep(100);
+    }
+
+    // Clean up SoLoud
+    soloud.deinit();
+
+
     return true;
 }
 
@@ -299,21 +326,13 @@ auto TGameHost::Unload() -> void {
 
     if (_renderer != nullptr) {
         _renderer->Unload();
-        delete _renderer;
-        _renderer = nullptr;
     }
-
+/*
     if (_renderContext != nullptr) {
         delete _renderContext;
         _renderContext = nullptr;
     }
-
-    UnloadGameModule();
-
-    SDL_GL_DeleteContext(_windowContext);
-    SDL_DestroyWindow(_window);
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    SDL_Quit();
+    */
 
     delete _inputState;
     _inputState = nullptr;
@@ -323,6 +342,13 @@ auto TGameHost::Unload() -> void {
 
     delete _gameContext;
     _gameContext = nullptr;
+
+    UnloadGameModule();
+
+    SDL_GL_DeleteContext(_windowContext);
+    SDL_DestroyWindow(_window);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    SDL_Quit();
 }
 
 auto TGameHost::Render() -> void {
