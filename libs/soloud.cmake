@@ -11,7 +11,7 @@ if(NOT soloud_POPULATED)
     message("Fetching soloud")
     FetchContent_MakeAvailable(soloud)
 
-    file(GLOB_RECURSE SOLOUD_AUDIOSOURCE_SRC_FILES ${soloud_SOURCE_DIR}/src/audiosource/*.cpp)
+    file(GLOB_RECURSE SOLOUD_AUDIOSOURCE_SRC_FILES ${soloud_SOURCE_DIR}/src/audiosource/*.cpp ${soloud_SOURCE_DIR}/src/audiosource/*.c)
     file(GLOB SOLOUD_BACKEND_SRC_FILES ${soloud_SOURCE_DIR}/src/backend/sdl2_static/*.cpp)
 
     file(GLOB SOLOUD_CORE_SRC_FILES ${soloud_SOURCE_DIR}/src/core/*.cpp)
