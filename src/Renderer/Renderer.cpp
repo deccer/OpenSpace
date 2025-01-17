@@ -60,7 +60,7 @@ auto TRenderer::Unload() -> void {
 
 auto TRenderer::Render(
     TGameContext* gameContext,
-    TRenderContext* renderContext,
+    TReference<TRenderContext> renderContext,
     TReference<TScene> scene) -> void {
 
 

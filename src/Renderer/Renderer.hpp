@@ -19,7 +19,7 @@ public:
         void* windowContext) -> bool;
     auto Render(
         TGameContext* gameContext,
-        TRenderContext* renderContext,
+        TReference<TRenderContext> renderContext,
         TReference<TScene> scene) -> void;
     auto Unload() -> void;
 
