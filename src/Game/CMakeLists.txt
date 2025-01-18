@@ -1,6 +1,7 @@
 
 add_library(Game SHARED
-    Scene.cpp
+    #Entity.cpp
+    #Scene.cpp
     Game.cpp
 )
 
@@ -30,6 +31,7 @@ target_compile_definitions(Game
 target_link_libraries(Game
     PRIVATE Logger
     PRIVATE glad
+    PRIVATE phmap
     PUBLIC EnTT
     PUBLIC glm
 )

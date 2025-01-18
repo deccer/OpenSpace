@@ -12,9 +12,11 @@
 
 #include <soloud.h>
 #include <soloud_speech.h>
+#include <soloud_wav.h>
 #include <soloud_thread.h>
 
 #include <chrono>
+#include <soloud_file.h>
 #include <utility>
 
 using TCreateGameDelegate = IGame*();
@@ -289,6 +291,9 @@ auto TGameHost::Initialize() -> bool {
     return true;
 }
 
+SoLoud::Soloud g_soloud = {};  // SoLoud engine core
+SoLoud::Wav g_source = {};
+
 auto TGameHost::Load() -> bool {
 
     if (!_renderer->Load(static_cast<void*>(_window), _windowContext)) {
@@ -296,27 +301,31 @@ auto TGameHost::Load() -> bool {
         return false;
     }
 
-    SoLoud::Soloud soloud;  // SoLoud engine core
-    SoLoud::Speech speech;  // A sound source (speech, in this case)
-    // Configure sound source
-    speech.setText("This will be the greatest open world space em em oh ever.");
-    speech.setParams(700, 9.0f, 0.6f, 1);
+    //SoLoud::Soloud soloud = new SoLoud::Soloud();
 
-    // initialize SoLoud.
-    soloud.init();
+    g_soloud.init();
 
-    // Play the sound source (we could do this several times if we wanted)
-    soloud.play(speech);
-
-    // Wait until sounds have finished
-    while (soloud.getActiveVoiceCount() > 0)
-    {
-        // Still going, sleep for a bit
-        SoLoud::Thread::sleep(100);
+    auto result = g_source.load("/home/deccer/Documents/deccer-ambient.mp3");
+    //auto result = source.load("/home/deccer/Storage/Resources/Audio/Saucer_loop.ogg");
+    //auto result = source.load("/home/deccer/Storage/Resources/Audio/sonniss/Detunized - AroundBridges/Bridges-Wind08.wav");
+    //auto result = source.load("/home/deccer/Media/Music/Ambient/Atrium Carceri - 2003 - 2013 - FLAC/2004 - Seishinbyouin/(02) [Atrium Carceri] Illusion Breaks.flac");
+    if (result == SoLoud::SO_NO_ERROR) {
+        g_source.setLooping(true);
+        g_source.setVolume(1.0f);
+        g_soloud.play(g_source);
     }
 
-    // Clean up SoLoud
-    soloud.deinit();
+    //while (g_soloud.getActiveVoiceCount() > 0)
+    //{
+        // Still going, sleep for a bit
+    //    SoLoud::Thread::sleep(100);
+    //}
+
+    // initialize SoLoud.
+
+
+    // Play the sound source (we could do this several times if we wanted)
+
 
 
     return true;

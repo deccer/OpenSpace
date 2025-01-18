@@ -46,6 +46,7 @@ target_link_libraries(GameHost
     PRIVATE stb
     PRIVATE debugbreak
     PRIVATE poolSTL::poolSTL
+    PRIVATE phmap
     #PRIVATE tbb
     PRIVATE fastgltf
     PRIVATE EnTT

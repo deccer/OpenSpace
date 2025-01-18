@@ -2,6 +2,8 @@
 #include "GameContext.hpp"
 
 #include "../Core/Logger.hpp"
+#include <entt/entt.hpp>
+#include "Entity.hpp"
 #include "Scene.hpp"
 
 #include <format>
@@ -23,6 +25,9 @@ auto TGame::Update(TGameContext* gameContext) -> void {
         TLogger::Warning(std::format("Hello from Game v17 {}", gameContext->DeltaTime));
         timer = 0.0f;
     }
+
+    auto entity = _scene->CreateEntity("Foo");
+
 }
 
 auto TGame::Unload() -> void {
