@@ -11,7 +11,7 @@
 float timer = 0.0f;
 float duration = 1.0f;
 
-auto TGame::Load() -> bool {
+auto TGame::Load(const TScoped<TAssetProvider>& assetProvider) -> bool {
 
     _scene = CreateReference<TScene>();
 
@@ -27,7 +27,6 @@ auto TGame::Update(TGameContext* gameContext) -> void {
     }
 
     auto entity = _scene->CreateEntity("Foo");
-
 }
 
 auto TGame::Unload() -> void {

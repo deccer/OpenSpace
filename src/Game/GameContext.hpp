@@ -5,6 +5,8 @@
 struct TGameContext {
     bool IsRunning;
     bool IsPaused;
+    bool IsEditor;
+    bool IsDebugUI;
     float DeltaTime;
     float ElapsedTime;
     float FramesPerSecond;

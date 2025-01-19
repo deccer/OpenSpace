@@ -1,6 +1,7 @@
 #include "GameHost.hpp"
 #include "Game/GameContext.hpp"
 #include "Renderer/RenderContext.hpp"
+#include "Assets/AssetProvider.hpp"
 #include "WindowSettings.hpp"
 #include "Core/Logger.hpp"
 #include "Input/Input.hpp"
@@ -133,6 +134,10 @@ constexpr static auto KeyCodeToInputKey(const int32_t keyCode) -> int32_t {
 
         default: [[unlikely]] std::unreachable();
     }
+}
+
+TGameHost::~TGameHost() {
+
 }
 
 auto TGameHost::Run(TWindowSettings* windowSettings) -> void {
@@ -278,21 +283,26 @@ auto TGameHost::Initialize() -> bool {
     _gameContext = new TGameContext {
         .IsRunning = true,
         .IsPaused = false,
+        .IsEditor = false,
+        .IsDebugUI = false,
         .DeltaTime = 0.0f,
         .ElapsedTime = 0.0f,
-        .FramebufferSize = { windowWidth, windowHeight },
-        .ScaledFramebufferSize = { windowWidth * _windowSettings->ResolutionScale, windowHeight * _windowSettings->ResolutionScale },
+        .FramesPerSecond = 0.0f,
+        .AverageFramesPerSecond = 0.0f,
+        .FrameCounter = 0,
+        .FramebufferSize = glm::vec2{ windowWidth, windowHeight },
+        .ScaledFramebufferSize = glm::vec2{ windowWidth * _windowSettings->ResolutionScale, windowHeight * _windowSettings->ResolutionScale },
         .FramebufferResized = true,
     };
 
-    _renderContext = CreateReference<TRenderContext>();
-    _renderer = CreateReference<TRenderer>();
+    _renderContext = new TRenderContext();
+    _renderer = CreateScoped<TRenderer>();
 
     return true;
 }
 
-SoLoud::Soloud g_soloud = {};  // SoLoud engine core
-SoLoud::Wav g_source = {};
+//SoLoud::Soloud g_soloud = {};  // SoLoud engine core
+//SoLoud::Wav g_source = {};
 
 auto TGameHost::Load() -> bool {
 
@@ -303,17 +313,17 @@ auto TGameHost::Load() -> bool {
 
     //SoLoud::Soloud soloud = new SoLoud::Soloud();
 
-    g_soloud.init();
+    //g_soloud.init();
 
-    auto result = g_source.load("/home/deccer/Documents/deccer-ambient.mp3");
+    //auto result = g_source.load("/home/deccer/Documents/deccer-ambient.mp3");
     //auto result = source.load("/home/deccer/Storage/Resources/Audio/Saucer_loop.ogg");
     //auto result = source.load("/home/deccer/Storage/Resources/Audio/sonniss/Detunized - AroundBridges/Bridges-Wind08.wav");
     //auto result = source.load("/home/deccer/Media/Music/Ambient/Atrium Carceri - 2003 - 2013 - FLAC/2004 - Seishinbyouin/(02) [Atrium Carceri] Illusion Breaks.flac");
-    if (result == SoLoud::SO_NO_ERROR) {
-        g_source.setLooping(true);
-        g_source.setVolume(1.0f);
-        g_soloud.play(g_source);
-    }
+    //if (result == SoLoud::SO_NO_ERROR) {
+//        g_source.setLooping(true);
+//        g_source.setVolume(1.0f);
+//        g_soloud.play(g_source);
+//    }
 
     //while (g_soloud.getActiveVoiceCount() > 0)
     //{
@@ -336,12 +346,11 @@ auto TGameHost::Unload() -> void {
     if (_renderer != nullptr) {
         _renderer->Unload();
     }
-/*
+
     if (_renderContext != nullptr) {
         delete _renderContext;
         _renderContext = nullptr;
     }
-    */
 
     delete _inputState;
     _inputState = nullptr;
@@ -365,7 +374,7 @@ auto TGameHost::Render() -> void {
     _renderer->Render(
         _gameContext,
         _renderContext,
-        _game->GetScene());
+        _game->GetScene().get());
 }
 
 auto TGameHost::Update() -> void {
@@ -483,7 +492,11 @@ auto TGameHost::LoadGameModule() -> bool {
 
     _gameModule = LoadModule(_gameModuleFilePath);
     if (_gameModule == nullptr) {
-        TLogger::Error("Unable to load game library");
+#if WIN32
+        TLogger::Error(std::format("Unable to load game library: {}", GetLastError()));
+#else
+        TLogger::Error(std::format("Unable to load game library: {}", dlerror()));
+#endif
         return false;
     }
 
@@ -494,7 +507,6 @@ auto TGameHost::LoadGameModule() -> bool {
 #if WIN32
         TLogger::Error(std::format("Unable to load create game delegate: {}", GetLastError()));
 #else
-
         TLogger::Error(std::format("Unable to load create game delegate: {}", dlerror()));
 #endif
         UnloadModule(_gameModule);
@@ -503,7 +515,7 @@ auto TGameHost::LoadGameModule() -> bool {
     }
 
     _game = createGameDelegate();
-    if (!_game->Load()) {
+    if (!_game->Load(_assetProvider)) {
         TLogger::Error("Unable to load game");
         return false;
     }

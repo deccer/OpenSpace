@@ -18,7 +18,7 @@ TEntity::TEntity() {
 }
 
 auto TEntity::AddChild(TEntity& entity) -> void {
-    if (static_cast<int32_t>(_entityHandle) != entity.GetHandle())
+    if (_entityHandle != entity.GetHandle())
     {
         entity.GetComponent<TParentComponent>().HasParent = true;
         entity.GetComponent<TParentComponent>().Parent = *this;

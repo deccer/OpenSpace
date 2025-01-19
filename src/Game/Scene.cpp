@@ -1,5 +1,5 @@
-//#include "Scene.hpp"
-//#include "Entity.hpp"
+#include "Scene.hpp"
+#include "Entity.hpp"
 
 TScene::TScene() {
 
@@ -20,8 +20,8 @@ auto TScene::CreateEntity(const std::string& name) -> TEntity {
 
 auto TScene::CreateEntity(const std::string& name, int32_t id) -> TEntity {
 
-    Entity entity = { _registry.create(), this };
-
+    TEntity entity = { _registry.create(), this };
+/*
     entity.AddComponent<TTransformComponent>();
     entity.AddComponent<TParentComponent>();
     entity.AddComponent<TVisibilityComponent>();
@@ -32,17 +32,17 @@ auto TScene::CreateEntity(const std::string& name, int32_t id) -> TEntity {
 
     _entitiesIDMap[id] = entity.GetID();
     _entitiesNameMap[entityName] = entity.GetName();
-
+*/
     return entity;
-
 }
 
 auto TScene::DestroyEntity(TEntity entity) -> TEntity {
 
-    return nullptr;
+    return TEntity();
 }
 
 auto TScene::EntityExists(entt::hashed_string name) -> bool {
 
-    return _entitiesIDMap.find(name) != _entitiesIDMap.end();
+    //return _entitiesIDMap.find(name) != _entitiesIDMap.end();
+    return true;
 }

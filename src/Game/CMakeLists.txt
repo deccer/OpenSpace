@@ -1,7 +1,7 @@
 
 add_library(Game SHARED
-    #Entity.cpp
-    #Scene.cpp
+    Entity.cpp
+    Scene.cpp
     Game.cpp
 )
 

@@ -13,8 +13,8 @@ auto Image::FreeImage(void* pixels) -> void {
 }
 
 auto Image::LoadImageFromMemory(
-    std::byte* encodedData,
-    size_t encodedDataSize,
+    const std::byte* encodedData,
+    const size_t encodedDataSize,
     int32_t* width,
     int32_t* height,
     int32_t* components) -> unsigned char* {

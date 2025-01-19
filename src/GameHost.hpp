@@ -10,15 +10,18 @@
 struct SDL_Window;
 struct TWindowSettings;
 
-struct TGameContext;
+struct TGameHostContext;
 struct TRenderContext;
 struct TInputState;
 struct TControlState;
 
+class TAssetProvider;
+
 using TFileTime = std::filesystem::file_time_type;
 
-class TGameHost {
+class TGameHost final {
 public:
+    ~TGameHost();
     auto Run(TWindowSettings* windowSettings) -> void;
 
 private:
@@ -43,9 +46,10 @@ private:
     auto ResetInputState() -> void;
 
     TWindowSettings* _windowSettings = nullptr;
-    TGameContext* _gameContext = nullptr;
-    TReference<TRenderContext> _renderContext = nullptr;
-    TReference<TRenderer> _renderer = nullptr;
+    TGameContext* _gameContext;
+    TRenderContext* _renderContext;
+    TScoped<TRenderer> _renderer;
+    TScoped<TAssetProvider> _assetProvider;
     TInputState* _inputState = nullptr;
     TControlState* _controlState = nullptr;
 

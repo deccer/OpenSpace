@@ -4,25 +4,33 @@
 
 struct TGameContext;
 struct TRenderContext;
+struct ImGuiContext;
 
 class TScene;
 
-struct ImGuiContext;
-
-class TRenderer {
+class TRenderer final {
 public:
     TRenderer();
-    virtual ~TRenderer();
+    ~TRenderer();
 
     auto Load(
         void* window,
         void* windowContext) -> bool;
     auto Render(
-        TGameContext* gameContext,
-        TReference<TRenderContext> renderContext,
-        TReference<TScene> scene) -> void;
+        const TGameContext* gameContext,
+        const TRenderContext* renderContext,
+        const TScene* scene) -> void;
     auto Unload() -> void;
 
 private:
-    ImGuiContext* _imguiContext;
+    void* _window = nullptr;
+    void* _windowContext = nullptr;
+    ImGuiContext* _imguiContext = nullptr;
+
+    auto RenderImGui(
+        const TGameContext* gameContext,
+        const TRenderContext* renderContext,
+        const TScene* scene) -> void;
+    auto LoadImGui() -> bool;
+    auto UnloadImGui() -> void;
 };
