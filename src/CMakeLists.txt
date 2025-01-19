@@ -18,6 +18,7 @@ add_executable(GameHost
     Images.cpp
     Assets/AssetProvider.cpp
     GameHost.cpp
+    Renderer/RHI/RHI.cpp
     Renderer/Renderer.cpp
     Main.cpp
 )
