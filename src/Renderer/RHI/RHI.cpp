@@ -1,5 +1,6 @@
 #include "RHI.hpp"
 #include "../../Core/Profiler.hpp"
+#include "../../Core/Logger.hpp"
 #include "../../Images.hpp"
 
 #include <expected>
@@ -13,6 +14,8 @@
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL
 #include <stb_include.h>
+
+namespace Rhi {
 
 std::vector<TTexture> g_textures;
 TTextureId g_textureCounter = TTextureId::Invalid;
@@ -734,7 +737,6 @@ auto PopDebugGroup() -> void {
     glPopDebugGroup();
 }
 
-
 auto CreateBuffer(
     const std::string_view label,
     const int64_t sizeInBytes,
@@ -822,13 +824,13 @@ auto TPipeline::BindTextureAndSampler(
 
 auto TPipeline::BindImage(
     const uint32_t bindingIndex,
-    const uint32_t texture,
+    const uint32_t image,
     const int32_t level,
     const int32_t layer,
     const TMemoryAccess memoryAccess,
     const TFormat format) -> void {
 
-    glBindImageTexture(bindingIndex, texture, level, GL_TRUE, layer, MemoryAccessToGL(memoryAccess), FormatToGL(format));
+    glBindImageTexture(bindingIndex, image, level, GL_TRUE, layer, MemoryAccessToGL(memoryAccess), FormatToGL(format));
 }
 
 auto TPipeline::InsertMemoryBarrier(const TMemoryBarrierMask memoryBarrierMask) -> void {
@@ -1666,9 +1668,13 @@ auto TComputePipeline::Dispatch(
     glDispatchCompute(workGroupSizeX, workGroupSizeY, workGroupSizeZ);
 }
 
-auto RhiInitialize() -> void {
+auto Initialize() -> void {
     g_samplers.reserve(128);
     g_textures.reserve(16384);
+
+    TLogger::Info(std::format("GL Vendor: {}", reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
+    TLogger::Info(std::format("GL Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+    TLogger::Info(std::format("GL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION))));
 
     glCreateVertexArrays(1, &g_defaultInputLayout);
     SetDebugLabel(g_defaultInputLayout, GL_VERTEX_ARRAY, "InputLayout-Default");
@@ -1678,10 +1684,12 @@ auto RhiInitialize() -> void {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
+    glClearColor(0.06f, 0.05f, 0.07f, 1.0f);
 }
 
-auto RhiShutdown() -> void {
+auto Shutdown() -> void {
     DeleteTextures();
     glDeleteVertexArrays(1, &g_defaultInputLayout);
+}
+
 }

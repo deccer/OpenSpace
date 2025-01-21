@@ -33,7 +33,7 @@ auto TRenderer::Load(
         return false;
     }
 
-    RhiInitialize();
+    Rhi::Initialize();
 
     return true;
 }
@@ -41,7 +41,7 @@ auto TRenderer::Load(
 auto TRenderer::Unload() -> void {
 
     UnloadImGui();
-    RhiShutdown();
+    Rhi::Shutdown();
 }
 
 auto TRenderer::Render(
