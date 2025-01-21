@@ -53,11 +53,11 @@ auto TLogger::Log(TLogLevel logLevel, const std::string_view message) -> void {
         return;
     }
 
-    std::time_t time = std::time(nullptr);
-    std::tm localTime = *std::localtime(&time);
+    const auto time = std::time(nullptr);
+    const auto localTime = *std::localtime(&time);
 
     std::ostringstream oss;
     oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
 
-    std::print("[{0}] [{1}] {2}!\n", oss.str(), LogLevelToString(logLevel), message);
+    std::print("[{0}] [{1}] {2}\n", oss.str(), LogLevelToString(logLevel), message);
 }
