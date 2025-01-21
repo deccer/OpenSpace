@@ -3,6 +3,7 @@
 #include "Core/Module.hpp"
 #include "Game/IGame.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Assets/AssetStorage.hpp"
 
 #include <filesystem>
 #include <string>
@@ -14,8 +15,6 @@ struct TGameHostContext;
 struct TRenderContext;
 struct TInputState;
 struct TControlState;
-
-class TAssetProvider;
 
 using TFileTime = std::filesystem::file_time_type;
 
@@ -49,7 +48,7 @@ private:
     TGameContext* _gameContext;
     TRenderContext* _renderContext;
     TScoped<TRenderer> _renderer;
-    TScoped<TAssetProvider> _assetProvider;
+    TScoped<TAssetStorage> _assetStorage;
     TInputState* _inputState = nullptr;
     TControlState* _controlState = nullptr;
 

@@ -1,7 +1,7 @@
 #include "GameHost.hpp"
 #include "Game/GameContext.hpp"
 #include "Renderer/RenderContext.hpp"
-#include "Assets/AssetProvider.hpp"
+#include "Assets/AssetStorage.hpp"
 #include "WindowSettings.hpp"
 #include "Core/Logger.hpp"
 #include "Input/Input.hpp"
@@ -311,6 +311,8 @@ auto TGameHost::Load() -> bool {
         return false;
     }
 
+    _assetStorage = CreateScoped<TAssetStorage>();
+
     //SoLoud::Soloud soloud = new SoLoud::Soloud();
 
     //g_soloud.init();
@@ -515,7 +517,7 @@ auto TGameHost::LoadGameModule() -> bool {
     }
 
     _game = createGameDelegate();
-    if (!_game->Load(_assetProvider)) {
+    if (!_game->Load(_assetStorage.get())) {
         TLogger::Error("Unable to load game");
         return false;
     }

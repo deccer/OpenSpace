@@ -11,9 +11,17 @@
 float timer = 0.0f;
 float duration = 1.0f;
 
-auto TGame::Load(const TScoped<TAssetProvider>& assetProvider) -> bool {
+auto TGame::Load(IAssetImporter* assetImporter) -> bool {
 
     _scene = CreateReference<TScene>();
+
+    const auto modelResult = assetImporter->ImportModel("Test", "/home/deccer/Code/scenes/DamagedHelmet/DamagedHelmet.gltf");
+    if (!modelResult) {
+        return false;
+    }
+
+    auto model = *modelResult;
+    TLogger::Info(std::format("Loaded Model: {}", model));
 
     TLogger::Warning("Loading Game");
     return true;

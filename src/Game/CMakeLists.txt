@@ -7,6 +7,7 @@ add_library(Game SHARED
 
 add_dependencies(Game
     Logger
+    Assets
 )
 
 set_target_properties(Game PROPERTIES PREFIX "")
@@ -30,8 +31,9 @@ target_compile_definitions(Game
 
 target_link_libraries(Game
     PRIVATE Logger
+    PRIVATE Assets
     PRIVATE glad
-    PRIVATE phmap
+    PUBLIC phmap
     PUBLIC EnTT
     PUBLIC glm
 )

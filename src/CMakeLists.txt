@@ -8,6 +8,9 @@ add_library(Logger SHARED
     Core/Logger.cpp
 )
 
+# ---- ASSETS ----
+add_subdirectory(Assets)
+
 # ---- GAME ----
 add_subdirectory(Game)
 
@@ -16,7 +19,6 @@ add_subdirectory(Game)
 add_executable(GameHost
     Core/Io.cpp
     Images.cpp
-    Assets/AssetProvider.cpp
     GameHost.cpp
     Renderer/RHI/RHI.cpp
     Renderer/Renderer.cpp
@@ -25,6 +27,7 @@ add_executable(GameHost
 add_dependencies(GameHost
     CopyData
     Logger
+    Assets
     Game
 )
 
@@ -50,7 +53,6 @@ target_link_libraries(GameHost
     PRIVATE poolSTL::poolSTL
     PRIVATE phmap
     #PRIVATE tbb
-    PRIVATE fastgltf
     PRIVATE EnTT
     #PRIVATE mimalloc-static
     #PRIVATE Jolt
@@ -58,6 +60,7 @@ target_link_libraries(GameHost
     PRIVATE soloud
 
     PRIVATE Logger
+    PRIVATE Assets
 )
 
 if(UNIX AND NOT APPLE)

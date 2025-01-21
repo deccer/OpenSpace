@@ -6,7 +6,7 @@ class TGame final : public IGame {
 public:
     ~TGame() override = default;
 
-    auto Load(const TScoped<TAssetProvider>& assetProvider) -> bool override;
+    auto Load(IAssetImporter* assetImporter) -> bool override;
     auto Update(TGameContext* gameContext) -> void override;
     auto Unload() -> void override;
 
