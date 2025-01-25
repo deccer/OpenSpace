@@ -486,6 +486,9 @@ auto TGameHost::LoadGameModule() -> bool {
         return false;
     }
 
+    auto& model = _assetStorage->GetAssetModel("Test");
+    auto& xx = _assetStorage->GetAssetMesh("Test-mesh-0");
+
     TLogger::Info("Game loaded");
 
     return true;

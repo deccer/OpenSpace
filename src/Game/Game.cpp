@@ -2,9 +2,10 @@
 #include "GameContext.hpp"
 
 #include "../Core/Logger.hpp"
-#include <entt/entt.hpp>
 #include "Entity.hpp"
 #include "Scene.hpp"
+
+#include "Components/TransformComponent.hpp"
 
 #include <format>
 
@@ -15,8 +16,9 @@ auto TGame::Load(IAssetImporter* assetImporter) -> bool {
 
     _scene = CreateReference<TScene>();
 
-    const auto modelResult = assetImporter->ImportModel("Test", "/home/deccer/Code/scenes/DamagedHelmet/DamagedHelmet.gltf");
+    const auto modelResult = assetImporter->ImportModel("Test", "data/Default/SM_Deccer_Cubes_Textured.gltf");
     if (!modelResult) {
+        TLogger::Error(modelResult.error());
         return false;
     }
 
@@ -30,11 +32,12 @@ auto TGame::Load(IAssetImporter* assetImporter) -> bool {
 auto TGame::Update(TGameContext* gameContext) -> void {
     timer += gameContext->DeltaTime;
     if (timer >= duration) {
-        TLogger::Warning(std::format("Hello from Game v17 {}", gameContext->DeltaTime));
+        TLogger::Warning(std::format("Hello from Game {}", gameContext->DeltaTime));
         timer = 0.0f;
     }
 
-    auto entity = _scene->CreateEntity("Foo");
+    //auto entity = _scene->CreateEntity("Foo");
+    //entity.AddComponent<TTransformComponent>();
 }
 
 auto TGame::Unload() -> void {
