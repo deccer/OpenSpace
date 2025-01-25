@@ -92,7 +92,7 @@ public:
 
     auto ImportModel(
         const std::string& modelName,
-        const std::filesystem::path& filePath) -> std::expected<std::string, std::string>;
+        const std::filesystem::path& filePath) -> std::expected<TAssetModel, std::string>;
 private:
     auto LoadImages(
         const fastgltf::Asset& fgAsset,
@@ -110,7 +110,7 @@ private:
     auto LoadMeshes(
         const fastgltf::Asset& fgAsset,
         TAssetModel& assetModel) -> void;
-    auto LoadNodes(
+    static auto LoadNodes(
         const fastgltf::Asset& fgAsset,
         TAssetModel& assetModel) -> void;
 
@@ -139,7 +139,7 @@ auto TAssetStorage::GetAssetMesh(const std::string& assetMeshName) -> TAssetMesh
 
 auto TAssetStorage::ImportModel(
     const std::string& modelName,
-    const std::filesystem::path& filePath) const -> std::expected<std::string, std::string> {
+    const std::filesystem::path& filePath) const -> std::expected<TAssetModel, std::string> {
 
     return _implementation->ImportModel(modelName, filePath);
 }
@@ -396,10 +396,10 @@ auto TAssetStorage::Implementation::LoadNodes(
 
         assetNode.Name = GetSafeResourceName(baseName.data(), fgNode.name.data(), "node", nodeId++);
 
-        auto& trs = std::get<fastgltf::TRS>(fgNode.transform);
-        assetNode.LocalPosition = glm::make_vec3(trs.translation.data());;
-        assetNode.LocalRotation = glm::quat{trs.rotation[3], trs.rotation[0], trs.rotation[1], trs.rotation[2]};
-        assetNode.LocalScale = glm::make_vec3(trs.scale.data());
+        const auto& [translation, rotation, scale] = std::get<fastgltf::TRS>(fgNode.transform);
+        assetNode.LocalPosition = glm::make_vec3(translation.data());;
+        assetNode.LocalRotation = glm::quat{rotation[3], rotation[0], rotation[1], rotation[2]};
+        assetNode.LocalScale = glm::make_vec3(scale.data());
 
         if (fgNode.meshIndex && !meshNames.empty()) {
             size_t meshId = *fgNode.meshIndex;
@@ -442,7 +442,7 @@ auto TAssetStorage::Implementation::GetAssetMesh(const std::string& assetMeshNam
 
 auto TAssetStorage::Implementation::ImportModel(
     const std::string& modelName,
-    const std::filesystem::path& filePath) -> std::expected<std::string, std::string> {
+    const std::filesystem::path& filePath) -> std::expected<TAssetModel, std::string> {
 
     if (!std::filesystem::exists(filePath)) {
         return std::unexpected(std::format("Unable to load model '{}'. File '{}' does not exist", modelName, filePath.string()));
@@ -507,5 +507,5 @@ auto TAssetStorage::Implementation::ImportModel(
 
     _models[modelName] = assetModel;
 
-    return assetModel.Name;
+    return assetModel;
 }

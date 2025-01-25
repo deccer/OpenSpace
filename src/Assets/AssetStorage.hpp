@@ -14,7 +14,7 @@ public:
 
 	auto ImportModel(
 		const std::string& modelName,
-		const std::filesystem::path& filePath) const -> std::expected<std::string, std::string> override;
+		const std::filesystem::path& filePath) const -> std::expected<TAssetModel, std::string> override;
 
 private:
 	class Implementation;

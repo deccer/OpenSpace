@@ -23,7 +23,7 @@ auto TGame::Load(IAssetImporter* assetImporter) -> bool {
     }
 
     auto model = *modelResult;
-    TLogger::Info(std::format("Loaded Model: {}", model));
+    TLogger::Info(std::format("Loaded Model: {}", model.Name));
 
     TLogger::Warning("Loading Game");
     return true;
