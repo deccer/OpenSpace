@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../Core/Types.hpp"
-
 #include "AssetImporter.hpp"
 #include "AssetProvider.hpp"
 
@@ -10,8 +9,8 @@ public:
 	TAssetStorage();
 	~TAssetStorage();
 
-	auto GetAssetModel(const std::string& assetName) -> std::shared_ptr<TAssetModel> override;
-	auto GetAssetMesh(const std::string& assetMeshName) -> std::shared_ptr<void> override;
+	auto GetAssetModel(const std::string& assetName) -> TAssetModel& override;
+	auto GetAssetMesh(const std::string& assetMeshName) -> TAssetMesh& override;
 
 	auto ImportModel(
 		const std::string& modelName,

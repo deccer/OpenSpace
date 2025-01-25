@@ -11,8 +11,8 @@ enum class TAssetMaterialChannelType {
 
 struct TAssetMaterialChannel {
     TAssetMaterialChannelType Type;
-    std::string TextureName;
     std::string SamplerName;
+    std::string TextureName;
 };
 
 struct TAssetMaterial {
@@ -23,13 +23,14 @@ struct TAssetMaterial {
     TAssetMaterialChannel EmissiveChannel;
     TAssetMaterialChannel ArmChannel;
     TAssetMaterialChannel OcclusionChannel;
-    TAssetMaterialChannel RoughnessChannel;
-    TAssetMaterialChannel MetalnessChannel;
-    bool IsArmSeparateChannels; // if true, use Occlusion/Roughness/Metalness-Channel, else ArmChannel
+    TAssetMaterialChannel MetallicRoughnessChannel;
+    bool IsArmPacked; // if true, use Occlusion/MetallicRoughness-Channel, else ArmChannel
     glm::vec4 BaseColor;
     float NormalStrength = 1.0f;
-    float Metalness = 0.0f;
+    float Metallic = 0.0f;
     float Roughness = 0.0f;
-    float EmissiveFactor = 1.0f;
+    glm::vec3 EmissiveFactor = glm::vec3(1.0f);
     float IndexOfRefraction = 1.0f;
+    bool IsUnlit = false;
+    bool IsDoubleSided = false;
 };
