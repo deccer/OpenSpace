@@ -29,11 +29,22 @@ target_compile_definitions(Game
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
+target_precompile_headers(Game
+    PUBLIC <entt/entity/registry.hpp>
+    PUBLIC <entt/entity/entity.hpp>
+    PUBLIC <filesystem>
+    PUBLIC <glm/mat4x4.hpp>
+    PUBLIC <glm/gtc/quaternion.hpp>
+    PUBLIC <glm/vec2.hpp>
+    PUBLIC <glm/vec3.hpp>
+    PUBLIC <glm/vec4.hpp>
+    PUBLIC <string>
+)
+
 target_link_libraries(Game
     PRIVATE Logger
     PRIVATE Assets
     PRIVATE glad
-    PUBLIC phmap
     PUBLIC EnTT
     PUBLIC glm
 )

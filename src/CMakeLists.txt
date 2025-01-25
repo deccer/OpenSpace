@@ -42,6 +42,22 @@ target_compile_definitions(GameHost
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
+target_precompile_headers(GameHost
+    PUBLIC <chrono>
+    PUBLIC <cstdint>
+    PUBLIC <entt/entity/registry.hpp>
+    PUBLIC <entt/entity/entity.hpp>
+    PUBLIC <filesystem>
+    PUBLIC <glm/mat4x4.hpp>
+    PUBLIC <glm/gtc/quaternion.hpp>
+    PUBLIC <glm/vec2.hpp>
+    PUBLIC <glm/vec3.hpp>
+    PUBLIC <glm/vec4.hpp>
+    PUBLIC <memory>
+    PUBLIC <string>
+    PUBLIC <utility>
+)
+
 target_link_libraries(GameHost
     PRIVATE SDL2::SDL2-static
     PRIVATE glad

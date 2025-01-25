@@ -18,9 +18,24 @@ target_compile_definitions(Assets
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
+target_precompile_headers(Assets
+    PUBLIC <filesystem>
+    #PUBLIC <glm/mat4x4.hpp>
+    #PUBLIC <glm/vec2.hpp>
+    #PUBLIC <glm/vec3.hpp>
+    #PUBLIC <glm/vec4.hpp>
+    PUBLIC <memory>
+    PUBLIC <optional>
+    PUBLIC <ranges>
+    PUBLIC <string>
+    PUBLIC <vector>
+)
+
 target_link_libraries(Assets
     PUBLIC Logger
     PUBLIC phmap
     PUBLIC glm
+    PUBLIC poolSTL::poolSTL
+    PUBLIC tbb
     PRIVATE fastgltf
 )
