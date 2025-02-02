@@ -41,7 +41,7 @@ target_link_libraries(HowToScript
     PRIVATE fastgltf
     PRIVATE EnTT
     PRIVATE mimalloc-static
-    PRIVATE Jolt
+    #PRIVATE Jolt
     PRIVATE mikktspace
 )
 
