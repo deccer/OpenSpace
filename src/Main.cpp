@@ -12,6 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <cassert>
+#include <cstdlib>
 #include <chrono>
 #include <thread>
 #include <vector>
@@ -147,8 +148,8 @@ auto MapInputStateToControlState(
     controlState.MoveBackward = inputState.Keys[INPUT_KEY_S];    
     controlState.MoveLeft = inputState.Keys[INPUT_KEY_A];
     controlState.MoveRight = inputState.Keys[INPUT_KEY_D];
-    controlState.MoveUp = inputState.Keys[INPUT_KEY_Q];
-    controlState.MoveDown = inputState.Keys[INPUT_KEY_Z];
+    controlState.MoveUp = inputState.Keys[INPUT_KEY_SPACE];
+    controlState.MoveDown = inputState.Keys[INPUT_KEY_C];
 
     controlState.CursorMode = inputState.Keys[INPUT_KEY_LEFT_SHIFT];
     controlState.CursorDelta = inputState.MousePositionDelta;
@@ -187,7 +188,13 @@ auto main(
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    auto isZink = std::getenv("GALLIUM_DRIVER");
+    if (isZink == nullptr) {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    } else {
+        spdlog::info("Zink detected");
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
