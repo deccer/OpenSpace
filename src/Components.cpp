@@ -3,6 +3,73 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
+auto TComponentTransformComposite::GetGlobalTransform() const -> glm::mat4 {
+    return GlobalTransform;
+}
+
+auto TComponentTransformComposite::GetGlobalPosition() const -> glm::vec3 {
+    return GlobalPosition;
+}
+
+auto TComponentTransformComposite::GetGlobalOrientation() const -> glm::quat {
+    return GlobalOrientation;
+}
+
+auto TComponentTransformComposite::GetGlobalScale() const -> glm::vec3 {
+    return GlobalScale;
+}
+
+auto TComponentTransformComposite::GetLocalTransform() const -> glm::mat4 {
+    return LocalTransform;
+}
+
+auto TComponentTransformComposite::GetLocalPosition() const -> glm::vec3 {
+    return LocalPosition;
+}
+
+auto TComponentTransformComposite::GetLocalOrientation() const -> glm::quat {
+    return LocalOrientation;
+}
+
+auto TComponentTransformComposite::GetLocalScale() const -> glm::vec3 {
+    return LocalScale;
+}
+
+auto TComponentTransformComposite::SetGlobalTransform(const glm::mat4& globalTransform) -> void {
+    GlobalTransform = globalTransform;
+}
+
+auto TComponentTransformComposite::SetGlobalPosition(const glm::vec3& position) -> void {
+    GlobalPosition = position;
+}
+
+auto TComponentTransformComposite::SetGlobalOrientation(const glm::quat& orientation) -> void {
+    GlobalOrientation = orientation;
+}
+
+auto TComponentTransformComposite::SetGlobalScale(const glm::vec3& scale) -> void {
+    GlobalScale = scale;
+}
+
+auto TComponentTransformComposite::SetLocalTransform(const glm::mat4& localTransform) -> void {
+    LocalTransform = localTransform;
+}
+
+auto TComponentTransformComposite::SetLocalPosition(const glm::vec3& position) -> void {
+    LocalPosition = position;
+    IsDirty = true;
+}
+
+auto TComponentTransformComposite::SetLocalOrientation(const glm::quat& orientation) -> void {
+    LocalOrientation = glm::normalize(orientation);
+    IsDirty = true;
+}
+
+auto TComponentTransformComposite::SetLocalScale(const glm::vec3& scale) -> void {
+    LocalScale = scale;
+    IsDirty = true;
+}
+
 // EntityChangeParent(registry, g_playerEntity, g_Ship) -> move player into ship
 // EntityChangeParent(registry, g_playerEntity, g_RootEntity) -> move player out of ship into world
 
@@ -35,17 +102,19 @@ auto EntityGetGlobalTransform(entt::registry& registry, entt::entity entity) -> 
     auto parentTransform = glm::mat4(1.0f);
     if (registry.any_of<TComponentChildOf>(entity)) {
         auto& parentComponent = registry.get<TComponentChildOf>(entity);
-        parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
+        if (parentComponent.Parent != entt::null) {
+            parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
 
-        glm::vec3 parentPosition;
-        glm::quat parentOrientation;
-        glm::vec3 parentScale;
-        glm::vec3 parentSkew;
-        glm::vec4 parentPerspective;
+            glm::vec3 parentPosition;
+            glm::quat parentOrientation;
+            glm::vec3 parentScale;
+            glm::vec3 parentSkew;
+            glm::vec4 parentPerspective;
 
-        glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
+            glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
 
-        parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
+            parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
+        }
     }
 
     auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);

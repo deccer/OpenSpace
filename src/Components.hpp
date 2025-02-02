@@ -51,6 +51,43 @@ struct TComponentScale : public glm::vec3
     TComponentScale(glm::vec3&& m) : glm::vec3(std::move(m)) {}
 };
 
+struct TComponentTransformComposite {
+    bool IsDirty;
+    bool IsDirtyGlobal;
+
+    glm::mat4 LocalTransform;
+    glm::mat4 GlobalTransform;
+    glm::mat4 PreviousTransform;
+
+    glm::vec3 GlobalPosition;
+    glm::quat GlobalOrientation;
+    glm::vec3 GlobalScale;
+
+    glm::vec3 LocalPosition;
+    glm::quat LocalOrientation;
+    glm::vec3 LocalScale;
+
+    auto GetGlobalTransform() const -> glm::mat4;
+    auto GetGlobalPosition() const -> glm::vec3;
+    auto GetGlobalOrientation() const -> glm::quat;
+    auto GetGlobalScale() const -> glm::vec3;
+
+    auto GetLocalTransform() const -> glm::mat4;
+    auto GetLocalPosition() const -> glm::vec3;
+    auto GetLocalOrientation() const -> glm::quat;
+    auto GetLocalScale() const -> glm::vec3;
+
+    auto SetGlobalTransform(const glm::mat4& globalTransform) -> void;
+    auto SetGlobalPosition(const glm::vec3& position) -> void;
+    auto SetGlobalOrientation(const glm::quat& orientation) -> void;
+    auto SetGlobalScale(const glm::vec3& scale) -> void;
+    
+    auto SetLocalTransform(const glm::mat4& localTransform) -> void;
+    auto SetLocalPosition(const glm::vec3& position) -> void;
+    auto SetLocalOrientation(const glm::quat& orientation) -> void;
+    auto SetLocalScale(const glm::vec3& scale) -> void;
+};
+
 struct TComponentTransform : public glm::mat4x4
 {
     using glm::mat4x4::mat4x4;

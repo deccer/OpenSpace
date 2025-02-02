@@ -32,7 +32,7 @@ struct TAssetRawImageData {
     TAssetImageDataType ImageDataType = {};
 };
 
-std::unordered_map<std::string, TAsset> g_assets = {};
+std::unordered_map<std::string, TAssetModel> g_assetModels = {};
 std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
 std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerDates = {};
 std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
@@ -49,7 +49,7 @@ auto GetSafeResourceName(
            : std::format("{}-{}", baseName, text);
 }
 
-auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -58,7 +58,7 @@ auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::Textu
     return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
 }
 
-auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -67,7 +67,7 @@ auto GetImageIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::Norma
     return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
 }
 
-auto GetSamplerIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -76,7 +76,7 @@ auto GetSamplerIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::Tex
     return fgTexture.samplerIndex;
 }
 
-auto GetSamplerIndex(fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -95,6 +95,68 @@ auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageDataType
     }
 
     return TAssetImageDataType::Uncompressed;
+}
+
+constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
+    if (!magFilter) {
+        return TAssetSamplerMagFilter::Linear;
+    }
+
+    switch (*magFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMagFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMagFilter::Nearest;
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ConvertMinFilter(std::optional<fastgltf::Filter> minFilter) -> TAssetSamplerMinFilter {
+    if (!minFilter) {
+        return TAssetSamplerMinFilter::Linear;
+    }
+
+    switch (*minFilter) {
+        case fastgltf::Filter::Linear: return TAssetSamplerMinFilter::Linear;
+        case fastgltf::Filter::Nearest: return TAssetSamplerMinFilter::Nearest;
+        case fastgltf::Filter::LinearMipMapNearest: return TAssetSamplerMinFilter::LinearMipMapNearest;
+        case fastgltf::Filter::NearestMipMapNearest: return TAssetSamplerMinFilter::NearestMipMapNearest;
+        case fastgltf::Filter::LinearMipMapLinear: return TAssetSamplerMinFilter::LinearMipMapLinear;
+        case fastgltf::Filter::NearestMipMapLinear: return TAssetSamplerMinFilter::NearestMipMapLinear;
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
+    switch (wrapMode) {
+        case fastgltf::Wrap::ClampToEdge: return TAssetSamplerWrapMode::ClampToEdge;
+        case fastgltf::Wrap::MirroredRepeat: return TAssetSamplerWrapMode::MirroredRepeat;
+        case fastgltf::Wrap::Repeat: return TAssetSamplerWrapMode::Repeat;
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ToString(std::optional<fastgltf::Filter> filter) -> std::string {
+    if (!filter) {
+        return "L";
+    }
+
+    switch (*filter) {
+        case fastgltf::Filter::Linear: return "L";
+        case fastgltf::Filter::Nearest: return "N";
+        case fastgltf::Filter::LinearMipMapNearest: return "LMN";
+        case fastgltf::Filter::NearestMipMapNearest: return "NMN";
+        case fastgltf::Filter::LinearMipMapLinear: return "LML";
+        case fastgltf::Filter::NearestMipMapLinear: return "NML";
+        default: std::unreachable();
+    }
+}
+
+constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
+    switch (wrapMode) {
+        case fastgltf::Wrap::ClampToEdge: return "C2E";
+        case fastgltf::Wrap::MirroredRepeat: return "MR";
+        case fastgltf::Wrap::Repeat: return "R";
+        default: std::unreachable();
+    }
 }
 
 auto CreateAssetRawImageData(
@@ -116,9 +178,13 @@ auto CreateAssetRawImageData(
     };
 }
 
-auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fgAsset, const std::filesystem::path& filePath) -> void {
+auto LoadImages(
+    std::string_view assetModelName,
+    TAssetModel& assetModel,
+    const fastgltf::Asset& fgAsset,
+    const std::filesystem::path& filePath) -> void {
 
-    asset.Images.resize(fgAsset.images.size());
+    assetModel.Images.resize(fgAsset.images.size());
 
     std::vector<TAssetImageData> assetImages;
     assetImages.resize(fgAsset.images.size());
@@ -134,7 +200,7 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
 
         const auto imageData = [&]{
 
-            auto imageName = GetSafeResourceName(modelName.data(), fgImage.name.data(), "image", imageIndex);
+            auto imageName = GetSafeResourceName(assetModelName.data(), fgImage.name.data(), "image", imageIndex);
             if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
                 auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
                 auto filePathParent = filePath.parent_path();
@@ -187,74 +253,14 @@ auto LoadImages(const std::string& modelName, TAsset& asset, fastgltf::Asset& fg
 
     for(auto i = 0; i < assetImages.size(); ++i) {
         auto& assetImage = assetImages[i];
-        asset.Images[i] = assetImage.Name;
+        assetModel.Images[i] = assetImage.Name;
         g_assetImageDates[assetImage.Name] = std::move(assetImage);
     }
 }
 
-constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
-    if (!magFilter) {
-        return TAssetSamplerMagFilter::Linear;
-    }
-
-    switch (*magFilter) {
-        case fastgltf::Filter::Linear: return TAssetSamplerMagFilter::Linear;
-        case fastgltf::Filter::Nearest: return TAssetSamplerMagFilter::Nearest;
-        default: std::unreachable();
-    }
-}
-
-constexpr auto ConvertMinFilter(std::optional<fastgltf::Filter> minFilter) -> TAssetSamplerMinFilter {
-    if (!minFilter) {
-        return TAssetSamplerMinFilter::Linear;
-    }
-
-    switch (*minFilter) {
-        case fastgltf::Filter::Linear: return TAssetSamplerMinFilter::Linear;
-        case fastgltf::Filter::Nearest: return TAssetSamplerMinFilter::Nearest;
-        case fastgltf::Filter::LinearMipMapNearest: return TAssetSamplerMinFilter::LinearMipMapNearest;
-        case fastgltf::Filter::NearestMipMapNearest: return TAssetSamplerMinFilter::NearestMipMapNearest;
-        case fastgltf::Filter::LinearMipMapLinear: return TAssetSamplerMinFilter::LinearMipMapLinear;
-        case fastgltf::Filter::NearestMipMapLinear: return TAssetSamplerMinFilter::NearestMipMapLinear;
-        default: std::unreachable();
-    }    
-}
-
-constexpr auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
-    switch (wrapMode) {
-        case fastgltf::Wrap::ClampToEdge: return TAssetSamplerWrapMode::ClampToEdge;
-        case fastgltf::Wrap::MirroredRepeat: return TAssetSamplerWrapMode::MirroredRepeat;
-        case fastgltf::Wrap::Repeat: return TAssetSamplerWrapMode::Repeat;
-        default: std::unreachable();
-    }
-}
-
-constexpr auto ToString(std::optional<fastgltf::Filter> filter) -> std::string {
-    if (!filter) {
-        return "L";
-    }
-
-    switch (*filter) {
-        case fastgltf::Filter::Linear: return "L";
-        case fastgltf::Filter::Nearest: return "N";
-        case fastgltf::Filter::LinearMipMapNearest: return "LMN";
-        case fastgltf::Filter::NearestMipMapNearest: return "NMN";
-        case fastgltf::Filter::LinearMipMapLinear: return "LML";
-        case fastgltf::Filter::NearestMipMapLinear: return "NML";
-        default: std::unreachable();
-    }    
-}
-
-constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
-    switch (wrapMode) {
-        case fastgltf::Wrap::ClampToEdge: return "C2E";
-        case fastgltf::Wrap::MirroredRepeat: return "MR";
-        case fastgltf::Wrap::Repeat: return "R";
-        default: std::unreachable();
-    }
-}
-
-auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
+auto LoadSamplers(
+    TAssetModel& asset,
+    const fastgltf::Asset& fgAsset) -> void {
 
     const auto samplerIndices = std::ranges::iota_view{IndexZero, fgAsset.samplers.size()};
     asset.Samplers.resize(fgAsset.samplers.size());
@@ -285,7 +291,10 @@ auto LoadSamplers(const std::string& assetName, TAsset& asset, fastgltf::Asset& 
     });
 }
 
-auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset& fgAsset) -> void {
+auto LoadMaterials(
+    std::string_view assetModelName,
+    TAssetModel& asset,
+    const fastgltf::Asset& fgAsset) -> void {
 
     const auto materialIndices = std::ranges::iota_view{IndexZero, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
@@ -302,7 +311,7 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
         const auto& fgMaterial = fgAsset.materials[materialIndex];
         auto& material = assetMaterials[materialIndex];
 
-        material.Name = GetSafeResourceName(assetName.data(), fgMaterial.name.data(), "material", materialIndex);
+        material.Name = GetSafeResourceName(assetModelName.data(), fgMaterial.name.data(), "material", materialIndex);
 
         auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
         auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
@@ -353,32 +362,29 @@ auto LoadMaterials(const std::string& assetName, TAsset& asset, fastgltf::Asset&
     }
 }
 
-auto LoadMesh(
-    std::string_view assetName,
+auto LoadMeshes(
     const fastgltf::Asset& fgAsset,
-    TAsset& asset,
-    size_t meshIndex,
-    size_t primitiveIndex,
-    size_t assetGlobalPrimitiveIndex,
-    const glm::mat4x4& initialTransform) -> void {
+    TAssetModel& assetModel) -> void {
 
+    /*
     auto& primitive = fgAsset.meshes[meshIndex].primitives[primitiveIndex];
     if (!primitive.indicesAccessor.has_value() || primitive.findAttribute("POSITION") == primitive.attributes.end()) {
         return;
     }
 
-    auto primitiveName = GetSafeResourceName(assetName.data(), fgAsset.meshes[meshIndex].name.data(), std::format("mesh-{}-primitive", meshIndex).data(), primitiveIndex);
+    auto primitiveName = GetSafeResourceName(assetModelName.data(), fgAsset.meshes[meshIndex].name.data(), std::format("mesh-{}-primitive", meshIndex).data(), primitiveIndex);
     
     TAssetMeshData assetMeshData;
     assetMeshData.Name = primitiveName;
-    assetMeshData.MaterialIndex = primitive.materialIndex;
-    assetMeshData.InitialTransform = initialTransform;
+    assetMeshData.MaterialName = primitive.materialIndex.has_value()
+        ? assetModel.Materials[primitive.materialIndex.value()]
+        : "default-material-0";
 
     auto& indices = fgAsset.accessors[primitive.indicesAccessor.value()];
     assetMeshData.Indices.resize(indices.count);
     fastgltf::copyFromAccessor<uint32_t>(fgAsset, indices, assetMeshData.Indices.data());
 
-    auto& positions = fgAsset.accessors[primitive.findAttribute("POSITION")->accessorIndex];
+    const auto& positions = fgAsset.accessors[primitive.findAttribute("POSITION")->accessorIndex];
     assetMeshData.Positions.resize(positions.count);
     fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, assetMeshData.Positions.data());
 
@@ -392,6 +398,8 @@ auto LoadMesh(
         auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
         assetMeshData.Uvs.resize(uv0s.count);
         fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, assetMeshData.Uvs.data());
+    } else {
+        assetMeshData.Uvs.resize(positions.count);
     }
 
     if (auto* tangentAttribute = primitive.findAttribute("TANGENT"); tangentAttribute != primitive.attributes.end()) {
@@ -403,56 +411,160 @@ auto LoadMesh(
         std::fill_n(assetMeshData.Tangents.begin(), assetMeshData.Positions.size(), glm::vec4{1.0f});
     }
 
-    asset.Meshes[assetGlobalPrimitiveIndex++] = primitiveName;
+    assetModel.Meshes[assetGlobalPrimitiveIndex++] = primitiveName;
     g_assetMeshDates[primitiveName] = std::move(assetMeshData);
+    */
+
+    struct TFlatPrimitive {
+        size_t PrimitiveId;
+        size_t MeshId;
+        std::optional<size_t> MaterialId;
+        std::string Name;
+    };
+
+    auto totalPrimitiveCount = 0uz;
+    for (size_t meshId = 0; meshId < fgAsset.meshes.size(); ++meshId) {
+        totalPrimitiveCount += fgAsset.meshes[meshId].primitives.size();
+    }
+
+    std::vector<TFlatPrimitive> flatPrimitives;
+    flatPrimitives.reserve(totalPrimitiveCount);
+
+    size_t primitiveId = 0;
+    for (size_t meshId = 0; meshId < fgAsset.meshes.size(); ++meshId) {
+        const auto& fgMesh = fgAsset.meshes[meshId];
+        for (size_t primitiveIndex = 0; primitiveIndex < fgMesh.primitives.size(); ++primitiveIndex) {
+            flatPrimitives.push_back(TFlatPrimitive{
+                .PrimitiveId = primitiveIndex,
+                .MeshId = meshId,
+                .MaterialId = fgMesh.primitives[primitiveIndex].materialIndex,
+                .Name = GetSafeResourceName(assetModel.Name.data(), nullptr, "mesh", primitiveId++)
+            });
+        }
+    }
+
+    assetModel.Meshes.resize(flatPrimitives.size());
+    auto meshes = std::vector<TAssetMeshData>(flatPrimitives.size(), TAssetMeshData());
+
+    for (size_t primitiveIndex = 0; primitiveIndex < flatPrimitives.size(); ++primitiveIndex) {
+        const auto& flatPrimitive = flatPrimitives[primitiveIndex];
+        const auto& fgPrimitive = fgAsset.meshes[flatPrimitive.MeshId].primitives[flatPrimitive.PrimitiveId];
+        assetModel.Meshes[primitiveIndex] = flatPrimitive.Name;
+
+        auto& mesh = meshes[primitiveIndex];
+        mesh.Name = flatPrimitive.Name;
+        mesh.MaterialName = flatPrimitive.MaterialId.has_value()
+            ? assetModel.Materials[flatPrimitive.MaterialId.value()]
+            : "default-material-0";
+
+        auto& indices = fgAsset.accessors[fgPrimitive.indicesAccessor.value()];
+        mesh.Indices.resize(indices.count);
+        fastgltf::copyFromAccessor<uint32_t>(fgAsset, indices, mesh.Indices.data());
+
+        auto& positions = fgAsset.accessors[fgPrimitive.findAttribute("POSITION")->accessorIndex];
+        mesh.Positions.resize(positions.count);
+        fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, mesh.Positions.data());
+        if (auto* normalsAttribute = fgPrimitive.findAttribute("NORMAL"); normalsAttribute != fgPrimitive.attributes.end()) {
+            auto& normals = fgAsset.accessors[normalsAttribute->accessorIndex];
+            mesh.Normals.resize(normals.count);
+            fastgltf::copyFromAccessor<glm::vec3>(fgAsset, normals, mesh.Normals.data());
+        } else {
+            mesh.Normals.resize(mesh.Positions.size());
+            std::fill_n(mesh.Normals.data(), mesh.Positions.size(), glm::vec3(0.5f, 0.5f, 1.0f));
+        }
+
+        if (auto* uv0Attribute = fgPrimitive.findAttribute("TEXCOORD_0"); uv0Attribute != fgPrimitive.attributes.end()) {
+            auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
+            mesh.Uvs.resize(uv0s.count);
+            fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, mesh.Uvs.data());
+        } else {
+            mesh.Uvs.resize(mesh.Positions.size());
+            std::fill_n(mesh.Uvs.begin(), mesh.Positions.size(), glm::vec2(0.0f, 0.0f));
+        }
+
+        if (auto* tangentAttribute = fgPrimitive.findAttribute("TANGENT"); tangentAttribute != fgPrimitive.attributes.end()) {
+            auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
+            mesh.Tangents.resize(tangents.count);
+            fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, mesh.Tangents.data());
+        } else  {
+            mesh.Tangents.resize(mesh.Positions.size());
+            std::fill_n(mesh.Tangents.begin(), mesh.Positions.size(), glm::vec4{1.0f});
+        }
+    }
+
+    for (const auto& mesh : meshes) {
+        g_assetMeshDates[mesh.Name] = mesh;
+    }
 }
 
-auto LoadNode(
-    const fastgltf::Asset& asset,
-    TAsset& assetScene,
-    size_t nodeIndex,
-    glm::mat4 parentTransform,
-    std::vector<std::pair<size_t, size_t>>& meshOffsets) -> void {
+auto LoadNodes(
+    const fastgltf::Asset& fgAsset,
+    TAssetModel& assetModel) -> void {
 
-    auto& node = asset.nodes[nodeIndex];
+    using TParseNodeDelegate = std::function<void(
+        std::string_view,
+        uint32_t,
+        const fastgltf::Node&,
+        const std::vector<std::string>&,
+        const std::optional<std::vector<fastgltf::Node>>&,
+        TAssetModelNode&)>;
 
-    glm::mat4 transform{1.0};
+    TParseNodeDelegate parseNode = [&](
+        std::string_view baseName,
+        uint32_t nodeId,
+        const fastgltf::Node& fgNode,
+        const std::vector<std::string>& meshNames,
+        const std::optional<std::vector<fastgltf::Node>>& allNodes,
+        TAssetModelNode& assetNode) -> void {
 
-    if (auto* trs = std::get_if<fastgltf::TRS>(&node.transform))
-    {
-        auto rotation = glm::quat{trs->rotation[3], trs->rotation[0], trs->rotation[1], trs->rotation[2]};
-        auto scale = glm::make_vec3(trs->scale.data());
-        auto translation = glm::make_vec3(trs->translation.data());
+        assetNode.Name = GetSafeResourceName(baseName.data(), fgNode.name.data(), "node", nodeId++);
 
-        auto rotationMatrix = glm::mat4_cast(rotation);
+        const auto& [translation, rotation, scale] = std::get<fastgltf::TRS>(fgNode.transform);
+        assetNode.LocalPosition = glm::make_vec3(translation.data());;
+        assetNode.LocalRotation = glm::quat{rotation[3], rotation[0], rotation[1], rotation[2]};
+        assetNode.LocalScale = glm::make_vec3(scale.data());
 
-        // T * R * S
-        transform = glm::scale(glm::translate(glm::mat4(1.0f), translation) * rotationMatrix, scale);
-    }
-    else if (auto* mat = std::get_if<fastgltf::math::fmat4x4>(&node.transform))
-    {
-        const auto& m = *mat;
-        transform = glm::make_mat4x4(m.data());
-    }
+        if (fgNode.meshIndex && !meshNames.empty()) {
+            size_t meshId = *fgNode.meshIndex;
+            if (meshId < meshNames.size()) {
+                assetNode.MeshName = meshNames[meshId];
+            } else {
+                assetNode.MeshName = std::nullopt;
+            }
+        } else {
+            assetNode.MeshName = std::nullopt;
+        }
 
-    if (node.meshIndex.has_value()) {
-        assetScene.Instances.emplace_back(TAssetInstanceData{
-            .WorldMatrix = transform,
-            .MeshIndex = node.meshIndex.value()
-        });
-    }
+        if (!fgNode.children.empty() && allNodes) {
+            for (size_t childIndex : fgNode.children) {
+                if (childIndex < allNodes->size()) {
+                    const auto& childNode = (*allNodes)[childIndex];
+                    TAssetModelNode childAssetNode;
+                    parseNode(baseName, nodeId, childNode, meshNames, allNodes, childAssetNode);
+                    assetNode.Children.push_back(std::move(childAssetNode));
+                }
+            }
+        }
+    };
 
-    for (auto childNodeIndex : node.children) {
-        LoadNode(asset, assetScene, childNodeIndex, transform, meshOffsets);
+    uint32_t nodeId = 0;
+
+    for (const auto& nodeIndex : fgAsset.scenes[0].nodeIndices) {
+
+        const auto& fgNode = fgAsset.nodes[nodeIndex];
+
+        TAssetModelNode rootNode;
+        parseNode(assetModel.Name, nodeId, fgNode, assetModel.Meshes, fgAsset.nodes, rootNode);
+        assetModel.Hierarchy.push_back(std::move(rootNode));
     }
 }
 
-auto LoadAssetFromFile(
-    const std::string& assetName,
-    const std::filesystem::path& filePath) -> std::expected<TAsset, std::string> {
+auto LoadAssetModelFromFile(
+    const std::string& assetModelName,
+    const std::filesystem::path& filePath) -> std::expected<TAssetModel, std::string> {
 
     if (!std::filesystem::exists(filePath)) {
-        return std::unexpected(std::format("Unable to load asset. File '{}' does not exist", filePath.string()));
+        return std::unexpected(std::format("Unable to load asset '{}'. File '{}' does not exist", assetModelName, filePath.string()));
     }
 
     constexpr auto parserOptions =
@@ -464,6 +576,7 @@ auto LoadAssetFromFile(
         fastgltf::Extensions::KHR_texture_transform |
         fastgltf::Extensions::KHR_texture_basisu |
         fastgltf::Extensions::MSFT_texture_dds |
+        fastgltf::Extensions::KHR_materials_pbrSpecularGlossiness |
         fastgltf::Extensions::KHR_materials_specular |
         fastgltf::Extensions::KHR_materials_ior |
         fastgltf::Extensions::KHR_materials_iridescence |
@@ -472,6 +585,7 @@ auto LoadAssetFromFile(
         fastgltf::Extensions::KHR_materials_clearcoat |
         fastgltf::Extensions::KHR_materials_emissive_strength |
         fastgltf::Extensions::KHR_materials_sheen |
+        fastgltf::Extensions::KHR_draco_mesh_compression |
         fastgltf::Extensions::KHR_materials_unlit;
     fastgltf::Parser parser(parserOptions);
 
@@ -484,7 +598,8 @@ auto LoadAssetFromFile(
         fastgltf::Options::DontRequireValidAssetMember |
         fastgltf::Options::AllowDouble |
         fastgltf::Options::LoadExternalBuffers |
-        fastgltf::Options::LoadExternalImages;
+        fastgltf::Options::LoadExternalImages |
+        fastgltf::Options::DecomposeNodeMatrices;
     const auto parentPath = filePath.parent_path();
     auto loadResult = parser.loadGltf(dataResult.get(), parentPath, gltfOptions);
     if (loadResult.error() != fastgltf::Error::None)
@@ -494,12 +609,14 @@ auto LoadAssetFromFile(
 
     auto& fgAsset = loadResult.get();
 
-    TAsset asset = {};
+    TAssetModel assetModel = {};
+    assetModel.Name = assetModelName;
 
-    LoadImages(assetName, asset, fgAsset, filePath);
-    LoadSamplers(assetName, asset, fgAsset);
-    LoadMaterials(assetName, asset, fgAsset);
+    LoadImages(assetModelName, assetModel, fgAsset, filePath);
+    LoadSamplers(assetModel, fgAsset);
+    LoadMaterials(assetModelName, assetModel, fgAsset);
 
+    /*
     std::vector<std::pair<size_t, size_t>> meshOffsets;
     meshOffsets.resize(fgAsset.meshes.size());
 
@@ -508,52 +625,50 @@ auto LoadAssetFromFile(
     for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
         primitiveCount += fgAsset.meshes[meshIndex].primitives.size();
     }
+    assetModel.Meshes.resize(primitiveCount);
+    */
 
-    asset.Meshes.resize(primitiveCount);
+    LoadMeshes(fgAsset, assetModel);
 
+    /*
     auto assetGlobalPrimitiveIndex = 0u;
     for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
-        meshOffsets[meshIndex].first = asset.Meshes.size();
+        meshOffsets[meshIndex].first = assetModel.Meshes.size();
         meshOffsets[meshIndex].second = fgAsset.meshes[meshIndex].primitives.size();
         for (auto primitiveIndex = 0; primitiveIndex < fgAsset.meshes[meshIndex].primitives.size(); primitiveIndex++) {
-            LoadMesh(assetName, fgAsset, asset, meshIndex, primitiveIndex, assetGlobalPrimitiveIndex++, glm::mat4(1.0f));
+            LoadMesh(assetModelName, fgAsset, assetModel, meshIndex, primitiveIndex, assetGlobalPrimitiveIndex++);
         }
     }
+    */
 
-    const auto& defaultScene = fgAsset.scenes[fgAsset.defaultScene.value()];
-    std::for_each(poolstl::execution::par,
-                  defaultScene.nodeIndices.begin(),
-                  defaultScene.nodeIndices.end(),
-                  [&](size_t nodeIndex) -> void {
-                      LoadNode(fgAsset, asset, nodeIndex, glm::mat4(1.0f), meshOffsets);
-                  });
+    LoadNodes(fgAsset, assetModel);
 
-    return asset;
+    return assetModel;
 }
 
-auto AddAssetFromFile(
+auto AddAssetModelFromFile(
     const std::string& assetName,
     const std::filesystem::path& filePath) -> void {
 
-    auto assetResult = LoadAssetFromFile(assetName, filePath);
+    auto assetResult = LoadAssetModelFromFile(assetName, filePath);
     if (!assetResult) {
         spdlog::error(assetResult.error());
         return;
     }
 
-    g_assets[assetName] = std::move(*assetResult);
+    g_assetModels[assetName] = std::move(*assetResult);
 }
 
-auto GetAssets() -> std::unordered_map<std::string, TAsset>& {
-    return g_assets;
+auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>& {
+    return g_assetModels;
 }
 
-auto GetAsset(const std::string& assetName) -> TAsset& {
-    return g_assets[assetName];
+auto GetAssetModel(const std::string& assetName) -> TAssetModel& {
+    return g_assetModels[assetName];
 }
 
 auto IsAssetLoaded(const std::string& assetName) -> bool {
-    return g_assets.contains(assetName);
+    return g_assetModels.contains(assetName);
 }
 
 auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData& {
@@ -573,7 +688,7 @@ auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
 }
 
 auto AddImage(
-    std::string imageName,
+    const std::string& imageName,
     const std::filesystem::path& filePath) -> void {
 
     int32_t width = 0;
@@ -670,7 +785,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         meshData->Tangents[index] = glm::vec4(glm::normalize(t), sign);
     };
 
-    SMikkTSpaceInterface interface = {
+    auto interface = SMikkTSpaceInterface{
         .m_getNumFaces = getNumFaces,
         .m_getNumVerticesOfFace = getNumVerticesOfFace,
         .m_getPosition = getPosition,
@@ -679,7 +794,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         .m_setTSpaceBasic = setTSpaceBasic,
     };
 
-    SMikkTSpaceContext context = {
+    auto context = SMikkTSpaceContext{
         .m_pInterface = &interface,
         .m_pUserData = &assetMeshData
     };
@@ -688,7 +803,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
 }
 
 auto CreateUvSphereMeshData(
-    std::string name,
+    const std::string& name,
     float radius,
     int32_t rings,
     int32_t segments) -> TAssetMeshData {
@@ -702,7 +817,7 @@ auto CreateUvSphereMeshData(
     assetMeshData.Tangents.resize(rings * segments * 4);
 
     auto index = 0;
-    const auto pi = glm::pi<float>();
+    constexpr auto pi = glm::pi<float>();
 
     for (auto ring = 0; ring <= rings; ++ring) {
 
@@ -760,8 +875,7 @@ auto CreateUvSphereMeshData(
         }
     }
 
-    assetMeshData.InitialTransform = glm::mat4(1.0f);
-    assetMeshData.MaterialIndex = 0;
+    assetMeshData.MaterialName = std::nullopt;
 
     CalculateTangents(assetMeshData);
 
@@ -783,8 +897,8 @@ auto CreateCuboid(
 
     TAssetMeshData assetMeshData;
     assetMeshData.Name = name;
-    assetMeshData.MaterialIndex = 0;
-    assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfHeight, 0));
+    assetMeshData.MaterialName = std::nullopt;
+    //assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfHeight, 0));
 
     std::size_t vertOffset = 0;
 
@@ -794,8 +908,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix/((float)segmentsX - 1.0f));
-            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
+            uv.x = (static_cast<float>(ix)/(static_cast<float>(segmentsX) - 1.0f));
+            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
 
             glm::vec3 position;
             position.x = uv.x * width - halfWidth;
@@ -829,8 +943,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsZ; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix / ((float)segmentsZ - 1.0f));
-            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
+            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f));
+            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
 
             glm::vec3 position;
             position.x = halfWidth;
@@ -864,8 +978,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsZ; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix / ((float)segmentsZ - 1.0f));
-            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
+            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f));
+            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
 
             glm::vec3 position;
             position.x = -halfWidth;
@@ -899,8 +1013,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix / ((float)segmentsX - 1.0f));
-            uv.y = 1.0f - ((float)iy / ((float)segmentsY - 1.0f));
+            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f));
+            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
 
             glm::vec3 position;
             position.x = uv.x * -width + halfWidth;
@@ -934,8 +1048,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = ((float)ix / ((float)segmentsX - 1.0f));
-            uv.y = 1.f - ((float)iy / ((float)segmentsZ - 1.0f));
+            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f));
+            uv.y = 1.f - (static_cast<float>(iy) / (static_cast<float>(segmentsZ) - 1.0f));
 
             glm::vec3 position;
             position.x = uv.x * width - halfWidth;
@@ -1010,21 +1124,24 @@ auto CreateCuboid(
     uint32_t segmentsZ,
     const std::string& materialName) -> void {
 
-    TAsset cuboid = {};
+    TAssetModel cuboid = {};
     cuboid.Materials.push_back(materialName);
     cuboid.Meshes.push_back(name);
-    cuboid.Instances.push_back(TAssetInstanceData{
-        .WorldMatrix = glm::mat4(1.0f),
-        .MeshIndex = 0,
+    cuboid.Hierarchy.push_back(TAssetModelNode{
+        .Name = name,
+        .LocalPosition = glm::vec3(0.0f, 0.0f, 0.0f),
+        .LocalRotation = glm::identity<glm::quat>(),
+        .LocalScale = glm::vec3(1.0f),
+        .MeshName = name,
     });
    
-    g_assets[name] = std::move(cuboid);
+    g_assetModels[name] = std::move(cuboid);
     g_assetMeshDates[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
 }
 
-auto AddAsset(const std::string& assetName, const TAsset& asset) -> void {
-    if (!g_assets.contains(assetName)) {
-        g_assets[assetName] = std::move(asset);
+auto AddAssetModel(const std::string& assetName, const TAssetModel& asset) -> void {
+    if (!g_assetModels.contains(assetName)) {
+        g_assetModels[assetName] = std::move(asset);
     }
 }
 

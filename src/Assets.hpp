@@ -13,6 +13,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace Assets {
 
@@ -94,27 +95,34 @@ struct TAssetMeshData {
     std::vector<glm::vec2> Uvs;
     std::vector<glm::vec4> Tangents;
     std::vector<uint32_t> Indices;
-    std::optional<size_t> MaterialIndex;
-    glm::mat4 InitialTransform;
+    std::optional<std::string> MaterialName;
 };
 
-struct TAssetInstanceData {
-    glm::mat4 WorldMatrix;
-    size_t MeshIndex;
+struct TAssetModelNode {
+    std::string Name;
+    glm::vec3 LocalPosition;
+    glm::quat LocalRotation;
+    glm::vec3 LocalScale;
+    std::optional<std::string> MeshName;
+    std::vector<TAssetModelNode> Children;
 };
 
-struct TAsset {
+struct TAssetModel {
+    std::string Name;
+    std::vector<std::string> Animations;
+    std::vector<std::string> Skins;
     std::vector<std::string> Images;
     std::vector<std::string> Samplers;
+    std::vector<std::string> Textures;
     std::vector<std::string> Materials;
     std::vector<std::string> Meshes;
-    std::vector<TAssetInstanceData> Instances;
+    std::vector<TAssetModelNode> Hierarchy;
 };
 
-auto AddAsset(const std::string& assetName, const TAsset& asset) -> void;
-auto AddAssetFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void;
-auto GetAssets() -> std::unordered_map<std::string, TAsset>&;
-auto GetAsset(const std::string& assetName) -> TAsset&;
+auto AddAssetModel(const std::string& assetName, const TAssetModel& asset) -> void;
+auto AddAssetModelFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void;
+auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>&;
+auto GetAssetModel(const std::string& assetName) -> TAssetModel&;
 auto IsAssetLoaded(const std::string& assetName) -> bool;
 
 auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData&;
