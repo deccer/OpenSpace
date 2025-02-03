@@ -303,7 +303,7 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
            : encodedNormal;
 }
 
-auto RendererCreateGpuMesh(const Assets::TAssetMeshData& assetMeshData) -> void {
+auto RendererCreateGpuMesh(const Assets::TAssetMesh& assetMeshData) -> void {
 
     if (g_gpuMeshes.contains(assetMeshData.Name)) {
         return;
@@ -522,7 +522,7 @@ constexpr auto ToMinFilter(std::optional<Assets::TAssetSamplerMinFilter> minFilt
     }
 }
 
-auto CreateSamplerDescriptor(const Assets::TAssetSamplerData& assetSampler) -> TSamplerDescriptor {
+auto CreateSamplerDescriptor(const Assets::TAssetSampler& assetSampler) -> TSamplerDescriptor {
 
     return TSamplerDescriptor{
         .Label = assetSampler.Name,

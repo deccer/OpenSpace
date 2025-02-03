@@ -17,13 +17,13 @@
 
 namespace Assets {
 
-enum class TAssetImageDataType {
+enum class TAssetImageType {
     Uncompressed,
     CompressedKtx,
     CompressedDds
 };
 
-struct TAssetImageData {
+struct TAssetImage {
 
     int32_t Width = 0;
     int32_t Height = 0;
@@ -32,7 +32,7 @@ struct TAssetImageData {
     int32_t Components = 0;
     std::string Name;
     std::unique_ptr<unsigned char[]> Data = {};
-    TAssetImageDataType ImageDataType = {};
+    TAssetImageType ImageDataType = {};
 };
 
 enum class TAssetMaterialChannel {
@@ -61,7 +61,7 @@ enum class TAssetSamplerWrapMode {
     Repeat,
 };
 
-struct TAssetSamplerData {
+struct TAssetSampler {
     std::string Name;
     std::optional<TAssetSamplerMagFilter> MagFilter;
     std::optional<TAssetSamplerMinFilter> MinFilter;
@@ -75,7 +75,7 @@ struct TAssetMaterialChannelData {
     std::string TextureName;
 };
 
-struct TAssetMaterialData {
+struct TAssetMaterial {
     std::string Name;
     glm::vec4 BaseColor = {};
     float NormalStrength = 1.0f;
@@ -88,7 +88,7 @@ struct TAssetMaterialData {
     std::optional<TAssetMaterialChannelData> EmissiveTextureChannel = {};
 };
 
-struct TAssetMeshData {
+struct TAssetMesh {
     std::string Name;
     std::vector<glm::vec3> Positions;
     std::vector<glm::vec3> Normals;
@@ -125,10 +125,10 @@ auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>&;
 auto GetAssetModel(const std::string& assetName) -> TAssetModel&;
 auto IsAssetLoaded(const std::string& assetName) -> bool;
 
-auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData&;
-auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData&;
-auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData&;
-auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData&;
+auto GetAssetImageData(const std::string& imageDataName) -> TAssetImage&;
+auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSampler&;
+auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterial&;
+auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMesh&;
 auto AddDefaultAssets() -> void;
 
 }

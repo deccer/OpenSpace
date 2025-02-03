@@ -29,14 +29,14 @@ struct TAssetRawImageData {
     std::string Name;
     std::unique_ptr<std::byte[]> EncodedData = {};
     std::size_t EncodedDataSize = 0;
-    TAssetImageDataType ImageDataType = {};
+    TAssetImageType ImageDataType = {};
 };
 
 std::unordered_map<std::string, TAssetModel> g_assetModels = {};
-std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
-std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerDates = {};
-std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
-std::unordered_map<std::string, TAssetMeshData> g_assetMeshDates = {};
+std::unordered_map<std::string, TAssetImage> g_assetImageDates = {};
+std::unordered_map<std::string, TAssetSampler> g_assetSamplerDates = {};
+std::unordered_map<std::string, TAssetMaterial> g_assetMaterialDates = {};
+std::unordered_map<std::string, TAssetMesh> g_assetMeshDates = {};
 
 auto GetSafeResourceName(
     const char* const baseName,
@@ -85,16 +85,16 @@ auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastglt
     return fgTexture.samplerIndex;
 }
 
-auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageDataType {
+auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageType {
     if (mimeType == fastgltf::MimeType::KTX2) {
-        return TAssetImageDataType::CompressedKtx;
+        return TAssetImageType::CompressedKtx;
     }
 
     if (mimeType == fastgltf::MimeType::DDS) {
-        return TAssetImageDataType::CompressedDds;
+        return TAssetImageType::CompressedDds;
     }
 
-    return TAssetImageDataType::Uncompressed;
+    return TAssetImageType::Uncompressed;
 }
 
 constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
@@ -186,7 +186,7 @@ auto LoadImages(
 
     assetModel.Images.resize(fgAsset.images.size());
 
-    std::vector<TAssetImageData> assetImages;
+    std::vector<TAssetImage> assetImages;
     assetImages.resize(fgAsset.images.size());
 
     const auto imageIndices = std::ranges::iota_view{IndexZero, fgAsset.images.size()};
@@ -233,9 +233,9 @@ auto LoadImages(
 
         auto& assetImage = assetImages[imageIndex];
         assetImage.ImageDataType = imageData.ImageDataType;
-        if (assetImage.ImageDataType == TAssetImageDataType::CompressedKtx) {
+        if (assetImage.ImageDataType == TAssetImageType::CompressedKtx) {
 
-        } else if (assetImage.ImageDataType == TAssetImageDataType::CompressedDds) {
+        } else if (assetImage.ImageDataType == TAssetImageType::CompressedDds) {
 
         } else {
             int32_t width = 0;
@@ -276,7 +276,7 @@ auto LoadSamplers(
         auto wrapT = ToString(fgSampler.wrapT);
         auto samplerName = std::format("S_{}_{}_{}_{}", magFilter, minFilter, wrapS, wrapT);
 
-        auto assetSamplerData = TAssetSamplerData {
+        auto assetSamplerData = TAssetSampler {
             .Name = samplerName,
             .MagFilter = ConvertMagFilter(fgSampler.magFilter),
             .MinFilter = ConvertMinFilter(fgSampler.minFilter),
@@ -299,7 +299,7 @@ auto LoadMaterials(
     const auto materialIndices = std::ranges::iota_view{IndexZero, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
 
-    std::vector<TAssetMaterialData> assetMaterials;
+    std::vector<TAssetMaterial> assetMaterials;
     assetMaterials.resize(fgAsset.materials.size());
 
     std::for_each(
@@ -433,6 +433,7 @@ auto LoadMeshes(
     size_t primitiveId = 0;
     for (size_t meshId = 0; meshId < fgAsset.meshes.size(); ++meshId) {
         const auto& fgMesh = fgAsset.meshes[meshId];
+
         for (size_t primitiveIndex = 0; primitiveIndex < fgMesh.primitives.size(); ++primitiveIndex) {
             flatPrimitives.push_back(TFlatPrimitive{
                 .PrimitiveId = primitiveIndex,
@@ -444,7 +445,7 @@ auto LoadMeshes(
     }
 
     assetModel.Meshes.resize(flatPrimitives.size());
-    auto meshes = std::vector<TAssetMeshData>(flatPrimitives.size(), TAssetMeshData());
+    auto meshes = std::vector<TAssetMesh>(flatPrimitives.size(), TAssetMesh());
 
     for (size_t primitiveIndex = 0; primitiveIndex < flatPrimitives.size(); ++primitiveIndex) {
         const auto& flatPrimitive = flatPrimitives[primitiveIndex];
@@ -671,19 +672,19 @@ auto IsAssetLoaded(const std::string& assetName) -> bool {
     return g_assetModels.contains(assetName);
 }
 
-auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData& {
+auto GetAssetImageData(const std::string& imageDataName) -> TAssetImage& {
     return g_assetImageDates[imageDataName];
 }
 
-auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData& {
+auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSampler& {
     return g_assetSamplerDates[samplerDataName];
 }
 
-auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData& {
+auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterial& {
     return g_assetMaterialDates[materialDataName];
 }
 
-auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
+auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMesh& {
     return g_assetMeshDates[meshDataName];
 }
 
@@ -702,7 +703,7 @@ auto AddImage(
 
     auto* pixels = Image::LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
 
-    auto assetImage = TAssetImageData{
+    auto assetImage = TAssetImage{
         .Width = width,
         .Height = height,
         .PixelType = 0,
@@ -715,11 +716,11 @@ auto AddImage(
     g_assetImageDates[imageName] = std::move(assetImage);
 }
 
-auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
+auto CalculateTangents(TAssetMesh& assetMeshData) -> void {
 
     auto getNumFaces = [](const SMikkTSpaceContext* context) -> int32_t {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto* meshData = static_cast<TAssetMesh*>(context->m_pUserData);
         return meshData->Indices.size() / 3;
     };
 
@@ -736,7 +737,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto* meshData = static_cast<TAssetMesh*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& pos = meshData->Positions[index];
         posOut[0] = pos.x;
@@ -750,7 +751,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto* meshData = static_cast<TAssetMesh*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& normal = meshData->Normals[index];
         normOut[0] = normal.x;
@@ -764,7 +765,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto* meshData = static_cast<TAssetMesh*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
         const glm::vec2& uv = meshData->Uvs[index];
         uvOut[0] = uv.x;
@@ -778,7 +779,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
+        auto* meshData = static_cast<TAssetMesh*>(context->m_pUserData);
         auto index = meshData->Indices[faceIndex * 3 + vertIndex];
 
         glm::vec3 t(tangent[0], tangent[1], tangent[2]);
@@ -806,9 +807,9 @@ auto CreateUvSphereMeshData(
     const std::string& name,
     float radius,
     int32_t rings,
-    int32_t segments) -> TAssetMeshData {
+    int32_t segments) -> TAssetMesh {
 
-    TAssetMeshData assetMeshData;
+    TAssetMesh assetMeshData;
 
     assetMeshData.Name = name;
     assetMeshData.Positions.resize(rings * segments * 4);
@@ -889,13 +890,13 @@ auto CreateCuboid(
     float depth,
     uint32_t segmentsX = 1,
     uint32_t segmentsY = 1,
-    uint32_t segmentsZ = 1) -> TAssetMeshData {
+    uint32_t segmentsZ = 1) -> TAssetMesh {
 
     auto halfWidth = width / 2.0f;
     auto halfHeight = height / 2.0f;
     auto halfDepth = depth / 2.0f;
 
-    TAssetMeshData assetMeshData;
+    TAssetMesh assetMeshData;
     assetMeshData.Name = name;
     assetMeshData.MaterialName = std::nullopt;
     //assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfHeight, 0));
@@ -1159,7 +1160,7 @@ auto AddDefaultAssets() -> void {
     AddImage("T_Blue", "data/default/T_Blue.png");
     AddImage("T_Gray", "data/default/T_Gray.png");
 
-    auto defaultAssetSampler = TAssetSamplerData {
+    auto defaultAssetSampler = TAssetSampler {
         .Name = "S_L_L_C2E_C2E",
         .MagFilter = TAssetSamplerMagFilter::Linear,
         .MinFilter = TAssetSamplerMinFilter::Linear,
@@ -1168,7 +1169,7 @@ auto AddDefaultAssets() -> void {
     };
     g_assetSamplerDates["S_L_L_C2E_C2E"] = std::move(defaultAssetSampler);
 
-    auto defaultMaterial = TAssetMaterialData {
+    auto defaultMaterial = TAssetMaterial {
         .Name = "M_Default",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1178,7 +1179,7 @@ auto AddDefaultAssets() -> void {
     };
     g_assetMaterialDates["M_Default"] = std::move(defaultMaterial);
 
-    auto orangeMaterial = TAssetMaterialData {
+    auto orangeMaterial = TAssetMaterial {
         .Name = "M_Orange",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1188,7 +1189,7 @@ auto AddDefaultAssets() -> void {
     };
     g_assetMaterialDates["M_Orange"] = std::move(orangeMaterial);
 
-    auto yellowMaterial = TAssetMaterialData {
+    auto yellowMaterial = TAssetMaterial {
         .Name = "M_Yellow",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1198,7 +1199,7 @@ auto AddDefaultAssets() -> void {
     };
     g_assetMaterialDates["M_Yellow"] = std::move(yellowMaterial);
 
-    auto blueMaterial = TAssetMaterialData {
+    auto blueMaterial = TAssetMaterial {
         .Name = "M_Blue",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1208,7 +1209,7 @@ auto AddDefaultAssets() -> void {
     };
     g_assetMaterialDates["M_Blue"] = std::move(blueMaterial);
 
-    auto grayMaterial = TAssetMaterialData {
+    auto grayMaterial = TAssetMaterial {
         .Name = "M_Gray",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1219,7 +1220,7 @@ auto AddDefaultAssets() -> void {
     g_assetMaterialDates["M_Gray"] = std::move(grayMaterial);
 
     AddImage("T_Mars_B", "data/default/2k_mars.jpg");
-    auto marsMaterial = TAssetMaterialData {
+    auto marsMaterial = TAssetMaterial {
         .Name = "M_Mars",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
