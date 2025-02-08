@@ -13,11 +13,10 @@
 #include <glm/ext/scalar_constants.hpp>
 #include "glm/gtc/quaternion.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
-
-#include <GLFW/glfw3.h>
 
 namespace Scene {
 
@@ -71,19 +70,19 @@ auto CreateEntityWithGraphics(
     glm::vec3 position,
     glm::vec3 orientation,
     glm::vec3 scale,
-    const std::string& assetMeshName,
+    const std::string& assetPrimitiveName,
     std::optional<std::string_view> overrideAssetMaterialName) -> entt::entity {
 
     const auto entity = CreateEntity(parent, name, position, orientation, scale);
 
-    const auto& assetMesh = Assets::GetAssetMeshData(assetMeshName);
+    const auto& assetPrimitive = Assets::GetAssetPrimitive(assetPrimitiveName);
     const auto& assetMaterialName = overrideAssetMaterialName.has_value()
         ? overrideAssetMaterialName.value().data()
-        : assetMesh.MaterialName.has_value()
-            ? assetMesh.MaterialName.value()
+        : assetPrimitive.MaterialName.has_value()
+            ? assetPrimitive.MaterialName.value()
             : "T-Default";
 
-    g_registry.emplace<TComponentMesh>(entity, assetMeshName);
+    g_registry.emplace<TComponentMesh>(entity, assetPrimitiveName);
     g_registry.emplace<TComponentMaterial>(entity, assetMaterialName);
     g_registry.emplace<TComponentCreateGpuResourcesNecessary>(entity);
 
@@ -92,6 +91,7 @@ auto CreateEntityWithGraphics(
 
 auto CreateAssetEntity(
     entt::entity parent,
+    const std::string& name,
     glm::vec3 position,
     glm::vec3 orientation,
     glm::vec3 scale,
@@ -108,13 +108,17 @@ auto CreateAssetEntity(
 
         entt::entity childEntity = entt::null;
         if (assetModelNode.MeshName.has_value()) {
-            childEntity = CreateEntityWithGraphics(
-                parentEntity,
-                nodeName,
-                localPosition,
-                localRotationEuler,
-                localScale,
-                assetModelNode.MeshName.value(), std::nullopt);
+            childEntity = CreateEntity(parentEntity, nodeName, localPosition, localRotationEuler, localScale);
+            const auto& assetMesh = Assets::GetAssetMesh(assetModelNode.MeshName.value());
+            for (const auto& assetPrimitive : assetMesh.Primitives) {
+                CreateEntityWithGraphics(
+                    childEntity,
+                    assetPrimitive.Name,
+                    localPosition,
+                    localRotationEuler,
+                    localScale,
+                    assetPrimitive.Name, assetPrimitive.MaterialName.value_or("M_Default"));
+            }
 
         } else {
             childEntity = CreateEntity(
@@ -131,7 +135,7 @@ auto CreateAssetEntity(
     };
 
     const auto& assetModel = Assets::GetAssetModel(assetModelName);
-    auto entity = CreateEntity(parent, assetModelName, position, orientation, scale);
+    auto entity = CreateEntity(parent, name, position, orientation, scale);
     for (const auto& assetModelNode : assetModel.Hierarchy) {
         visitNodes(entity, assetModelNode);
     }
@@ -146,7 +150,7 @@ auto Load() -> bool {
      */
 
 
-    Assets::AddAssetModelFromFile("axes", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
+    //Assets::AddAssetModelFromFile("axes", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
     /*
     Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
     Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
@@ -165,13 +169,13 @@ auto Load() -> bool {
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponzaCurtains/NewSponza_Curtains_glTF.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/GearboxAssy.gltf");
+    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/Buggy.glb");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty_2.gltf");
 
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
-    //Assets::AddAssetModelFromFile("LessSillyShip", "data/scenes/SM_DemonShip.glb");
-
-    //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/scenes/SM_Cube_x1_y1_z1.glb");
+    Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
+    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Cube_x1_y1_z1.glb");
     //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
 
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Storage/Resources/Models/UnitySponza/UnitySponza.glb");
@@ -194,6 +198,8 @@ auto Load() -> bool {
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/abstract_shapes.glb");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/calacona_santa_muerte.glb");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/hover_bike_-_the_rocket.glb");
+    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Cube_TwoPrimitives_2.gltf");
+    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/structure.glb");
     //Assets::AddAssetModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
 
     /// Setup Scene ////////////
@@ -237,6 +243,7 @@ auto Load() -> bool {
 
     CreateAssetEntity(
         g_rootEntity,
+        "Axes",
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f),
         glm::vec3(1.0f), "axes", "");
@@ -259,6 +266,10 @@ auto Load() -> bool {
         .Sensitivity = 0.0025f,
     });
     g_registry.emplace<TComponentChildOf>(g_playerEntity, g_rootEntity);
+
+    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{50.0f, 1.0f, 50.0f}, "SM_Cube_x1_y1_z1", "");
+    g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
+
 
 /*
     Assets::TAsset sunAsset;
@@ -302,9 +313,6 @@ auto Load() -> bool {
     //auto marsScale = glm::vec3(6227558);
     auto zeroRotation = glm::vec3{0.0f};
     //g_marsEntity = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, zeroRotation, marsScale, "Mars", "M_Mars");
-
-    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, zeroRotation, glm::vec3{1.0f}, "SM_Cuboid_x50_y1_z50", "");
-    g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, zeroRotation, glm::vec3{1.0f}, "LessSillyShip", "");
 
     /*
     g_celestialBodySun = g_registry.create();
@@ -544,7 +552,7 @@ auto Update(
             playerPosition = glm::vec3{0.0f};
             auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
             playerOrientation.Pitch = 0.0f;
-            playerOrientation.Yaw = -glm::pi<float>();
+            playerOrientation.Yaw = glm::radians(0.0f);
             playerOrientation.Roll = 0.0f;
 
         } else {
@@ -558,35 +566,28 @@ auto Update(
         }
     }
 
-/*
-    auto& sunRotation = registry.get<TComponentOrientationEuler>(g_celestialBodySun);
-    sunRotation.Yaw = renderContext.FrameCounter * 0.02f;
+    auto shipGlobal = EntityGetGlobalTransform(registry, g_shipEntity);
+    glm::vec3 s_scale;
+    glm::quat s_orientation;
+    glm::vec3 s_translation;
+    glm::vec3 s_skew;
+    glm::vec4 s_perspective;
+    glm::decompose(shipGlobal, s_scale, s_orientation, s_translation, s_skew, s_perspective);
 
-    auto& planetRotation = registry.get<TComponentOrientationEuler>(g_celestialBodyPlanet);
+    auto playerGlobal = EntityGetGlobalTransform(registry, g_playerEntity);
+    glm::vec3 p_scale;
+    glm::quat p_orientation;
+    glm::vec3 p_translation;
+    glm::vec3 p_skew;
+    glm::vec4 p_perspective;
+    glm::decompose(playerGlobal, p_scale, p_orientation, p_translation, p_skew, p_perspective);
 
-    planetRotation.Pitch = glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.3f;
-    planetRotation.Yaw = glm::radians(static_cast<float>(renderContext.FrameCounter)) * 1.1f;
-    planetRotation.Roll = 0;
-
-    auto& marsRotation = registry.get<TComponentOrientationEuler>(g_marsEntity);
-    auto marsRotationEuler = glm::eulerAngles(glm::quat_cast(glm::rotate(glm::mat4(1.0f), glm::radians(static_cast<float>(renderContext.FrameCounter)) * 0.01f, glm::vec3(0.2f, 0.7f, 0.2f))));
-    marsRotation.Pitch = marsRotationEuler.x;
-    marsRotation.Yaw = marsRotationEuler.y;
-    marsRotation.Roll = marsRotationEuler.z;
-*/
-
-/*
-    {
-        PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
-
-        registry.view<TComponentTransform>().each([&](
-            const auto& entity,
-            auto& transformComponent) {
-
-            transformComponent = EntityGetGlobalTransform(registry, entity);
-        });
-    }
-*/
+    //std::printf("ShipGlobalPos: %0.f, %0.f, %0.f\n", s_translation.x, s_translation.y, s_translation.z);
+    //std::printf("PlyrGlobalPos: %0.f, %0.f, %0.f\n", p_translation.x, p_translation.y, p_translation.z);
+    //ImGui::Begin("Debug");
+    //ImGui::InputFloat3("Ship Global Position", glm::value_ptr(s_translation));
+    //ImGui::InputFloat3("Player Global Position", glm::value_ptr(p_translation));
+    //ImGui::End();
 }
 
 auto GetRegistry() -> entt::registry& {

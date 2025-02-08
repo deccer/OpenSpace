@@ -303,26 +303,22 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
            : encodedNormal;
 }
 
-auto RendererCreateGpuMesh(const Assets::TAssetMesh& assetMeshData) -> void {
-
-    if (g_gpuMeshes.contains(assetMeshData.Name)) {
-        return;
-    }
+auto RendererCreateGpuMesh(const Assets::TAssetPrimitive& assetPrimitive, const std::string& label) -> void {
 
     std::vector<TGpuVertexPosition> vertexPositions;
     std::vector<TGpuPackedVertexNormalTangentUvTangentSign> vertexNormalUvTangents;
-    vertexPositions.resize(assetMeshData.Positions.size());
-    vertexNormalUvTangents.resize(assetMeshData.Positions.size());
+    vertexPositions.resize(assetPrimitive.Positions.size());
+    vertexNormalUvTangents.resize(assetPrimitive.Positions.size());
 
-    for (size_t i = 0; i < assetMeshData.Positions.size(); i++) {
+    for (size_t i = 0; i < assetPrimitive.Positions.size(); i++) {
         vertexPositions[i] = {
-            assetMeshData.Positions[i],
+            assetPrimitive.Positions[i],
         };
 
         vertexNormalUvTangents[i] = {
-            glm::packSnorm2x16(EncodeNormal(assetMeshData.Normals[i])),
-            glm::packSnorm2x16(EncodeNormal(assetMeshData.Tangents[i].xyz())),
-            glm::vec4(assetMeshData.Uvs[i], assetMeshData.Tangents[i].w, 0.0f),
+            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Normals[i])),
+            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Tangents[i].xyz())),
+            glm::vec4(assetPrimitive.Uvs[i], assetPrimitive.Tangents[i].w, 0.0f),
         };
     }
 
@@ -331,29 +327,29 @@ auto RendererCreateGpuMesh(const Assets::TAssetMesh& assetMeshData) -> void {
         PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
 
         glCreateBuffers(3, buffers);
-        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", assetMeshData.Name));
-        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", assetMeshData.Name));
-        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", assetMeshData.Name));
+        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", label));
+        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", label));
+        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", label));
         glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * vertexPositions.size(),
                                 vertexPositions.data(), 0);
         glNamedBufferStorage(buffers[1], sizeof(TGpuPackedVertexNormalTangentUvTangentSign) * vertexNormalUvTangents.size(),
                                 vertexNormalUvTangents.data(), 0);
-        glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMeshData.Indices.size(), assetMeshData.Indices.data(), 0);
+        glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetPrimitive.Indices.size(), assetPrimitive.Indices.data(), 0);
     }
 
     auto gpuMesh = TGpuMesh{
-        .Name = assetMeshData.Name,
+        .Name = label,
         .VertexPositionBuffer = buffers[0],
         .VertexNormalUvTangentBuffer = buffers[1],
         .IndexBuffer = buffers[2],
 
         .VertexCount = vertexPositions.size(),
-        .IndexCount = assetMeshData.Indices.size(),
+        .IndexCount = assetPrimitive.Indices.size(),
     };
 
     {
         PROFILER_ZONESCOPEDN("Add Gpu Mesh");
-        g_gpuMeshes[assetMeshData.Name] = gpuMesh;
+        g_gpuMeshes[label] = gpuMesh;
     }
 }
 
@@ -425,7 +421,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImageData(materialDataName);
+    auto& imageData = Assets::GetAssetImage(materialDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -457,7 +453,7 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName, Assets::T
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImageData(imageDataName);
+    auto& imageData = Assets::GetAssetImage(imageDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -541,7 +537,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         return;
     }
 
-    auto& assetMaterialData = Assets::GetAssetMaterialData(assetMaterialName);
+    auto& assetMaterialData = Assets::GetAssetMaterial(assetMaterialName);
 
     auto cpuMaterial = TCpuMaterial{
         .BaseColor = assetMaterialData.BaseColor,
@@ -550,7 +546,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
     if (baseColorChannel.has_value()) {
         auto& baseColor = *baseColorChannel;
-        auto& baseColorSampler = Assets::GetAssetSamplerData(baseColor.SamplerName);
+        auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
 
         cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
@@ -561,7 +557,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel.has_value()) {
         auto& normalTexture = *normalTextureChannel;
-        auto& normalTextureSampler = Assets::GetAssetSamplerData(normalTexture.SamplerName);
+        auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
 
         cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
@@ -1392,8 +1388,8 @@ auto RendererRender(
             auto& meshComponent = registry.get<TComponentMesh>(entity);
             auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-            auto& assetMesh = Assets::GetAssetMeshData(meshComponent.Mesh);
-            RendererCreateGpuMesh(assetMesh);
+            auto& assetPrimitive = Assets::GetAssetPrimitive(meshComponent.Mesh);
+            RendererCreateGpuMesh(assetPrimitive, assetPrimitive.Name);
             RendererCreateCpuMaterial(materialComponent.Material);
 
             registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
@@ -1406,7 +1402,7 @@ auto RendererRender(
     /*
      * ECS - Update Transforms
      */
-    /* 
+    /*
     {
         PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
 
@@ -1419,26 +1415,12 @@ auto RendererRender(
     }
     */
 
-    /*
     auto entities = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform>();
     BuildDependencyGraph(entities, registry);
     auto sortedEntities = TopologicalSort(entities);
     UpdateTransforms(sortedEntities, registry);
-    */
 
     /*
-    auto localTransformView = registry.view<TComponentTransform>();
-    for (auto localTransform : localTransformView) {
-        TransformComponent& transform = localTransformView.get<TransformComponent>(localTransform);
-        Entity currentEntity = { localTransform, _scene };
-        ParentComponent& parentComponent = currentEntity.GetComponent<ParentComponent>();
-        if (transform.Dirty) {
-            
-        }
-    }
-        */
-    
-
     auto group = registry.group<TComponentTransform, TComponentPosition, TComponentOrientationEuler, TComponentScale>(entt::get<TComponentChildOf>);
     for (auto entity : group) {
         auto& position = group.get<TComponentPosition>(entity);
@@ -1463,7 +1445,7 @@ auto RendererRender(
             transform = localTransform;
         }
     }
-
+    */
 
     /*
      * Update Global Uniforms
@@ -1480,7 +1462,7 @@ auto RendererRender(
             glm::vec3 cameraPosition = cameraMatrix[3];
             glm::vec3 cameraDirection = cameraMatrix[1];
 
-            auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
+            auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
             g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
             g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
 
@@ -1555,16 +1537,17 @@ auto RendererRender(
             g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
             const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentTransform>();
-            renderablesView.each([](
+            renderablesView.each([&](
+                const entt::entity& entity,
                 const auto& meshComponent,
                 const auto& transformComponent) {
 
                 PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
                 const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-
+                //const auto& t = EntityGetGlobalTransform(registry, entity);
                 g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent/* * gpuMesh.InitialTransform*/);
+                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent /* t*/);
 
                 g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
             });
@@ -1584,7 +1567,8 @@ auto RendererRender(
             g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
             const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
-            renderablesView.each([](
+            renderablesView.each([&](
+                const entt::entity& entity,
                 const auto& meshComponent,
                 const auto& materialComponent,
                 const auto& transformComponent) {
@@ -1594,7 +1578,8 @@ auto RendererRender(
                 auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                auto worldMatrix = transformComponent/* * gpuMesh.InitialTransform*/;
+                //const auto& t = EntityGetGlobalTransform(registry, entity);
+                auto worldMatrix = transformComponent;
                 if (counter == 1) {
                     selectedObjectMatrix = worldMatrix;
                 }

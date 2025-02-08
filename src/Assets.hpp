@@ -15,6 +15,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <parallel_hashmap/phmap_fwd_decl.h>
+
 namespace Assets {
 
 enum class TAssetImageType {
@@ -88,7 +90,7 @@ struct TAssetMaterial {
     std::optional<TAssetMaterialChannelData> EmissiveTextureChannel = {};
 };
 
-struct TAssetMesh {
+struct TAssetPrimitive {
     std::string Name;
     std::vector<glm::vec3> Positions;
     std::vector<glm::vec3> Normals;
@@ -96,6 +98,11 @@ struct TAssetMesh {
     std::vector<glm::vec4> Tangents;
     std::vector<uint32_t> Indices;
     std::optional<std::string> MaterialName;
+};
+
+struct TAssetMesh {
+    std::string Name;
+    std::vector<TAssetPrimitive> Primitives;
 };
 
 struct TAssetModelNode {
@@ -125,10 +132,11 @@ auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>&;
 auto GetAssetModel(const std::string& assetName) -> TAssetModel&;
 auto IsAssetLoaded(const std::string& assetName) -> bool;
 
-auto GetAssetImageData(const std::string& imageDataName) -> TAssetImage&;
-auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSampler&;
-auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterial&;
-auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMesh&;
+auto GetAssetImage(const std::string& imageDataName) -> TAssetImage&;
+auto GetAssetSampler(const std::string& samplerDataName) -> TAssetSampler&;
+auto GetAssetMaterial(const std::string& materialDataName) -> TAssetMaterial&;
+auto GetAssetMesh(const std::string& meshDataName) -> TAssetMesh&;
+auto GetAssetPrimitive(const std::string& assetPrimitiveName) -> TAssetPrimitive&;
 auto AddDefaultAssets() -> void;
 
 }
