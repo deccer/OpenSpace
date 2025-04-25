@@ -167,7 +167,7 @@ auto Load() -> bool {
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/hintze-hall_-_vr_tour-1k.glb");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponzaCurtains/NewSponza_Curtains_glTF.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/GearboxAssy.gltf");
+    //Assets::AddAssetModelFromFile("LessSillyShip", "/home/deccer/Code/scenes/GearboxAssy.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/Buggy.glb");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty.gltf");
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty_2.gltf");
