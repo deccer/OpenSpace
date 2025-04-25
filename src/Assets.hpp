@@ -107,9 +107,9 @@ struct TAssetMesh {
 
 struct TAssetModelNode {
     std::string Name;
-    glm::vec3 LocalPosition;
-    glm::quat LocalRotation;
-    glm::vec3 LocalScale;
+    glm::vec3 LocalPosition = {};
+    glm::quat LocalRotation = glm::identity<glm::quat>();
+    glm::vec3 LocalScale = glm::vec3(1.0f);
     std::optional<std::string> MeshName;
     std::vector<TAssetModelNode> Children;
 };
