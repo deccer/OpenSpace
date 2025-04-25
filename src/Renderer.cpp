@@ -710,11 +710,11 @@ auto RendererInitialize(
     g_fontJetbrainsMonoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMono_Regular_compressed_data, JetBrainsMono_Regular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
 
     io.Fonts->TexGlyphPadding = 1;
-    for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->ConfigData.Size; fontConfigIndex++) {
-        ImFontConfig* fontConfig = (ImFontConfig*)&io.Fonts->ConfigData[fontConfigIndex];
+    for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->Sources.Size; fontConfigIndex++) {
+        auto* fontConfig = &io.Fonts->Sources[fontConfigIndex];
         fontConfig->RasterizerMultiply = 1.0f;
     }
-    
+
     auto& style = ImGui::GetStyle();
     style.WindowMenuButtonPosition = ImGuiDir_None;
     style.DisabledAlpha = 0.3f;
