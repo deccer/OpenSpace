@@ -1400,6 +1400,31 @@ auto RendererRender(
     }
 
     /*
+     * Update Global Uniforms
+     */
+    {
+        PROFILER_ZONESCOPEDN("Update Global Uniforms");
+
+        registry.view<TComponentCamera>().each([&](
+            const auto& entity,
+            const auto& cameraComponent) {
+
+            auto cameraMatrix = EntityGetGlobalTransform(registry, entity);
+            auto viewMatrix = glm::inverse(cameraMatrix);
+            glm::vec3 cameraPosition = cameraMatrix[3];
+            glm::vec3 cameraDirection = cameraMatrix[1];
+
+            auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
+            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
+            g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
+
+            g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
+            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
+            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
+        });
+    }
+
+    /*
      * ECS - Update Transforms
      */
     /*
@@ -1446,31 +1471,6 @@ auto RendererRender(
         }
     }
     */
-
-    /*
-     * Update Global Uniforms
-     */
-    {
-        PROFILER_ZONESCOPEDN("Update Global Uniforms"); 
-
-        registry.view<TComponentCamera>().each([&](
-            const auto& entity,
-            const auto& cameraComponent) {
-
-            auto cameraMatrix = EntityGetGlobalTransform(registry, entity);
-            auto viewMatrix = glm::inverse(cameraMatrix);
-            glm::vec3 cameraPosition = cameraMatrix[3];
-            glm::vec3 cameraDirection = cameraMatrix[1];
-
-            auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
-            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
-            g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
-
-            g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
-            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
-            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
-        });
-    }
 
     /*
      * Resize if necessary
