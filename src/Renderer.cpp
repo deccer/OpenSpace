@@ -1505,20 +1505,20 @@ auto RendererRender(
 
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{100, 0, 0},
+            .StartColor = glm::vec4{0.7f, 0.0f, 0.0f, 1.0f},
+            .EndPosition = glm::vec3{128, 0, 0},
             .EndColor = glm::vec4{1.0f, 0.0f, 0.0f, 1.0f}
         });
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{0, 100, 0},
+            .StartColor = glm::vec4{0.0f, 0.7f, 0.0f, 1.0f},
+            .EndPosition = glm::vec3{0, 128, 0},
             .EndColor = glm::vec4{0.0f, 1.0f, 0.0f, 1.0f}
         });
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{0, 0, 100},
+            .StartColor = glm::vec4{0.0f, 0.0f, 0.7f, 1.0f},
+            .EndPosition = glm::vec3{0, 0, 128},
             .EndColor = glm::vec4{0.0f, 0.0f, 1.0f, 1.0f}
         });
     }
