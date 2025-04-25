@@ -1376,7 +1376,7 @@ auto RendererRender(
     }
 
     {
-        PROFILER_ZONESCOPEDN("Create Gpu Resources");
+        PROFILER_ZONESCOPEDN("Create Gpu Resources if necessary");
 
         /*
          * ECS - Create Gpu Resources if necessary
