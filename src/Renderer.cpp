@@ -1539,9 +1539,9 @@ auto RendererRender(
                 PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
                 const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-                //const auto& t = EntityGetGlobalTransform(registry, entity);
+                const auto& t = transformComponent;//EntityGetGlobalTransform(registry, entity);
                 g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent /* t*/);
+                g_depthPrePassGraphicsPipeline.SetUniform(0, t);
 
                 g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
             });
@@ -1572,7 +1572,7 @@ auto RendererRender(
                 auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                //const auto& t = EntityGetGlobalTransform(registry, entity);
+                const auto& t = EntityGetGlobalTransform(registry, entity);
                 auto worldMatrix = transformComponent;
                 if (counter == 1) {
                     selectedObjectMatrix = worldMatrix;
