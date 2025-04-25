@@ -141,7 +141,6 @@ glm::ivec2 g_sceneViewerSize = {};
 glm::ivec2 g_sceneViewerScaledSize = {};
 bool g_sceneViewerResized = false;
 bool g_isEditor = false;
-bool g_isSrgbDisabled = false;
 
 entt::entity g_selectedEntity = entt::null;
 
@@ -1523,11 +1522,6 @@ auto RendererRender(
         });
     }
 
-    if (g_isSrgbDisabled) {
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        g_isSrgbDisabled = false;
-    }
-
     {
         PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
         PushDebugGroup("Depth PrePass");
@@ -1888,8 +1882,6 @@ auto RendererRender(
         ImGui::Render();
         if (auto* imGuiDrawData = ImGui::GetDrawData(); imGuiDrawData != nullptr) {
             PushDebugGroup("UI");
-            glDisable(GL_FRAMEBUFFER_SRGB);
-            g_isSrgbDisabled = true;
             glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
             ImGui_ImplOpenGL3_RenderDrawData(imGuiDrawData);
             PopDebugGroup();
