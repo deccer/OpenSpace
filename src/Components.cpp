@@ -99,28 +99,28 @@ auto EntityGetGlobalTransform(entt::registry& registry, entt::entity entity) -> 
         ? registry.get<TComponentScale>(entity)
         : static_cast<TComponentScale>(glm::vec3{1.0f});
 
-    auto parentTransform = glm::mat4(1.0f);
-    if (registry.any_of<TComponentChildOf>(entity)) {
-        auto& parentComponent = registry.get<TComponentChildOf>(entity);
-        if (parentComponent.Parent != entt::null) {
-            parentTransform = registry.get<TComponentTransform>(parentComponent.Parent);
-
-            glm::vec3 parentPosition;
-            glm::quat parentOrientation;
-            glm::vec3 parentScale;
-            glm::vec3 parentSkew;
-            glm::vec4 parentPerspective;
-
-            glm::decompose(parentTransform, parentScale, parentOrientation, parentPosition, parentSkew, parentPerspective);
-
-            parentTransform = glm::translate(glm::mat4(1.0f), parentPosition) * glm::mat4_cast(parentOrientation);
-        }
-    }
-
     auto localTranslation = glm::translate(glm::mat4(1.0f), positionComponent);
     auto localOrientation = glm::eulerAngleYXZ(orientationComponent.Yaw, orientationComponent.Pitch, orientationComponent.Roll);
     auto localScale = glm::scale(glm::mat4(1.0f), scaleComponent);
     auto localTransform = localTranslation * localOrientation * localScale;
+
+    if (!registry.all_of<TComponentChildOf>(entity)) {
+        return localTransform;
+    }
+
+    auto& parentComponent = registry.get<TComponentChildOf>(entity);
+    if (parentComponent.Parent == entt::null) {
+        return localTransform;
+    }
+
+    const auto& parentPositionComponent = registry.get<TComponentPosition>(parentComponent.Parent);
+    const auto& parentOrientationComponent = registry.get<TComponentOrientationEuler>(parentComponent.Parent);
+    const auto& parentScaleComponent = registry.get<TComponentScale>(parentComponent.Parent);
+
+    auto parentTranslation = glm::translate(glm::mat4(1.0f), parentPositionComponent);
+    auto parentOrientation = glm::eulerAngleYXZ(parentOrientationComponent.Yaw, parentOrientationComponent.Pitch, parentOrientationComponent.Roll);
+    auto parentScale = glm::scale(glm::mat4(1.0f), parentScaleComponent);
+    auto parentTransform = parentTranslation * parentOrientation * parentScale;
 
     return parentTransform * localTransform;
 }
