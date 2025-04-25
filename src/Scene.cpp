@@ -58,7 +58,6 @@ auto CreateEntity(
     });
     g_registry.emplace<TComponentScale>(entity, scale);
     g_registry.emplace<TComponentTransform>(entity, glm::mat4(1.0f));
-
     g_registry.emplace<TComponentChildOf>(entity, parent);
 
     return entity;
@@ -203,43 +202,7 @@ auto Load() -> bool {
     //Assets::AddAssetModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
 
     /// Setup Scene ////////////
-
-    g_rootEntity = g_registry.create();
-    g_registry.emplace<TComponentChildOf>(g_rootEntity, TComponentChildOf { 
-        .Parent = entt::null
-    });
-    g_registry.emplace<TComponentName>(g_rootEntity, TComponentName {
-        .Name = "Root"
-    });
-    g_registry.emplace<TComponentPosition>(g_rootEntity, glm::vec3{0.0f});
-    g_registry.emplace<TComponentOrientationEuler>(g_rootEntity, TComponentOrientationEuler{});
-    g_registry.emplace<TComponentScale>(g_rootEntity, glm::vec3{1.0f});
-    g_registry.emplace<TComponentTransform>(g_rootEntity, glm::mat4(1.0f));
-
-/*
-    for (auto i = 1; i < 11; i++) {
-        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x{}_y1_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, i * 2.0f, -10.0f)), false, "");
-        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x1_y{}_z1", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, 0.0f, -5.0f)), false, "");
-        SceneAddEntity(g_rootEntity, std::format("SM_Cuboid_x1_y1_z{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, i * 2.0f, -5.0f)), false, "");
-    }
-*/
-
-/*
-    SceneAddEntity(g_rootEntity, "Test", glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f)), false, "");
-    for (auto i = 1; i < 10; i++) {
-        SceneAddEntity(g_rootEntity, std::format("fform{}", i), glm::translate(glm::mat4(1.0f), glm::vec3(i * 5.0f, 0.0f, 0.0f)), true, "M_Default");
-    }
-*/
-/*
-    for (auto i = 1; i < 10; i++) {
-        CreateAssetEntity(
-            g_rootEntity,
-            std::format("backpack_{}", i),
-            glm::vec3(i * 5.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f),
-            glm::vec3(1.0f), "backpack", "");
-    }
-    */
+    g_rootEntity = CreateEntity(entt::null, "Root", glm::vec3{0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f});
 
     CreateAssetEntity(
         g_rootEntity,
@@ -248,143 +211,19 @@ auto Load() -> bool {
         glm::vec3(0.0f),
         glm::vec3(1.0f), "axes", "");
 
-    g_playerEntity = g_registry.create();
-    g_registry.emplace<TComponentName>(g_playerEntity, TComponentName {
-        .Name = "Player"
-    });
-    g_registry.emplace<TComponentPosition>(g_playerEntity, glm::vec3{-60.0f, -3.0f, 5.0f});
+    g_playerEntity = CreateEntity(g_rootEntity, "Player", glm::vec3{-60.0f, -3.0f, 5.0f}, glm::vec3{0.0f, glm::radians(-90.0f), 0.0f}, glm::vec3{1.0f});
     g_registry.emplace<TComponentPositionBackup>(g_playerEntity, glm::vec3{0.0f});
-    g_registry.emplace<TComponentOrientationEuler>(g_playerEntity, TComponentOrientationEuler {
-        .Pitch = 0.0f,
-        .Yaw = glm::radians(-90.0f),
-        .Roll = 0.0f
-    });
-    g_registry.emplace<TComponentTransform>(g_playerEntity, glm::mat4(1.0f));
     g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
-        .FieldOfView = 70.0f,
+        .FieldOfView = 90.0f,
         .CameraSpeed = 2.0f,
         .Sensitivity = 0.0025f,
     });
-    g_registry.emplace<TComponentChildOf>(g_playerEntity, g_rootEntity);
 
     g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{50.0f, 1.0f, 50.0f}, "SM_Cube_x1_y1_z1", "");
     g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
 
-
-/*
-    Assets::TAsset sunAsset;
-    sunAsset.Meshes.push_back("SM_Geodesic");
-    sunAsset.Materials.push_back("M_Yellow");
-    sunAsset.Instances.push_back(Assets::TAssetInstanceData{
-        .WorldMatrix = glm::mat4(1.0f),
-        .MeshIndex = 0,
-    });
-
-    Assets::TAsset planetAsset;
-    planetAsset.Meshes.push_back("SM_Geodesic");
-    planetAsset.Materials.push_back("M_Blue");
-    planetAsset.Instances.push_back(Assets::TAssetInstanceData{
-        .WorldMatrix = glm::mat4(1.0f),
-        .MeshIndex = 0,
-    });
-
-    Assets::TAsset moonAsset;
-    moonAsset.Meshes.push_back("SM_Geodesic");
-    moonAsset.Materials.push_back("M_Gray");
-    moonAsset.Instances.push_back(Assets::TAssetInstanceData{
-        .WorldMatrix = glm::mat4(1.0f),
-        .MeshIndex = 0,
-    });
-
-    Assets::AddAsset("Sun", sunAsset);
-    Assets::AddAsset("Planet", planetAsset);
-    Assets::AddAsset("Moon", moonAsset);
-
-    Assets::TAsset marsAsset;
-    marsAsset.Meshes.push_back("SM_Geodesic");
-    marsAsset.Materials.push_back("M_Mars");
-    marsAsset.Instances.push_back(Assets::TAssetInstanceData{
-        .WorldMatrix = glm::mat4(1.0f),
-        .MeshIndex = 0,
-    });
-    Assets::AddAsset("Mars", marsAsset);
-
-    //auto marsPosition = glm::vec3(0.0f, -6235072.0f, 0.0f);
-    //auto marsScale = glm::vec3(6227558);
-    auto zeroRotation = glm::vec3{0.0f};
-    //g_marsEntity = CreateAssetEntity(g_rootEntity, "Mars", marsPosition, zeroRotation, marsScale, "Mars", "M_Mars");
-
-    /*
-    g_celestialBodySun = g_registry.create();
-    g_registry.emplace<TComponentName>(g_celestialBodySun, TComponentName {
-        .Name = "Sun"
-    });
-    g_registry.emplace<TComponentTransform>(g_celestialBodySun, glm::mat4(1.0f));
-    g_registry.emplace<TComponentPosition>(g_celestialBodySun, glm::vec3{-20.0f, 5.0f, 0.0f});
-    g_registry.emplace<TComponentScale>(g_celestialBodySun, glm::vec3(4.0f));
-    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodySun, TComponentOrientationEuler {
-        .Pitch = 0.0f,
-        .Yaw = 0.0f,
-        .Roll = 0.0f
-    });
-    g_registry.emplace<TComponentMesh>(g_celestialBodySun, "SM_Geodesic");
-    g_registry.emplace<TComponentMaterial>(g_celestialBodySun, "M_Yellow");
-    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodySun);
-    g_registry.emplace<TComponentChildOf>(g_celestialBodySun, TComponentChildOf{
-        .Parent = g_rootEntity
-    });
-    g_registry.emplace<TComponentParent>(g_celestialBodySun, TComponentParent{});
-
-    g_celestialBodyPlanet = g_registry.create();
-    g_registry.emplace<TComponentName>(g_celestialBodyPlanet, TComponentName {
-        .Name = "Planet"
-    });
-    g_registry.emplace<TComponentTransform>(g_celestialBodyPlanet, glm::mat4(1.0f));
-    g_registry.emplace<TComponentPosition>(g_celestialBodyPlanet, glm::vec3{19.0f, 0.0f, 0.0f});
-    g_registry.emplace<TComponentScale>(g_celestialBodyPlanet, glm::vec3(2.0f));
-    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodyPlanet, TComponentOrientationEuler {
-        .Pitch = 0.0f,
-        .Yaw = 0.0f,
-        .Roll = 0.0f
-    });
-    g_registry.emplace<TComponentMesh>(g_celestialBodyPlanet, "SM_Geodesic");
-    g_registry.emplace<TComponentMaterial>(g_celestialBodyPlanet, "M_Blue");
-    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodyPlanet);
-    g_registry.emplace<TComponentChildOf>(g_celestialBodyPlanet, TComponentChildOf{
-        .Parent = g_celestialBodySun
-    });
-    g_registry.emplace<TComponentParent>(g_celestialBodyPlanet, TComponentParent{});
-
-    g_celestialBodyMoon = g_registry.create();
-    g_registry.emplace<TComponentName>(g_celestialBodyMoon, TComponentName {
-        .Name = "Moon"
-    });
-    g_registry.emplace<TComponentTransform>(g_celestialBodyMoon, glm::mat4(1.0f));
-    g_registry.emplace<TComponentPosition>(g_celestialBodyMoon, glm::vec3{8.0f, 0.0f, 0.0f});
-    g_registry.emplace<TComponentScale>(g_celestialBodyMoon, glm::vec3(0.5f));
-    g_registry.emplace<TComponentOrientationEuler>(g_celestialBodyMoon, TComponentOrientationEuler {
-        .Pitch = 0.0f,
-        .Yaw = 0.0f,
-        .Roll = 0.0f
-    });
-    g_registry.emplace<TComponentMesh>(g_celestialBodyMoon, "SM_Geodesic");
-    g_registry.emplace<TComponentMaterial>(g_celestialBodyMoon, "M_Gray");
-    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(g_celestialBodyMoon);
-    g_registry.emplace<TComponentChildOf>(g_celestialBodyMoon, TComponentChildOf{
-        .Parent = g_celestialBodyPlanet
-    });
-    */
-
-    //auto& sunChildren = g_registry.get<TComponentParent>(g_celestialBodySun);
-    //sunChildren.Children.push_back(g_celestialBodyPlanet);
-
-    //auto& planetChildren = g_registry.get<TComponentParent>(g_celestialBodyPlanet);
-    //planetChildren.Children.push_back(g_celestialBodyMoon);
-
     auto& rootChildren = g_registry.get_or_emplace<TComponentParent>(g_rootEntity);
     rootChildren.Children.push_back(g_playerEntity);
-
-    //rootChildren.Children.push_back(g_celestialBodySun);
 
     return true;
 }
@@ -582,12 +421,8 @@ auto Update(
     glm::vec4 p_perspective;
     glm::decompose(playerGlobal, p_scale, p_orientation, p_translation, p_skew, p_perspective);
 
-    //std::printf("ShipGlobalPos: %0.f, %0.f, %0.f\n", s_translation.x, s_translation.y, s_translation.z);
-    //std::printf("PlyrGlobalPos: %0.f, %0.f, %0.f\n", p_translation.x, p_translation.y, p_translation.z);
-    //ImGui::Begin("Debug");
-    //ImGui::InputFloat3("Ship Global Position", glm::value_ptr(s_translation));
-    //ImGui::InputFloat3("Player Global Position", glm::value_ptr(p_translation));
-    //ImGui::End();
+    //std::printf("ShipGlobalPos: %0.2f, %0.2f, %0.2f\n", s_translation.x, s_translation.y, s_translation.z);
+    //std::printf("PlyrGlobalPos: %0.2f, %0.2f, %0.2f\n", p_translation.x, p_translation.y, p_translation.z);
 }
 
 auto GetRegistry() -> entt::registry& {
