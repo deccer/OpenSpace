@@ -1335,7 +1335,7 @@ auto UpdateAllTransforms(entt::registry& registry) -> void{
             auto& renderTransform = registry.get<TComponentRenderTransform>(entity);
 
             glm::mat4 localMatrix = glm::translate(glm::mat4(1.0f), localPosition)
-                                  * glm::eulerAngleXYZ(localOrientation.Pitch, localOrientation.Yaw, localOrientation.Roll)
+                                  * glm::eulerAngleYXZ(localOrientation.Yaw, localOrientation.Pitch, localOrientation.Roll)
                                   * glm::scale(glm::mat4(1.0f), localScale);
 
             if (parentGlobal) {

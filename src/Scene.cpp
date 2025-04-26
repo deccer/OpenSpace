@@ -240,7 +240,7 @@ auto PlayerControlShip(
 
     auto& shipPosition = registry.get<TComponentPosition>(g_shipEntity);
     auto& shipOrientationEuler = registry.get<TComponentOrientationEuler>(g_shipEntity);
-    glm::quat shipOrientation = glm::eulerAngleXYZ(shipOrientationEuler.Pitch, shipOrientationEuler.Yaw, shipOrientationEuler.Roll);
+    glm::quat shipOrientation = glm::eulerAngleYXZ(shipOrientationEuler.Yaw, shipOrientationEuler.Pitch, shipOrientationEuler.Roll);
 
     glm::vec3 forward = glm::normalize(shipOrientation * -g_unitZ);
     glm::vec3 right = glm::normalize(shipOrientation * g_unitX);
@@ -305,7 +305,7 @@ auto PlayerControlPlayer(
     auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
     auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
 
-    glm::quat playerCameraOrientation = glm::eulerAngleXYZ(playerOrientation.Pitch, playerOrientation.Yaw, playerOrientation.Roll);
+    glm::quat playerCameraOrientation = glm::eulerAngleYXZ(playerOrientation.Yaw, playerOrientation.Pitch, playerOrientation.Roll);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
     if (controlState.Fast.IsDown) {
