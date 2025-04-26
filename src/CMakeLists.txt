@@ -50,10 +50,6 @@ target_sources(HowToScript
     PRIVATE ${glm_SOURCE_DIR}/util/glm.natvis
 )
 
-#target_link_options(HowToScript
-#    PRIVATE /NATVIS:${glm_SOURCE_DIR}/util/glm.natvis
-#)
-
 if(USE_PROFILER)
     target_compile_definitions(HowToScript
         PRIVATE USE_PROFILER
