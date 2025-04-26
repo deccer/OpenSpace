@@ -46,8 +46,7 @@ auto CreateEntity(
     glm::vec3 scale) -> entt::entity {
 
     auto entity = g_registry.create();
-    auto& parentComponent = g_registry.get_or_emplace<TComponentParent>(parent);
-    parentComponent.Children.push_back(entity);
+    g_registry.emplace<TComponentHierarchy>(entity);
 
     g_registry.emplace<TComponentName>(entity, name);
     g_registry.emplace<TComponentPosition>(entity, position);
@@ -58,7 +57,9 @@ auto CreateEntity(
     });
     g_registry.emplace<TComponentScale>(entity, scale);
     g_registry.emplace<TComponentTransform>(entity, glm::mat4(1.0f));
-    g_registry.emplace<TComponentChildOf>(entity, parent);
+    g_registry.emplace<TComponentRenderTransform>(entity, glm::mat4(1.0f));
+
+    EntityChangeParent(g_registry, entity, parent);
 
     return entity;
 }
@@ -222,9 +223,6 @@ auto Load() -> bool {
     g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{50.0f, 1.0f, 50.0f}, "SM_Cube_x1_y1_z1", "");
     g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
 
-    auto& rootChildren = g_registry.get_or_emplace<TComponentParent>(g_rootEntity);
-    rootChildren.Children.push_back(g_playerEntity);
-
     return true;
 }
 
@@ -239,12 +237,10 @@ auto PlayerControlShip(
 
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
     auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
-    auto& playerCameraPosition = registry.get<TComponentPosition>(g_playerEntity);
 
     auto& shipPosition = registry.get<TComponentPosition>(g_shipEntity);
     auto& shipOrientationEuler = registry.get<TComponentOrientationEuler>(g_shipEntity);
-    glm::quat shipOrientation = glm::eulerAngleYX(shipOrientationEuler.Yaw, shipOrientationEuler.Pitch);
-    glm::quat playerCameraOrientation = glm::eulerAngleYX(playerCameraOrientationEuler.Yaw, playerCameraOrientationEuler.Pitch);
+    glm::quat shipOrientation = glm::eulerAngleXYZ(shipOrientationEuler.Pitch, shipOrientationEuler.Yaw, shipOrientationEuler.Roll);
 
     glm::vec3 forward = glm::normalize(shipOrientation * -g_unitZ);
     glm::vec3 right = glm::normalize(shipOrientation * g_unitX);
@@ -306,17 +302,10 @@ auto PlayerControlPlayer(
     const TControlState& controlState) -> void {
 
     auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
-    auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
-    auto& playerCameraPosition = registry.get<TComponentPosition>(g_playerEntity);
+    auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
+    auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
 
-    glm::quat playerCameraOrientation = glm::eulerAngleYX(playerCameraOrientationEuler.Yaw, playerCameraOrientationEuler.Pitch);
-
-    glm::vec3 forward = playerCameraOrientation * -g_unitZ;
-    forward.y = 0;
-    forward = glm::normalize(forward);
-
-    glm::vec3 right = glm::normalize(playerCameraOrientation * g_unitX);
-    glm::vec3 up = glm::normalize(playerCameraOrientation * g_unitY);
+    glm::quat playerCameraOrientation = glm::eulerAngleXYZ(playerOrientation.Pitch, playerOrientation.Yaw, playerOrientation.Roll);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
     if (controlState.Fast.IsDown) {
@@ -329,39 +318,36 @@ auto PlayerControlPlayer(
         tempCameraSpeed *= 0.125f;
     }
 
-    forward *= tempCameraSpeed;
-    right *= tempCameraSpeed;
-    up *= tempCameraSpeed;
+    glm::vec3 forward = playerCameraOrientation * -g_unitZ;
+    forward.y = 0;
+    forward = glm::normalize(forward) * tempCameraSpeed;
+
+    glm::vec3 right = glm::normalize(playerCameraOrientation * g_unitX) * tempCameraSpeed;
+    glm::vec3 up = glm::normalize(playerCameraOrientation * g_unitY) * tempCameraSpeed;
 
     if (controlState.MoveForward.IsDown) {
-
-        playerCameraPosition += forward;
+        playerPosition += forward;
     }
     if (controlState.MoveBackward.IsDown) {
-
-        playerCameraPosition -= forward;
+        playerPosition -= forward;
     }
     if (controlState.MoveRight.IsDown) {
-
-        playerCameraPosition += right;
+        playerPosition += right;
     }
     if (controlState.MoveLeft.IsDown) {
-
-        playerCameraPosition -= right;
+        playerPosition -= right;
     }
     if (controlState.MoveUp.IsDown) {
-
-        playerCameraPosition += up;
+        playerPosition += up;
     }
     if (controlState.MoveDown.IsDown) {
-
-        playerCameraPosition -= up;
+        playerPosition -= up;
     }
 
     if (controlState.FreeLook) {
-        playerCameraOrientationEuler.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
-        playerCameraOrientationEuler.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
-        playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
+        playerOrientation.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
+        playerOrientation.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
+        playerOrientation.Pitch = glm::clamp(playerOrientation.Pitch, -3.1f/2.0f, 3.1f/2.0f);
     }
 }
 
@@ -369,12 +355,6 @@ auto Update(
     TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
-
-    if (g_playerMounted) {
-        PlayerControlShip(renderContext, registry, controlState);
-    } else {
-        PlayerControlPlayer(renderContext, registry, controlState);
-    }
 
     if (controlState.ToggleMount.JustPressed) {
         g_playerMounted = !g_playerMounted;
@@ -384,10 +364,8 @@ auto Update(
             EntityChangeParent(registry, g_playerEntity, g_shipEntity);
 
             auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
-            auto& playerPositionBackup = registry.get<TComponentPositionBackup>(g_playerEntity);
-            playerPositionBackup = (TComponentPositionBackup)glm::vec3(playerPosition);
+            registry.replace<TComponentPositionBackup>(g_playerEntity, playerPosition);
 
-            //playerPosition = glm::vec3{0.0f, 0.4f, -4.66f};
             playerPosition = glm::vec3{0.0f};
             auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
             playerOrientation.Pitch = 0.0f;
@@ -405,24 +383,11 @@ auto Update(
         }
     }
 
-    auto shipGlobal = EntityGetGlobalTransform(registry, g_shipEntity);
-    glm::vec3 s_scale;
-    glm::quat s_orientation;
-    glm::vec3 s_translation;
-    glm::vec3 s_skew;
-    glm::vec4 s_perspective;
-    glm::decompose(shipGlobal, s_scale, s_orientation, s_translation, s_skew, s_perspective);
-
-    auto playerGlobal = EntityGetGlobalTransform(registry, g_playerEntity);
-    glm::vec3 p_scale;
-    glm::quat p_orientation;
-    glm::vec3 p_translation;
-    glm::vec3 p_skew;
-    glm::vec4 p_perspective;
-    glm::decompose(playerGlobal, p_scale, p_orientation, p_translation, p_skew, p_perspective);
-
-    //std::printf("ShipGlobalPos: %0.2f, %0.2f, %0.2f\n", s_translation.x, s_translation.y, s_translation.z);
-    //std::printf("PlyrGlobalPos: %0.2f, %0.2f, %0.2f\n", p_translation.x, p_translation.y, p_translation.z);
+    if (g_playerMounted) {
+        PlayerControlShip(renderContext, registry, controlState);
+    } else {
+        PlayerControlPlayer(renderContext, registry, controlState);
+    }
 }
 
 auto GetRegistry() -> entt::registry& {

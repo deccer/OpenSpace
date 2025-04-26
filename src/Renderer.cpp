@@ -1110,7 +1110,7 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
     auto treeNodeFlags = g_selectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0;
     treeNodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-    if (registry.all_of<TComponentParent>(entity)) {
+    if (registry.all_of<TComponentHierarchy>(entity)) {
 
         bool isOpen = false;
         bool isRootEntity = false;
@@ -1126,7 +1126,7 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
             ImGui::TextUnformatted(entityName.Name.data());
         }
         if (isOpen) {
-            auto& children = registry.get<TComponentParent>(entity).Children;
+            auto& children = registry.get<TComponentHierarchy>(entity).Children;
             for (auto& child : children) {
                 RenderEntityHierarchy(registry, child);
             }
@@ -1222,13 +1222,13 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
         }
     }
 
-    if (registry.all_of<TComponentChildOf>(entity)) {
+    if (registry.all_of<TComponentHierarchy>(entity)) {
 
         if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
 
             ImGui::Indent();
-            auto& childOf = registry.get<TComponentChildOf>(entity);
-            auto& parentName = registry.get<TComponentName>(childOf.Parent);
+            auto& hierarchy = registry.get<TComponentHierarchy>(entity);
+            auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
 
             ImGui::TextUnformatted(parentName.Name.data());
             ImGui::Unindent();
@@ -1313,56 +1313,44 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
     }    
 }
 
-std::unordered_map<entt::entity, std::vector<entt::entity>> dependencies;
-
-auto BuildDependencyGraph(const auto& entities, entt::registry& registry) -> void {
-    for (auto entity : entities) {
-        if (registry.all_of<TComponentParent>(entity) && entity != static_cast<entt::entity>(0)) {
-            auto parent = registry.get<TComponentChildOf>(entity).Parent;
-            dependencies[parent].push_back(entity);
+auto UpdateAllTransforms(entt::registry& registry) -> void{
+    auto view = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform, TComponentHierarchy>();
+    for (auto root : view) {
+        const auto& hierarchy = view.get<TComponentHierarchy>(root);
+        if (hierarchy.Parent != entt::null) {
+            continue;
         }
-    }
-}
 
-std::vector<entt::entity> TopologicalSort(const auto& entities) {
-    std::unordered_set<entt::entity> visited;
-    std::stack<entt::entity> sortedStack;
+        std::stack<std::pair<entt::entity, const glm::mat4*>> stack;
+        stack.emplace(root, nullptr);
 
-    auto dfs = [&](entt::entity entity, auto& dfsRef) -> void {
-        if (visited.count(entity)) {
-            return;
-        }
-        visited.insert(entity);
+        while (!stack.empty()) {
+            auto [entity, parentGlobal] = stack.top();
+            stack.pop();
 
-        if (dependencies.count(entity)) {
-            for (auto child : dependencies[entity]) {
-                dfsRef(child, dfsRef);
+            auto& localPosition = registry.get<TComponentPosition>(entity);
+            auto& localOrientation = registry.get<TComponentOrientationEuler>(entity);
+            auto& localScale = registry.get<TComponentScale>(entity);
+            auto& globalTransform = registry.get<TComponentTransform>(entity);
+            auto& renderTransform = registry.get<TComponentRenderTransform>(entity);
+
+            glm::mat4 localMatrix = glm::translate(glm::mat4(1.0f), localPosition)
+                                  * glm::eulerAngleXYZ(localOrientation.Pitch, localOrientation.Yaw, localOrientation.Roll)
+                                  * glm::scale(glm::mat4(1.0f), localScale);
+
+            if (parentGlobal) {
+                globalTransform = *parentGlobal * localMatrix;
+            } else {
+                globalTransform = localMatrix;
+            }
+
+            renderTransform = globalTransform;
+
+            const auto& entityHierarchy = registry.get<TComponentHierarchy>(entity);
+            for (auto child : entityHierarchy.Children) {
+                stack.emplace(child, &globalTransform);
             }
         }
-
-        sortedStack.push(entity);
-    };
-
-    for (auto entity : entities) {
-        if (!visited.count(entity)) {
-            dfs(entity, dfs);
-        }
-    }
-
-    std::vector<entt::entity> sortedEntities;
-    while (!sortedStack.empty()) {
-        sortedEntities.push_back(sortedStack.top());
-        sortedStack.pop();
-    }
-
-    return sortedEntities;
-}
-
-void UpdateTransforms(const std::vector<entt::entity>& sortedEntities, entt::registry& registry) {
-    for (auto entity : sortedEntities) {
-
-        auto& transform = registry.get<TComponentTransform>(entity);
-        transform = EntityGetGlobalTransform(registry, entity);
     }
 }
 
@@ -1399,6 +1387,11 @@ auto RendererRender(
     }
 
     /*
+     * ECS - Update Transforms
+     */
+    UpdateAllTransforms(registry);
+
+    /*
      * Update Global Uniforms
      */
     {
@@ -1408,7 +1401,7 @@ auto RendererRender(
             const auto& entity,
             const auto& cameraComponent) {
 
-            auto cameraMatrix = EntityGetGlobalTransform(registry, entity);
+            auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
             auto viewMatrix = glm::inverse(cameraMatrix);
             glm::vec3 cameraPosition = cameraMatrix[3];
             glm::vec3 cameraDirection = cameraMatrix[1];
@@ -1422,54 +1415,6 @@ auto RendererRender(
             UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
         });
     }
-
-    /*
-     * ECS - Update Transforms
-     */
-    /*
-    {
-        PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
-
-        registry.view<TComponentTransform>().each([&](
-            const auto& entity,
-            auto& transformComponent) {
-
-            transformComponent = EntityGetGlobalTransform(registry, entity);
-        });
-    }
-    */
-
-    auto entities = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform>();
-    BuildDependencyGraph(entities, registry);
-    auto sortedEntities = TopologicalSort(entities);
-    UpdateTransforms(sortedEntities, registry);
-
-    /*
-    auto group = registry.group<TComponentTransform, TComponentPosition, TComponentOrientationEuler, TComponentScale>(entt::get<TComponentChildOf>);
-    for (auto entity : group) {
-        auto& position = group.get<TComponentPosition>(entity);
-        auto& orientation = group.get<TComponentOrientationEuler>(entity);
-        auto& scale = group.get<TComponentScale>(entity);
-        auto& transform = group.get<TComponentTransform>(entity);
-
-        auto localTranslation = glm::translate(glm::mat4(1.0f), position);
-        auto localOrientation = glm::eulerAngleYXZ(orientation.Yaw, orientation.Pitch, orientation.Roll);
-        auto localScale = glm::scale(glm::mat4(1.0f), scale);
-        auto localTransform = localTranslation * localOrientation * localScale;
-
-        if (registry.any_of<TComponentChildOf>(entity)) {
-            auto& parentComp = registry.get<TComponentChildOf>(entity);
-            if (parentComp.Parent != entt::null) {
-                const auto& parentTransform = registry.get<TComponentTransform>(parentComp.Parent);
-                transform = parentTransform * localTransform;
-            } else {
-                transform = localTransform;
-            }
-        } else {
-            transform = localTransform;
-        }
-    }
-    */
 
     /*
      * Resize if necessary
@@ -1560,7 +1505,7 @@ auto RendererRender(
             g_geometryGraphicsPipeline.Bind();
             g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
-            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
+            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentRenderTransform>();
             renderablesView.each([&](
                 const entt::entity& entity,
                 const auto& meshComponent,
@@ -1572,7 +1517,6 @@ auto RendererRender(
                 auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                const auto& t = EntityGetGlobalTransform(registry, entity);
                 auto worldMatrix = transformComponent;
                 if (counter == 1) {
                     selectedObjectMatrix = worldMatrix;
@@ -1752,9 +1696,8 @@ auto RendererRender(
                     ImGuizmo::SetDrawlist();
                     ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-                    glm::mat4 temp = EntityGetGlobalTransform(registry, g_selectedEntity);
-                    //auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
-                    //glm::mat4 temp = transformComponent;
+                    auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
+                    glm::mat4 temp = transformComponent;
 
                     static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
                     static ImGuizmo::MODE currentGizmoMode(ImGuizmo::MODE::WORLD);
