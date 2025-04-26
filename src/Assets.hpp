@@ -15,15 +15,17 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <parallel_hashmap/phmap_fwd_decl.h>
+
 namespace Assets {
 
-enum class TAssetImageDataType {
+enum class TAssetImageType {
     Uncompressed,
     CompressedKtx,
     CompressedDds
 };
 
-struct TAssetImageData {
+struct TAssetImage {
 
     int32_t Width = 0;
     int32_t Height = 0;
@@ -32,7 +34,7 @@ struct TAssetImageData {
     int32_t Components = 0;
     std::string Name;
     std::unique_ptr<unsigned char[]> Data = {};
-    TAssetImageDataType ImageDataType = {};
+    TAssetImageType ImageDataType = {};
 };
 
 enum class TAssetMaterialChannel {
@@ -61,7 +63,7 @@ enum class TAssetSamplerWrapMode {
     Repeat,
 };
 
-struct TAssetSamplerData {
+struct TAssetSampler {
     std::string Name;
     std::optional<TAssetSamplerMagFilter> MagFilter;
     std::optional<TAssetSamplerMinFilter> MinFilter;
@@ -75,7 +77,7 @@ struct TAssetMaterialChannelData {
     std::string TextureName;
 };
 
-struct TAssetMaterialData {
+struct TAssetMaterial {
     std::string Name;
     glm::vec4 BaseColor = {};
     float NormalStrength = 1.0f;
@@ -88,7 +90,7 @@ struct TAssetMaterialData {
     std::optional<TAssetMaterialChannelData> EmissiveTextureChannel = {};
 };
 
-struct TAssetMeshData {
+struct TAssetPrimitive {
     std::string Name;
     std::vector<glm::vec3> Positions;
     std::vector<glm::vec3> Normals;
@@ -98,11 +100,16 @@ struct TAssetMeshData {
     std::optional<std::string> MaterialName;
 };
 
+struct TAssetMesh {
+    std::string Name;
+    std::vector<TAssetPrimitive> Primitives;
+};
+
 struct TAssetModelNode {
     std::string Name;
-    glm::vec3 LocalPosition;
-    glm::quat LocalRotation;
-    glm::vec3 LocalScale;
+    glm::vec3 LocalPosition = {};
+    glm::quat LocalRotation = glm::identity<glm::quat>();
+    glm::vec3 LocalScale = glm::vec3(1.0f);
     std::optional<std::string> MeshName;
     std::vector<TAssetModelNode> Children;
 };
@@ -125,10 +132,11 @@ auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>&;
 auto GetAssetModel(const std::string& assetName) -> TAssetModel&;
 auto IsAssetLoaded(const std::string& assetName) -> bool;
 
-auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData&;
-auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData&;
-auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData&;
-auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData&;
+auto GetAssetImage(const std::string& imageDataName) -> TAssetImage&;
+auto GetAssetSampler(const std::string& samplerDataName) -> TAssetSampler&;
+auto GetAssetMaterial(const std::string& materialDataName) -> TAssetMaterial&;
+auto GetAssetMesh(const std::string& meshDataName) -> TAssetMesh&;
+auto GetAssetPrimitive(const std::string& assetPrimitiveName) -> TAssetPrimitive&;
 auto AddDefaultAssets() -> void;
 
 }

@@ -188,7 +188,7 @@ auto main(
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
 
-    auto isZink = std::getenv("GALLIUM_DRIVER");
+    const auto isZink = std::getenv("GALLIUM_DRIVER");
     if (isZink == nullptr) {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
     } else {

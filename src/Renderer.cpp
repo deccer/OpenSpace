@@ -141,7 +141,6 @@ glm::ivec2 g_sceneViewerSize = {};
 glm::ivec2 g_sceneViewerScaledSize = {};
 bool g_sceneViewerResized = false;
 bool g_isEditor = false;
-bool g_isSrgbDisabled = false;
 
 entt::entity g_selectedEntity = entt::null;
 
@@ -303,26 +302,22 @@ auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
            : encodedNormal;
 }
 
-auto RendererCreateGpuMesh(const Assets::TAssetMeshData& assetMeshData) -> void {
-
-    if (g_gpuMeshes.contains(assetMeshData.Name)) {
-        return;
-    }
+auto RendererCreateGpuMesh(const Assets::TAssetPrimitive& assetPrimitive, const std::string& label) -> void {
 
     std::vector<TGpuVertexPosition> vertexPositions;
     std::vector<TGpuPackedVertexNormalTangentUvTangentSign> vertexNormalUvTangents;
-    vertexPositions.resize(assetMeshData.Positions.size());
-    vertexNormalUvTangents.resize(assetMeshData.Positions.size());
+    vertexPositions.resize(assetPrimitive.Positions.size());
+    vertexNormalUvTangents.resize(assetPrimitive.Positions.size());
 
-    for (size_t i = 0; i < assetMeshData.Positions.size(); i++) {
+    for (size_t i = 0; i < assetPrimitive.Positions.size(); i++) {
         vertexPositions[i] = {
-            assetMeshData.Positions[i],
+            assetPrimitive.Positions[i],
         };
 
         vertexNormalUvTangents[i] = {
-            glm::packSnorm2x16(EncodeNormal(assetMeshData.Normals[i])),
-            glm::packSnorm2x16(EncodeNormal(assetMeshData.Tangents[i].xyz())),
-            glm::vec4(assetMeshData.Uvs[i], assetMeshData.Tangents[i].w, 0.0f),
+            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Normals[i])),
+            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Tangents[i].xyz())),
+            glm::vec4(assetPrimitive.Uvs[i], assetPrimitive.Tangents[i].w, 0.0f),
         };
     }
 
@@ -331,29 +326,29 @@ auto RendererCreateGpuMesh(const Assets::TAssetMeshData& assetMeshData) -> void 
         PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
 
         glCreateBuffers(3, buffers);
-        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", assetMeshData.Name));
-        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", assetMeshData.Name));
-        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", assetMeshData.Name));
+        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", label));
+        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", label));
+        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", label));
         glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * vertexPositions.size(),
                                 vertexPositions.data(), 0);
         glNamedBufferStorage(buffers[1], sizeof(TGpuPackedVertexNormalTangentUvTangentSign) * vertexNormalUvTangents.size(),
                                 vertexNormalUvTangents.data(), 0);
-        glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetMeshData.Indices.size(), assetMeshData.Indices.data(), 0);
+        glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetPrimitive.Indices.size(), assetPrimitive.Indices.data(), 0);
     }
 
     auto gpuMesh = TGpuMesh{
-        .Name = assetMeshData.Name,
+        .Name = label,
         .VertexPositionBuffer = buffers[0],
         .VertexNormalUvTangentBuffer = buffers[1],
         .IndexBuffer = buffers[2],
 
         .VertexCount = vertexPositions.size(),
-        .IndexCount = assetMeshData.Indices.size(),
+        .IndexCount = assetPrimitive.Indices.size(),
     };
 
     {
         PROFILER_ZONESCOPEDN("Add Gpu Mesh");
-        g_gpuMeshes[assetMeshData.Name] = gpuMesh;
+        g_gpuMeshes[label] = gpuMesh;
     }
 }
 
@@ -425,7 +420,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImageData(materialDataName);
+    auto& imageData = Assets::GetAssetImage(materialDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -457,7 +452,7 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName, Assets::T
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImageData(imageDataName);
+    auto& imageData = Assets::GetAssetImage(imageDataName);
 
     auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
@@ -522,7 +517,7 @@ constexpr auto ToMinFilter(std::optional<Assets::TAssetSamplerMinFilter> minFilt
     }
 }
 
-auto CreateSamplerDescriptor(const Assets::TAssetSamplerData& assetSampler) -> TSamplerDescriptor {
+auto CreateSamplerDescriptor(const Assets::TAssetSampler& assetSampler) -> TSamplerDescriptor {
 
     return TSamplerDescriptor{
         .Label = assetSampler.Name,
@@ -541,7 +536,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         return;
     }
 
-    auto& assetMaterialData = Assets::GetAssetMaterialData(assetMaterialName);
+    auto& assetMaterialData = Assets::GetAssetMaterial(assetMaterialName);
 
     auto cpuMaterial = TCpuMaterial{
         .BaseColor = assetMaterialData.BaseColor,
@@ -550,7 +545,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
     if (baseColorChannel.has_value()) {
         auto& baseColor = *baseColorChannel;
-        auto& baseColorSampler = Assets::GetAssetSamplerData(baseColor.SamplerName);
+        auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
 
         cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
@@ -561,7 +556,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
     auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel.has_value()) {
         auto& normalTexture = *normalTextureChannel;
-        auto& normalTextureSampler = Assets::GetAssetSamplerData(normalTexture.SamplerName);
+        auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
 
         cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel);
         auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
@@ -714,11 +709,11 @@ auto RendererInitialize(
     g_fontJetbrainsMonoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMono_Regular_compressed_data, JetBrainsMono_Regular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
 
     io.Fonts->TexGlyphPadding = 1;
-    for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->ConfigData.Size; fontConfigIndex++) {
-        ImFontConfig* fontConfig = (ImFontConfig*)&io.Fonts->ConfigData[fontConfigIndex];
+    for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->Sources.Size; fontConfigIndex++) {
+        auto* fontConfig = &io.Fonts->Sources[fontConfigIndex];
         fontConfig->RasterizerMultiply = 1.0f;
     }
-    
+
     auto& style = ImGui::GetStyle();
     style.WindowMenuButtonPosition = ImGuiDir_None;
     style.DisabledAlpha = 0.3f;
@@ -1115,7 +1110,7 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
     auto treeNodeFlags = g_selectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0;
     treeNodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-    if (registry.all_of<TComponentParent>(entity)) {
+    if (registry.all_of<TComponentHierarchy>(entity)) {
 
         bool isOpen = false;
         bool isRootEntity = false;
@@ -1131,7 +1126,7 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
             ImGui::TextUnformatted(entityName.Name.data());
         }
         if (isOpen) {
-            auto& children = registry.get<TComponentParent>(entity).Children;
+            auto& children = registry.get<TComponentHierarchy>(entity).Children;
             for (auto& child : children) {
                 RenderEntityHierarchy(registry, child);
             }
@@ -1227,13 +1222,13 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
         }
     }
 
-    if (registry.all_of<TComponentChildOf>(entity)) {
+    if (registry.all_of<TComponentHierarchy>(entity)) {
 
         if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
 
             ImGui::Indent();
-            auto& childOf = registry.get<TComponentChildOf>(entity);
-            auto& parentName = registry.get<TComponentName>(childOf.Parent);
+            auto& hierarchy = registry.get<TComponentHierarchy>(entity);
+            auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
 
             ImGui::TextUnformatted(parentName.Name.data());
             ImGui::Unindent();
@@ -1318,56 +1313,44 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
     }    
 }
 
-std::unordered_map<entt::entity, std::vector<entt::entity>> dependencies;
-
-auto BuildDependencyGraph(const auto& entities, entt::registry& registry) -> void {
-    for (auto entity : entities) {
-        if (registry.all_of<TComponentParent>(entity) && entity != static_cast<entt::entity>(0)) {
-            auto parent = registry.get<TComponentChildOf>(entity).Parent;
-            dependencies[parent].push_back(entity);
+auto UpdateAllTransforms(entt::registry& registry) -> void{
+    auto view = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform, TComponentHierarchy>();
+    for (auto root : view) {
+        const auto& hierarchy = view.get<TComponentHierarchy>(root);
+        if (hierarchy.Parent != entt::null) {
+            continue;
         }
-    }
-}
 
-std::vector<entt::entity> TopologicalSort(const auto& entities) {
-    std::unordered_set<entt::entity> visited;
-    std::stack<entt::entity> sortedStack;
+        std::stack<std::pair<entt::entity, const glm::mat4*>> stack;
+        stack.emplace(root, nullptr);
 
-    auto dfs = [&](entt::entity entity, auto& dfsRef) -> void {
-        if (visited.count(entity)) {
-            return;
-        }
-        visited.insert(entity);
+        while (!stack.empty()) {
+            auto [entity, parentGlobal] = stack.top();
+            stack.pop();
 
-        if (dependencies.count(entity)) {
-            for (auto child : dependencies[entity]) {
-                dfsRef(child, dfsRef);
+            auto& localPosition = registry.get<TComponentPosition>(entity);
+            auto& localOrientation = registry.get<TComponentOrientationEuler>(entity);
+            auto& localScale = registry.get<TComponentScale>(entity);
+            auto& globalTransform = registry.get<TComponentTransform>(entity);
+            auto& renderTransform = registry.get<TComponentRenderTransform>(entity);
+
+            glm::mat4 localMatrix = glm::translate(glm::mat4(1.0f), localPosition)
+                                  * glm::eulerAngleYXZ(localOrientation.Yaw, localOrientation.Pitch, localOrientation.Roll)
+                                  * glm::scale(glm::mat4(1.0f), localScale);
+
+            if (parentGlobal) {
+                globalTransform = *parentGlobal * localMatrix;
+            } else {
+                globalTransform = localMatrix;
+            }
+
+            renderTransform = globalTransform;
+
+            const auto& entityHierarchy = registry.get<TComponentHierarchy>(entity);
+            for (auto child : entityHierarchy.Children) {
+                stack.emplace(child, &globalTransform);
             }
         }
-
-        sortedStack.push(entity);
-    };
-
-    for (auto entity : entities) {
-        if (!visited.count(entity)) {
-            dfs(entity, dfs);
-        }
-    }
-
-    std::vector<entt::entity> sortedEntities;
-    while (!sortedStack.empty()) {
-        sortedEntities.push_back(sortedStack.top());
-        sortedStack.pop();
-    }
-
-    return sortedEntities;
-}
-
-void UpdateTransforms(const std::vector<entt::entity>& sortedEntities, entt::registry& registry) {
-    for (auto entity : sortedEntities) {
-
-        auto& transform = registry.get<TComponentTransform>(entity);
-        transform = EntityGetGlobalTransform(registry, entity);
     }
 }
 
@@ -1380,7 +1363,7 @@ auto RendererRender(
     }
 
     {
-        PROFILER_ZONESCOPEDN("Create Gpu Resources");
+        PROFILER_ZONESCOPEDN("Create Gpu Resources if necessary");
 
         /*
          * ECS - Create Gpu Resources if necessary
@@ -1392,8 +1375,8 @@ auto RendererRender(
             auto& meshComponent = registry.get<TComponentMesh>(entity);
             auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-            auto& assetMesh = Assets::GetAssetMeshData(meshComponent.Mesh);
-            RendererCreateGpuMesh(assetMesh);
+            auto& assetPrimitive = Assets::GetAssetPrimitive(meshComponent.Mesh);
+            RendererCreateGpuMesh(assetPrimitive, assetPrimitive.Name);
             RendererCreateCpuMaterial(materialComponent.Material);
 
             registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
@@ -1406,81 +1389,24 @@ auto RendererRender(
     /*
      * ECS - Update Transforms
      */
-    /* 
-    {
-        PROFILER_ZONESCOPEDN("ECS - Update Transforms"); 
-
-        registry.view<TComponentTransform>().each([&](
-            const auto& entity,
-            auto& transformComponent) {
-
-            transformComponent = EntityGetGlobalTransform(registry, entity);
-        });
-    }
-    */
-
-    /*
-    auto entities = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform>();
-    BuildDependencyGraph(entities, registry);
-    auto sortedEntities = TopologicalSort(entities);
-    UpdateTransforms(sortedEntities, registry);
-    */
-
-    /*
-    auto localTransformView = registry.view<TComponentTransform>();
-    for (auto localTransform : localTransformView) {
-        TransformComponent& transform = localTransformView.get<TransformComponent>(localTransform);
-        Entity currentEntity = { localTransform, _scene };
-        ParentComponent& parentComponent = currentEntity.GetComponent<ParentComponent>();
-        if (transform.Dirty) {
-            
-        }
-    }
-        */
-    
-
-    auto group = registry.group<TComponentTransform, TComponentPosition, TComponentOrientationEuler, TComponentScale>(entt::get<TComponentChildOf>);
-    for (auto entity : group) {
-        auto& position = group.get<TComponentPosition>(entity);
-        auto& orientation = group.get<TComponentOrientationEuler>(entity);
-        auto& scale = group.get<TComponentScale>(entity);
-        auto& transform = group.get<TComponentTransform>(entity);
-
-        auto localTranslation = glm::translate(glm::mat4(1.0f), position);
-        auto localOrientation = glm::eulerAngleYXZ(orientation.Yaw, orientation.Pitch, orientation.Roll);
-        auto localScale = glm::scale(glm::mat4(1.0f), scale);
-        auto localTransform = localTranslation * localOrientation * localScale;
-
-        if (registry.any_of<TComponentChildOf>(entity)) {
-            auto& parentComp = registry.get<TComponentChildOf>(entity);
-            if (parentComp.Parent != entt::null) {
-                const auto& parentTransform = registry.get<TComponentTransform>(parentComp.Parent);
-                transform = parentTransform * localTransform;
-            } else {
-                transform = localTransform;
-            }
-        } else {
-            transform = localTransform;
-        }
-    }
-
+    UpdateAllTransforms(registry);
 
     /*
      * Update Global Uniforms
      */
     {
-        PROFILER_ZONESCOPEDN("Update Global Uniforms"); 
+        PROFILER_ZONESCOPEDN("Update Global Uniforms");
 
         registry.view<TComponentCamera>().each([&](
             const auto& entity,
             const auto& cameraComponent) {
 
-            auto cameraMatrix = EntityGetGlobalTransform(registry, entity);
+            auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
             auto viewMatrix = glm::inverse(cameraMatrix);
             glm::vec3 cameraPosition = cameraMatrix[3];
             glm::vec3 cameraDirection = cameraMatrix[1];
 
-            auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
+            auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
             g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
             g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
 
@@ -1523,27 +1449,22 @@ auto RendererRender(
 
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{100, 0, 0},
+            .StartColor = glm::vec4{0.7f, 0.0f, 0.0f, 1.0f},
+            .EndPosition = glm::vec3{128, 0, 0},
             .EndColor = glm::vec4{1.0f, 0.0f, 0.0f, 1.0f}
         });
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{0, 100, 0},
+            .StartColor = glm::vec4{0.0f, 0.7f, 0.0f, 1.0f},
+            .EndPosition = glm::vec3{0, 128, 0},
             .EndColor = glm::vec4{0.0f, 1.0f, 0.0f, 1.0f}
         });
         g_debugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
-            .StartColor = glm::vec4{1.1f, 1.1f, 1.1f, 1.0f},
-            .EndPosition = glm::vec3{0, 0, 100},
+            .StartColor = glm::vec4{0.0f, 0.0f, 0.7f, 1.0f},
+            .EndPosition = glm::vec3{0, 0, 128},
             .EndColor = glm::vec4{0.0f, 0.0f, 1.0f, 1.0f}
         });
-    }
-
-    if (g_isSrgbDisabled) {
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        g_isSrgbDisabled = false;
     }
 
     {
@@ -1555,16 +1476,17 @@ auto RendererRender(
             g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
             const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentTransform>();
-            renderablesView.each([](
+            renderablesView.each([&](
+                const entt::entity& entity,
                 const auto& meshComponent,
                 const auto& transformComponent) {
 
                 PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
                 const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-
+                const auto& t = transformComponent;//EntityGetGlobalTransform(registry, entity);
                 g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, transformComponent/* * gpuMesh.InitialTransform*/);
+                g_depthPrePassGraphicsPipeline.SetUniform(0, t);
 
                 g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
             });
@@ -1583,8 +1505,9 @@ auto RendererRender(
             g_geometryGraphicsPipeline.Bind();
             g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
-            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentTransform>();
-            renderablesView.each([](
+            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentRenderTransform>();
+            renderablesView.each([&](
+                const entt::entity& entity,
                 const auto& meshComponent,
                 const auto& materialComponent,
                 const auto& transformComponent) {
@@ -1594,7 +1517,7 @@ auto RendererRender(
                 auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
                 auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-                auto worldMatrix = transformComponent/* * gpuMesh.InitialTransform*/;
+                auto worldMatrix = transformComponent;
                 if (counter == 1) {
                     selectedObjectMatrix = worldMatrix;
                 }
@@ -1773,9 +1696,8 @@ auto RendererRender(
                     ImGuizmo::SetDrawlist();
                     ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-                    glm::mat4 temp = EntityGetGlobalTransform(registry, g_selectedEntity);
-                    //auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
-                    //glm::mat4 temp = transformComponent;
+                    auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
+                    glm::mat4 temp = transformComponent;
 
                     static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
                     static ImGuizmo::MODE currentGizmoMode(ImGuizmo::MODE::WORLD);
@@ -1903,8 +1825,6 @@ auto RendererRender(
         ImGui::Render();
         if (auto* imGuiDrawData = ImGui::GetDrawData(); imGuiDrawData != nullptr) {
             PushDebugGroup("UI");
-            glDisable(GL_FRAMEBUFFER_SRGB);
-            g_isSrgbDisabled = true;
             glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
             ImGui_ImplOpenGL3_RenderDrawData(imGuiDrawData);
             PopDebugGroup();

@@ -37,21 +37,25 @@ target_link_libraries(HowToScript
     PRIVATE debugbreak
     PRIVATE spdlog
     PRIVATE poolSTL::poolSTL
-    PRIVATE tbb
     PRIVATE fastgltf
     PRIVATE EnTT
     PRIVATE mimalloc-static
     #PRIVATE Jolt
     PRIVATE mikktspace
+    PRIVATE phmap
 )
+
+# tbb is not required on windows for some reason
+if(!MSVC)
+    message("Linking with tbb")
+    target_link_libraries(HowToScript
+        PRIVATE tbb
+    )
+endif()
 
 target_sources(HowToScript
     PRIVATE ${glm_SOURCE_DIR}/util/glm.natvis
 )
-
-#target_link_options(HowToScript
-#    PRIVATE /NATVIS:${glm_SOURCE_DIR}/util/glm.natvis
-#)
 
 if(USE_PROFILER)
     target_compile_definitions(HowToScript

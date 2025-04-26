@@ -14,6 +14,8 @@
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
+#include <parallel_hashmap/phmap.h>
+
 #include <spdlog/spdlog.h>
 #include <mikktspace.h>
 
@@ -29,14 +31,15 @@ struct TAssetRawImageData {
     std::string Name;
     std::unique_ptr<std::byte[]> EncodedData = {};
     std::size_t EncodedDataSize = 0;
-    TAssetImageDataType ImageDataType = {};
+    TAssetImageType ImageDataType = {};
 };
 
 std::unordered_map<std::string, TAssetModel> g_assetModels = {};
-std::unordered_map<std::string, TAssetImageData> g_assetImageDates = {};
-std::unordered_map<std::string, TAssetSamplerData> g_assetSamplerDates = {};
-std::unordered_map<std::string, TAssetMaterialData> g_assetMaterialDates = {};
-std::unordered_map<std::string, TAssetMeshData> g_assetMeshDates = {};
+std::unordered_map<std::string, TAssetImage> g_assetImages = {};
+std::unordered_map<std::string, TAssetSampler> g_assetSamplers = {};
+std::unordered_map<std::string, TAssetMaterial> g_assetMaterials = {};
+std::unordered_map<std::string, TAssetPrimitive> g_assetPrimitives = {};
+std::unordered_map<std::string, TAssetMesh> g_assetMeshes = {};
 
 auto GetSafeResourceName(
     const char* const baseName,
@@ -85,16 +88,16 @@ auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastglt
     return fgTexture.samplerIndex;
 }
 
-auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageDataType {
+auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageType {
     if (mimeType == fastgltf::MimeType::KTX2) {
-        return TAssetImageDataType::CompressedKtx;
+        return TAssetImageType::CompressedKtx;
     }
 
     if (mimeType == fastgltf::MimeType::DDS) {
-        return TAssetImageDataType::CompressedDds;
+        return TAssetImageType::CompressedDds;
     }
 
-    return TAssetImageDataType::Uncompressed;
+    return TAssetImageType::Uncompressed;
 }
 
 constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
@@ -186,7 +189,7 @@ auto LoadImages(
 
     assetModel.Images.resize(fgAsset.images.size());
 
-    std::vector<TAssetImageData> assetImages;
+    std::vector<TAssetImage> assetImages;
     assetImages.resize(fgAsset.images.size());
 
     const auto imageIndices = std::ranges::iota_view{IndexZero, fgAsset.images.size()};
@@ -233,9 +236,9 @@ auto LoadImages(
 
         auto& assetImage = assetImages[imageIndex];
         assetImage.ImageDataType = imageData.ImageDataType;
-        if (assetImage.ImageDataType == TAssetImageDataType::CompressedKtx) {
+        if (assetImage.ImageDataType == TAssetImageType::CompressedKtx) {
 
-        } else if (assetImage.ImageDataType == TAssetImageDataType::CompressedDds) {
+        } else if (assetImage.ImageDataType == TAssetImageType::CompressedDds) {
 
         } else {
             int32_t width = 0;
@@ -254,7 +257,7 @@ auto LoadImages(
     for(auto i = 0; i < assetImages.size(); ++i) {
         auto& assetImage = assetImages[i];
         assetModel.Images[i] = assetImage.Name;
-        g_assetImageDates[assetImage.Name] = std::move(assetImage);
+        g_assetImages[assetImage.Name] = std::move(assetImage);
     }
 }
 
@@ -276,7 +279,7 @@ auto LoadSamplers(
         auto wrapT = ToString(fgSampler.wrapT);
         auto samplerName = std::format("S_{}_{}_{}_{}", magFilter, minFilter, wrapS, wrapT);
 
-        auto assetSamplerData = TAssetSamplerData {
+        auto assetSamplerData = TAssetSampler {
             .Name = samplerName,
             .MagFilter = ConvertMagFilter(fgSampler.magFilter),
             .MinFilter = ConvertMinFilter(fgSampler.minFilter),
@@ -285,8 +288,8 @@ auto LoadSamplers(
         };
         
         asset.Samplers[samplerIndex] = samplerName;
-        if (!g_assetSamplerDates.contains(samplerName)) {
-            g_assetSamplerDates[samplerName] = std::move(assetSamplerData);
+        if (!g_assetSamplers.contains(samplerName)) {
+            g_assetSamplers[samplerName] = std::move(assetSamplerData);
         }
     });
 }
@@ -299,7 +302,7 @@ auto LoadMaterials(
     const auto materialIndices = std::ranges::iota_view{IndexZero, fgAsset.materials.size()};
     asset.Materials.resize(fgAsset.materials.size());
 
-    std::vector<TAssetMaterialData> assetMaterials;
+    std::vector<TAssetMaterial> assetMaterials;
     assetMaterials.resize(fgAsset.materials.size());
 
     std::for_each(
@@ -358,7 +361,7 @@ auto LoadMaterials(
     for (auto i = 0; i < assetMaterials.size(); ++i) {
         auto& assetMaterial = assetMaterials[i];
         asset.Materials[i] = assetMaterial.Name;
-        g_assetMaterialDates[assetMaterial.Name] = std::move(assetMaterial);
+        g_assetMaterials[assetMaterial.Name] = std::move(assetMaterial);
     }
 }
 
@@ -366,134 +369,70 @@ auto LoadMeshes(
     const fastgltf::Asset& fgAsset,
     TAssetModel& assetModel) -> void {
 
-    /*
-    auto& primitive = fgAsset.meshes[meshIndex].primitives[primitiveIndex];
-    if (!primitive.indicesAccessor.has_value() || primitive.findAttribute("POSITION") == primitive.attributes.end()) {
-        return;
-    }
+    assetModel.Meshes.resize(fgAsset.meshes.size());
+    auto meshes = std::vector<TAssetMesh>(fgAsset.meshes.size(), TAssetMesh());
 
-    auto primitiveName = GetSafeResourceName(assetModelName.data(), fgAsset.meshes[meshIndex].name.data(), std::format("mesh-{}-primitive", meshIndex).data(), primitiveIndex);
-    
-    TAssetMeshData assetMeshData;
-    assetMeshData.Name = primitiveName;
-    assetMeshData.MaterialName = primitive.materialIndex.has_value()
-        ? assetModel.Materials[primitive.materialIndex.value()]
-        : "default-material-0";
+    static auto globalPrimitiveIndex = 0;
+    for (auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); ++meshIndex) {
+        const auto& fgMesh = fgAsset.meshes[meshIndex];
+        const auto& meshName = GetSafeResourceName(assetModel.Name.data(), fgMesh.name.data(), "mesh", meshIndex);
 
-    auto& indices = fgAsset.accessors[primitive.indicesAccessor.value()];
-    assetMeshData.Indices.resize(indices.count);
-    fastgltf::copyFromAccessor<uint32_t>(fgAsset, indices, assetMeshData.Indices.data());
+        auto& assetMesh = meshes[meshIndex];
+        assetMesh.Primitives.resize(fgMesh.primitives.size());
+        assetMesh.Name = meshName;
+        assetModel.Meshes[meshIndex] = meshName;
 
-    const auto& positions = fgAsset.accessors[primitive.findAttribute("POSITION")->accessorIndex];
-    assetMeshData.Positions.resize(positions.count);
-    fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, assetMeshData.Positions.data());
-
-    if (auto* normalsAttribute = primitive.findAttribute("NORMAL"); normalsAttribute != primitive.attributes.end()) {
-        auto& normals = fgAsset.accessors[normalsAttribute->accessorIndex];
-        assetMeshData.Normals.resize(normals.count);
-        fastgltf::copyFromAccessor<glm::vec3>(fgAsset, normals, assetMeshData.Normals.data());
-    }
-
-    if (auto* uv0Attribute = primitive.findAttribute("TEXCOORD_0"); uv0Attribute != primitive.attributes.end()) {
-        auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
-        assetMeshData.Uvs.resize(uv0s.count);
-        fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, assetMeshData.Uvs.data());
-    } else {
-        assetMeshData.Uvs.resize(positions.count);
-    }
-
-    if (auto* tangentAttribute = primitive.findAttribute("TANGENT"); tangentAttribute != primitive.attributes.end()) {
-        auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
-        assetMeshData.Tangents.resize(tangents.count);
-        fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, assetMeshData.Tangents.data());
-    } else  {
-        assetMeshData.Tangents.resize(assetMeshData.Positions.size());
-        std::fill_n(assetMeshData.Tangents.begin(), assetMeshData.Positions.size(), glm::vec4{1.0f});
-    }
-
-    assetModel.Meshes[assetGlobalPrimitiveIndex++] = primitiveName;
-    g_assetMeshDates[primitiveName] = std::move(assetMeshData);
-    */
-
-    struct TFlatPrimitive {
-        size_t PrimitiveId;
-        size_t MeshId;
-        std::optional<size_t> MaterialId;
-        std::string Name;
-    };
-
-    auto totalPrimitiveCount = 0uz;
-    for (size_t meshId = 0; meshId < fgAsset.meshes.size(); ++meshId) {
-        totalPrimitiveCount += fgAsset.meshes[meshId].primitives.size();
-    }
-
-    std::vector<TFlatPrimitive> flatPrimitives;
-    flatPrimitives.reserve(totalPrimitiveCount);
-
-    size_t primitiveId = 0;
-    for (size_t meshId = 0; meshId < fgAsset.meshes.size(); ++meshId) {
-        const auto& fgMesh = fgAsset.meshes[meshId];
         for (size_t primitiveIndex = 0; primitiveIndex < fgMesh.primitives.size(); ++primitiveIndex) {
-            flatPrimitives.push_back(TFlatPrimitive{
-                .PrimitiveId = primitiveIndex,
-                .MeshId = meshId,
-                .MaterialId = fgMesh.primitives[primitiveIndex].materialIndex,
-                .Name = GetSafeResourceName(assetModel.Name.data(), nullptr, "mesh", primitiveId++)
-            });
-        }
-    }
 
-    assetModel.Meshes.resize(flatPrimitives.size());
-    auto meshes = std::vector<TAssetMeshData>(flatPrimitives.size(), TAssetMeshData());
+            const auto& fgPrimitive = fgAsset.meshes[meshIndex].primitives[primitiveIndex];
+            auto& assetPrimitive = assetMesh.Primitives[primitiveIndex];
+            auto assetPrimitiveName = GetSafeResourceName(assetModel.Name.data(), nullptr, "primitive", globalPrimitiveIndex++);
 
-    for (size_t primitiveIndex = 0; primitiveIndex < flatPrimitives.size(); ++primitiveIndex) {
-        const auto& flatPrimitive = flatPrimitives[primitiveIndex];
-        const auto& fgPrimitive = fgAsset.meshes[flatPrimitive.MeshId].primitives[flatPrimitive.PrimitiveId];
-        assetModel.Meshes[primitiveIndex] = flatPrimitive.Name;
+            assetPrimitive.Name = assetPrimitiveName;
+            assetPrimitive.MaterialName = fgPrimitive.materialIndex.has_value()
+                ? assetModel.Materials[fgPrimitive.materialIndex.value()]
+                : "T-Default";
 
-        auto& mesh = meshes[primitiveIndex];
-        mesh.Name = flatPrimitive.Name;
-        mesh.MaterialName = flatPrimitive.MaterialId.has_value()
-            ? assetModel.Materials[flatPrimitive.MaterialId.value()]
-            : "default-material-0";
+            auto& indices = fgAsset.accessors[fgPrimitive.indicesAccessor.value()];
+            assetPrimitive.Indices.resize(indices.count);
+            fastgltf::copyFromAccessor<uint32_t>(fgAsset, indices, assetPrimitive.Indices.data());
 
-        auto& indices = fgAsset.accessors[fgPrimitive.indicesAccessor.value()];
-        mesh.Indices.resize(indices.count);
-        fastgltf::copyFromAccessor<uint32_t>(fgAsset, indices, mesh.Indices.data());
+            auto& positions = fgAsset.accessors[fgPrimitive.findAttribute("POSITION")->accessorIndex];
+            assetPrimitive.Positions.resize(positions.count);
+            fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, assetPrimitive.Positions.data());
+            if (auto* normalsAttribute = fgPrimitive.findAttribute("NORMAL"); normalsAttribute != fgPrimitive.attributes.end()) {
+                auto& normals = fgAsset.accessors[normalsAttribute->accessorIndex];
+                assetPrimitive.Normals.resize(normals.count);
+                fastgltf::copyFromAccessor<glm::vec3>(fgAsset, normals, assetPrimitive.Normals.data());
+            } else {
+                assetPrimitive.Normals.resize(assetPrimitive.Positions.size());
+                std::fill_n(assetPrimitive.Normals.data(), assetPrimitive.Positions.size(), glm::vec3(0.5f, 0.5f, 1.0f));
+            }
 
-        auto& positions = fgAsset.accessors[fgPrimitive.findAttribute("POSITION")->accessorIndex];
-        mesh.Positions.resize(positions.count);
-        fastgltf::copyFromAccessor<glm::vec3>(fgAsset, positions, mesh.Positions.data());
-        if (auto* normalsAttribute = fgPrimitive.findAttribute("NORMAL"); normalsAttribute != fgPrimitive.attributes.end()) {
-            auto& normals = fgAsset.accessors[normalsAttribute->accessorIndex];
-            mesh.Normals.resize(normals.count);
-            fastgltf::copyFromAccessor<glm::vec3>(fgAsset, normals, mesh.Normals.data());
-        } else {
-            mesh.Normals.resize(mesh.Positions.size());
-            std::fill_n(mesh.Normals.data(), mesh.Positions.size(), glm::vec3(0.5f, 0.5f, 1.0f));
-        }
+            if (auto* uv0Attribute = fgPrimitive.findAttribute("TEXCOORD_0"); uv0Attribute != fgPrimitive.attributes.end()) {
+                auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
+                assetPrimitive.Uvs.resize(uv0s.count);
+                fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, assetPrimitive.Uvs.data());
+            } else {
+                assetPrimitive.Uvs.resize(assetPrimitive.Positions.size());
+                std::fill_n(assetPrimitive.Uvs.begin(), assetPrimitive.Positions.size(), glm::vec2(0.0f, 0.0f));
+            }
 
-        if (auto* uv0Attribute = fgPrimitive.findAttribute("TEXCOORD_0"); uv0Attribute != fgPrimitive.attributes.end()) {
-            auto& uv0s = fgAsset.accessors[uv0Attribute->accessorIndex];
-            mesh.Uvs.resize(uv0s.count);
-            fastgltf::copyFromAccessor<glm::vec2>(fgAsset, uv0s, mesh.Uvs.data());
-        } else {
-            mesh.Uvs.resize(mesh.Positions.size());
-            std::fill_n(mesh.Uvs.begin(), mesh.Positions.size(), glm::vec2(0.0f, 0.0f));
-        }
+            if (auto* tangentAttribute = fgPrimitive.findAttribute("TANGENT"); tangentAttribute != fgPrimitive.attributes.end()) {
+                auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
+                assetPrimitive.Tangents.resize(tangents.count);
+                fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, assetPrimitive.Tangents.data());
+            } else  {
+                assetPrimitive.Tangents.resize(assetPrimitive.Positions.size());
+                std::fill_n(assetPrimitive.Tangents.begin(), assetPrimitive.Positions.size(), glm::vec4{1.0f});
+            }
 
-        if (auto* tangentAttribute = fgPrimitive.findAttribute("TANGENT"); tangentAttribute != fgPrimitive.attributes.end()) {
-            auto& tangents = fgAsset.accessors[tangentAttribute->accessorIndex];
-            mesh.Tangents.resize(tangents.count);
-            fastgltf::copyFromAccessor<glm::vec4>(fgAsset, tangents, mesh.Tangents.data());
-        } else  {
-            mesh.Tangents.resize(mesh.Positions.size());
-            std::fill_n(mesh.Tangents.begin(), mesh.Positions.size(), glm::vec4{1.0f});
+            g_assetPrimitives[assetPrimitiveName] = assetPrimitive;
         }
     }
 
     for (const auto& mesh : meshes) {
-        g_assetMeshDates[mesh.Name] = mesh;
+        g_assetMeshes[mesh.Name] = std::move(mesh);
     }
 }
 
@@ -667,24 +606,28 @@ auto GetAssetModel(const std::string& assetName) -> TAssetModel& {
     return g_assetModels[assetName];
 }
 
+auto GetAssetPrimitive(const std::string& assetPrimitiveName) -> TAssetPrimitive& {
+    return g_assetPrimitives[assetPrimitiveName];
+}
+
 auto IsAssetLoaded(const std::string& assetName) -> bool {
     return g_assetModels.contains(assetName);
 }
 
-auto GetAssetImageData(const std::string& imageDataName) -> TAssetImageData& {
-    return g_assetImageDates[imageDataName];
+auto GetAssetImage(const std::string& imageDataName) -> TAssetImage& {
+    return g_assetImages[imageDataName];
 }
 
-auto GetAssetSamplerData(const std::string& samplerDataName) -> TAssetSamplerData& {
-    return g_assetSamplerDates[samplerDataName];
+auto GetAssetSampler(const std::string& samplerDataName) -> TAssetSampler& {
+    return g_assetSamplers[samplerDataName];
 }
 
-auto GetAssetMaterialData(const std::string& materialDataName) -> TAssetMaterialData& {
-    return g_assetMaterialDates[materialDataName];
+auto GetAssetMaterial(const std::string& materialDataName) -> TAssetMaterial& {
+    return g_assetMaterials[materialDataName];
 }
 
-auto GetAssetMeshData(const std::string& meshDataName) -> TAssetMeshData& {
-    return g_assetMeshDates[meshDataName];
+auto GetAssetMesh(const std::string& meshDataName) -> TAssetMesh& {
+    return g_assetMeshes[meshDataName];
 }
 
 auto AddImage(
@@ -702,7 +645,7 @@ auto AddImage(
 
     auto* pixels = Image::LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
 
-    auto assetImage = TAssetImageData{
+    auto assetImage = TAssetImage{
         .Width = width,
         .Height = height,
         .PixelType = 0,
@@ -712,15 +655,15 @@ auto AddImage(
     };
     assetImage.Data.reset(pixels);
 
-    g_assetImageDates[imageName] = std::move(assetImage);
+    g_assetImages[imageName] = std::move(assetImage);
 }
 
-auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
+auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
 
     auto getNumFaces = [](const SMikkTSpaceContext* context) -> int32_t {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
-        return meshData->Indices.size() / 3;
+        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        return primitive->Indices.size() / 3;
     };
 
     auto getNumVerticesOfFace = [](
@@ -736,9 +679,9 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
-        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
-        const glm::vec3& pos = meshData->Positions[index];
+        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec3& pos = primitive->Positions[index];
         posOut[0] = pos.x;
         posOut[1] = pos.y;
         posOut[2] = pos.z;
@@ -750,9 +693,9 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
-        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
-        const glm::vec3& normal = meshData->Normals[index];
+        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec3& normal = primitive->Normals[index];
         normOut[0] = normal.x;
         normOut[1] = normal.y;
         normOut[2] = normal.z;
@@ -764,9 +707,9 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
-        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
-        const glm::vec2& uv = meshData->Uvs[index];
+        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const glm::vec2& uv = primitive->Uvs[index];
         uvOut[0] = uv.x;
         uvOut[1] = uv.y;
     };
@@ -778,11 +721,11 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) {
 
-        auto* meshData = static_cast<TAssetMeshData*>(context->m_pUserData);
-        auto index = meshData->Indices[faceIndex * 3 + vertIndex];
+        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
 
         glm::vec3 t(tangent[0], tangent[1], tangent[2]);
-        meshData->Tangents[index] = glm::vec4(glm::normalize(t), sign);
+        primitive->Tangents[index] = glm::vec4(glm::normalize(t), sign);
     };
 
     auto interface = SMikkTSpaceInterface{
@@ -796,7 +739,7 @@ auto CalculateTangents(TAssetMeshData& assetMeshData) -> void {
 
     auto context = SMikkTSpaceContext{
         .m_pInterface = &interface,
-        .m_pUserData = &assetMeshData
+        .m_pUserData = &assetPrimitive
     };
 
     genTangSpaceDefault(&context);
@@ -806,15 +749,13 @@ auto CreateUvSphereMeshData(
     const std::string& name,
     float radius,
     int32_t rings,
-    int32_t segments) -> TAssetMeshData {
+    int32_t segments) -> TAssetMesh {
 
-    TAssetMeshData assetMeshData;
-
-    assetMeshData.Name = name;
-    assetMeshData.Positions.resize(rings * segments * 4);
-    assetMeshData.Normals.resize(rings * segments * 4);
-    assetMeshData.Uvs.resize(rings * segments * 4);
-    assetMeshData.Tangents.resize(rings * segments * 4);
+    TAssetPrimitive assetPrimitive;
+    assetPrimitive.Positions.resize(rings * segments * 4);
+    assetPrimitive.Normals.resize(rings * segments * 4);
+    assetPrimitive.Uvs.resize(rings * segments * 4);
+    assetPrimitive.Tangents.resize(rings * segments * 4);
 
     auto index = 0;
     constexpr auto pi = glm::pi<float>();
@@ -847,15 +788,15 @@ auto CreateUvSphereMeshData(
                 static_cast<float>(ring) / rings,
             };
 
-            assetMeshData.Positions[index] = position;
-            assetMeshData.Normals[index] = glm::normalize(normal);
-            assetMeshData.Uvs[index] = uv;
-            assetMeshData.Tangents[index] = glm::vec4{0.0f};
+            assetPrimitive.Positions[index] = position;
+            assetPrimitive.Normals[index] = glm::normalize(normal);
+            assetPrimitive.Uvs[index] = uv;
+            assetPrimitive.Tangents[index] = glm::vec4{0.0f};
             index++;
         }
     }
 
-    assetMeshData.Indices.resize(rings * segments * 6);
+    assetPrimitive.Indices.resize(rings * segments * 6);
 
     index = 0;
     for (auto ring = 0; ring < rings; ++ring) {
@@ -863,21 +804,24 @@ auto CreateUvSphereMeshData(
             auto first = (ring * (segments + 1)) + segment;
             auto second = first + segments + 1;
 
-            assetMeshData.Indices[index + 0] = first;
-            assetMeshData.Indices[index + 1] = first + 1;
-            assetMeshData.Indices[index + 2] = second;
+            assetPrimitive.Indices[index + 0] = first;
+            assetPrimitive.Indices[index + 1] = first + 1;
+            assetPrimitive.Indices[index + 2] = second;
 
-            assetMeshData.Indices[index + 3] = second;
-            assetMeshData.Indices[index + 4] = first + 1;
-            assetMeshData.Indices[index + 5] = second + 1;
+            assetPrimitive.Indices[index + 3] = second;
+            assetPrimitive.Indices[index + 4] = first + 1;
+            assetPrimitive.Indices[index + 5] = second + 1;
 
             index += 6;
         }
     }
 
-    assetMeshData.MaterialName = std::nullopt;
+    assetPrimitive.MaterialName = std::nullopt;
+    CalculateTangents(assetPrimitive);
 
-    CalculateTangents(assetMeshData);
+    TAssetMesh assetMeshData;
+    assetMeshData.Name = name;
+    assetMeshData.Primitives.push_back(assetPrimitive);
 
     return assetMeshData;
 }
@@ -889,18 +833,17 @@ auto CreateCuboid(
     float depth,
     uint32_t segmentsX = 1,
     uint32_t segmentsY = 1,
-    uint32_t segmentsZ = 1) -> TAssetMeshData {
+    uint32_t segmentsZ = 1) -> TAssetMesh {
 
     auto halfWidth = width / 2.0f;
     auto halfHeight = height / 2.0f;
     auto halfDepth = depth / 2.0f;
 
-    TAssetMeshData assetMeshData;
-    assetMeshData.Name = name;
-    assetMeshData.MaterialName = std::nullopt;
     //assetMeshData.InitialTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0, halfHeight, 0));
 
     std::size_t vertOffset = 0;
+    TAssetPrimitive assetPrimitiveFront;
+    assetPrimitiveFront.MaterialName = std::nullopt;
 
     // Front Face
     glm::vec3 normal = {0.0f, 0.0f, 1.0f};
@@ -916,26 +859,29 @@ auto CreateCuboid(
             position.y = -(uv.y - 1.0f) * height - halfHeight;
             position.z = halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4(0.0f));
+            assetPrimitiveFront.Positions.push_back(position);
+            assetPrimitiveFront.Uvs.push_back(uv);
+            assetPrimitiveFront.Normals.push_back(normal);
+            assetPrimitiveFront.Tangents.push_back(glm::vec4(0.0f));
         }
     }
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);            
+            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
+            assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
         }
     }
 
-    vertOffset = assetMeshData.Positions.size();
+    //vertOffset = assetMeshData.Positions.size();
+    vertOffset = 0;
+    TAssetPrimitive assetPrimitiveRight;
+    assetPrimitiveRight.MaterialName = std::nullopt;
 
     // Right Side Face
     normal = {1.0f, 0.0f, 0.0f};
@@ -951,26 +897,29 @@ auto CreateCuboid(
             position.y = -(uv.y - 1.0f) * height - halfHeight;
             position.z = uv.x * -depth + halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+            assetPrimitiveRight.Positions.push_back(position);
+            assetPrimitiveRight.Uvs.push_back(uv);
+            assetPrimitiveRight.Normals.push_back(normal);
+            assetPrimitiveRight.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsZ - 1; x++) {
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + vertOffset);            
+            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
+            assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
         }
     }
 
-    vertOffset = assetMeshData.Positions.size();
+    //vertOffset = assetMeshData.Positions.size();
+    vertOffset = 0;
+    TAssetPrimitive assetPrimitiveLeft;
+    assetPrimitiveLeft.MaterialName = std::nullopt;
 
     // Left Side Face
     normal = {-1.0f, 0.0f, 0.0f};
@@ -986,26 +935,29 @@ auto CreateCuboid(
             position.y = -(uv.y - 1.0f) * height - halfHeight;
             position.z = uv.x * depth - halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+            assetPrimitiveLeft.Positions.push_back(position);
+            assetPrimitiveLeft.Uvs.push_back(uv);
+            assetPrimitiveLeft.Normals.push_back(normal);
+            assetPrimitiveLeft.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsZ - 1; x++) {
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + vertOffset);            
+            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);            
+            assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
+            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
         }
     }
 
-    vertOffset = assetMeshData.Positions.size();
+    //vertOffset = assetMeshData.Positions.size();
+    vertOffset = 0;
+    TAssetPrimitive assetPrimitiveBack;
+    assetPrimitiveBack.MaterialName = std::nullopt;
 
     // Back Face
     normal = {0.0f, 0.0f, -1.0f};
@@ -1021,26 +973,30 @@ auto CreateCuboid(
             position.y = -(uv.y - 1.0f) * height - halfHeight;
             position.z = -halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+            assetPrimitiveBack.Positions.push_back(position);
+            assetPrimitiveBack.Uvs.push_back(uv);
+            assetPrimitiveBack.Normals.push_back(normal);
+            assetPrimitiveBack.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);            
+            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
+            assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
         }
     }
 
-    vertOffset = assetMeshData.Positions.size();
+    //vertOffset = assetMeshData.Positions.size();
+    vertOffset = 0;
+
+    TAssetPrimitive assetPrimitiveTop;
+    assetPrimitiveTop.MaterialName = std::nullopt;
 
     // Top Face
     normal = {0.0f, 1.0f, 0.0f};
@@ -1056,27 +1012,30 @@ auto CreateCuboid(
             position.y = -halfHeight;
             position.z = uv.y * depth - halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+            assetPrimitiveTop.Positions.push_back(position);
+            assetPrimitiveTop.Uvs.push_back(uv);
+            assetPrimitiveTop.Normals.push_back(normal);
+            assetPrimitiveTop.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
     for (auto y = 0; y < segmentsZ - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);            
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + vertOffset);
 
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);            
+            assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
         }
     }
 
-    vertOffset = assetMeshData.Positions.size();
+    //vertOffset = assetMeshData.Positions.size();
+    vertOffset = 0;
 
+    TAssetPrimitive assetPrimitiveBottom;
+    assetPrimitiveBottom.MaterialName = std::nullopt;
     // Bottom Face
     normal = {0.0f, -1.0f, 0.0f};
     for (auto iy = 0; iy < segmentsZ; iy++) {
@@ -1091,26 +1050,38 @@ auto CreateCuboid(
             position.y = halfHeight;
             position.z = uv.y * -depth + halfDepth;
 
-            assetMeshData.Positions.push_back(position);
-            assetMeshData.Uvs.push_back(uv);
-            assetMeshData.Normals.push_back(normal);
-            assetMeshData.Tangents.push_back(glm::vec4{0.0f});
+            assetPrimitiveBottom.Positions.push_back(position);
+            assetPrimitiveBottom.Uvs.push_back(uv);
+            assetPrimitiveBottom.Normals.push_back(normal);
+            assetPrimitiveBottom.Tangents.push_back(glm::vec4{0.0f});
         }
     }
 
     for (auto y = 0; y < segmentsZ-1; y++) {
         for (auto x = 0; x < segmentsX-1; x++) {
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + vertOffset);
             
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetMeshData.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetMeshData.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            
+            assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
+            assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
         }
     }
-   
+
+    TAssetMesh assetMeshData;
+    assetMeshData.Name = name;
+    assetMeshData.Primitives.push_back(assetPrimitiveFront);
+    assetMeshData.Primitives.push_back(assetPrimitiveBack);
+    assetMeshData.Primitives.push_back(assetPrimitiveLeft);
+    assetMeshData.Primitives.push_back(assetPrimitiveRight);
+    assetMeshData.Primitives.push_back(assetPrimitiveTop);
+    assetMeshData.Primitives.push_back(assetPrimitiveBottom);
+
+    for (auto& assetPrimitive : assetMeshData.Primitives) {
+        CalculateTangents(assetPrimitive);
+    }
+
     return std::move(assetMeshData);
 }
 
@@ -1136,7 +1107,7 @@ auto CreateCuboid(
     });
    
     g_assetModels[name] = std::move(cuboid);
-    g_assetMeshDates[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
+    g_assetMeshes[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
 }
 
 auto AddAssetModel(const std::string& assetName, const TAssetModel& asset) -> void {
@@ -1159,16 +1130,16 @@ auto AddDefaultAssets() -> void {
     AddImage("T_Blue", "data/default/T_Blue.png");
     AddImage("T_Gray", "data/default/T_Gray.png");
 
-    auto defaultAssetSampler = TAssetSamplerData {
+    auto defaultAssetSampler = TAssetSampler {
         .Name = "S_L_L_C2E_C2E",
         .MagFilter = TAssetSamplerMagFilter::Linear,
         .MinFilter = TAssetSamplerMinFilter::Linear,
         .WrapS = TAssetSamplerWrapMode::ClampToEdge,
         .WrapT = TAssetSamplerWrapMode::ClampToEdge,
     };
-    g_assetSamplerDates["S_L_L_C2E_C2E"] = std::move(defaultAssetSampler);
+    g_assetSamplers["S_L_L_C2E_C2E"] = std::move(defaultAssetSampler);
 
-    auto defaultMaterial = TAssetMaterialData {
+    auto defaultMaterial = TAssetMaterial {
         .Name = "M_Default",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1176,9 +1147,9 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Purple"
         },
     };
-    g_assetMaterialDates["M_Default"] = std::move(defaultMaterial);
+    g_assetMaterials["M_Default"] = std::move(defaultMaterial);
 
-    auto orangeMaterial = TAssetMaterialData {
+    auto orangeMaterial = TAssetMaterial {
         .Name = "M_Orange",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1186,9 +1157,9 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Orange"
         },
     };
-    g_assetMaterialDates["M_Orange"] = std::move(orangeMaterial);
+    g_assetMaterials["M_Orange"] = std::move(orangeMaterial);
 
-    auto yellowMaterial = TAssetMaterialData {
+    auto yellowMaterial = TAssetMaterial {
         .Name = "M_Yellow",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1196,9 +1167,9 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Yellow"
         },
     };
-    g_assetMaterialDates["M_Yellow"] = std::move(yellowMaterial);
+    g_assetMaterials["M_Yellow"] = std::move(yellowMaterial);
 
-    auto blueMaterial = TAssetMaterialData {
+    auto blueMaterial = TAssetMaterial {
         .Name = "M_Blue",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1206,9 +1177,9 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Blue"
         },
     };
-    g_assetMaterialDates["M_Blue"] = std::move(blueMaterial);
+    g_assetMaterials["M_Blue"] = std::move(blueMaterial);
 
-    auto grayMaterial = TAssetMaterialData {
+    auto grayMaterial = TAssetMaterial {
         .Name = "M_Gray",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1216,10 +1187,10 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Gray"
         },
     };
-    g_assetMaterialDates["M_Gray"] = std::move(grayMaterial);
+    g_assetMaterials["M_Gray"] = std::move(grayMaterial);
 
     AddImage("T_Mars_B", "data/default/2k_mars.jpg");
-    auto marsMaterial = TAssetMaterialData {
+    auto marsMaterial = TAssetMaterial {
         .Name = "M_Mars",
         .BaseColorTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -1227,10 +1198,10 @@ auto AddDefaultAssets() -> void {
             .TextureName = "T_Mars_B"
         }
     };
-    g_assetMaterialDates["M_Mars"] = std::move(marsMaterial);
+    g_assetMaterials["M_Mars"] = std::move(marsMaterial);
 
     auto geodesic = CreateUvSphereMeshData("SM_Geodesic", 1, 64, 64);
-    g_assetMeshDates["SM_Geodesic"] = std::move(geodesic);
+    g_assetMeshes["SM_Geodesic"] = std::move(geodesic);
 
     for (auto i = 1; i < 11; i++) {
         CreateCuboid(std::format("SM_Cuboid_x{}_y1_z1", i), i, 1.0f, 1.0f, i + 1, i + 1, i + 1, "M_Orange");

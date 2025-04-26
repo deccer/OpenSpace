@@ -901,7 +901,7 @@ auto CreateTexture2DFromFile(const std::filesystem::path& filePath, TFormat form
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight))))),
         .Layers = 0,
         .SampleCount = TSampleCount::One,
-        .Label = filePath.filename(),
+        .Label = filePath.filename().string(),
     });
 
     UploadTexture(textureId, TUploadTextureDescriptor{
