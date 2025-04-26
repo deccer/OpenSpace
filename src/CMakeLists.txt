@@ -37,7 +37,6 @@ target_link_libraries(HowToScript
     PRIVATE debugbreak
     PRIVATE spdlog
     PRIVATE poolSTL::poolSTL
-    PRIVATE tbb
     PRIVATE fastgltf
     PRIVATE EnTT
     PRIVATE mimalloc-static
@@ -45,6 +44,14 @@ target_link_libraries(HowToScript
     PRIVATE mikktspace
     PRIVATE phmap
 )
+
+# tbb is not required on windows for some reason
+if(NOT MSVC)
+    message("Linking with tbb")
+    target_link_libraries(HowToScript
+        PRIVATE tbb
+    )
+endif()
 
 target_sources(HowToScript
     PRIVATE ${glm_SOURCE_DIR}/util/glm.natvis
