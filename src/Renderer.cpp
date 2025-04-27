@@ -891,7 +891,7 @@ auto RendererInitialize(
 
     Assets::AddDefaultAssets();
 
-    auto skyTextureId = LoadSkyTexture("Miramar");
+    auto skyTextureId = LoadSkyTexture("Green");
     auto convolveSkyTextureResult = ConvolveTextureCube(skyTextureId);
     if (!convolveSkyTextureResult) {
         spdlog::error("Unable to convolve sky surface texture {}", convolveSkyTextureResult.error());
