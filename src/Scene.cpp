@@ -114,9 +114,9 @@ auto CreateAssetEntity(
                 CreateEntityWithGraphics(
                     childEntity,
                     assetPrimitive.Name,
-                    localPosition,
-                    localRotationEuler,
-                    localScale,
+                    glm::vec3{0.0f},//localPosition,
+                    glm::vec3{0.0f},//localRotationEuler,
+                    glm::vec3{1.0f},//localScale,
                     assetPrimitive.Name, assetPrimitive.MaterialName.value_or("M_Default"));
             }
 
