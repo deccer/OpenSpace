@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
+#include <stack>
 #include <unordered_map>
 #include <utility>
 
@@ -496,6 +497,63 @@ auto LoadNodes(
         parseNode(assetModel.Name, nodeId, fgNode, assetModel.Meshes, fgAsset.nodes, rootNode);
         assetModel.Hierarchy.push_back(std::move(rootNode));
     }
+
+    // the whole thing non recursive
+    /*
+    struct TStackEntry {
+        size_t NodeIndex;
+        TAssetModelNode* Parent;
+    };
+
+    std::stack<TStackEntry> stack;
+
+    for (const auto rootIndex : fgAsset.scenes[0].nodeIndices) {
+        stack.push({ rootIndex, nullptr });
+    }
+
+    auto nodeId = 0;
+
+    while (!stack.empty()) {
+        auto [nodeIndex, parent] = stack.top();
+        stack.pop();
+
+        const auto& srcNode = fgAsset.nodes[nodeIndex];
+        TAssetModelNode newNode;
+        newNode.Name = GetSafeResourceName(assetModel.Name.data(), srcNode.name.data(), "node", nodeId++);
+
+        const auto& [translation, rotation, scale] = std::get<fastgltf::TRS>(srcNode.transform);
+        newNode.LocalPosition = glm::make_vec3(translation.data());;
+        newNode.LocalRotation = glm::quat{rotation[3], rotation[0], rotation[1], rotation[2]};
+        newNode.LocalScale = glm::make_vec3(scale.data());
+
+        if (srcNode.meshIndex && !assetModel.Meshes.empty()) {
+            const size_t meshId = *srcNode.meshIndex;
+            if (meshId < assetModel.Meshes.size()) {
+                newNode.MeshName = assetModel.Meshes[meshId];
+            } else {
+                newNode.MeshName = std::nullopt;
+            }
+        } else {
+            newNode.MeshName = std::nullopt;
+        }
+
+        if (parent) {
+            parent->Children.push_back(std::move(newNode));
+            parent = &parent->Children.back();
+        } else {
+            assetModel.Hierarchy.push_back(std::move(newNode));
+            parent = &assetModel.Hierarchy.back();
+        }
+
+        // Push children
+        //if (srcNode.children..has_value()) {
+        for (const auto childIndex : srcNode.children) {
+            stack.push({ childIndex, parent });
+        }
+        //}
+    }
+    */
+
 }
 
 auto LoadAssetModelFromFile(
