@@ -46,8 +46,8 @@ target_link_libraries(HowToScript
 )
 
 # tbb is not required on windows for some reason
-if(!MSVC)
-    message("Linking with tbb")
+if(LINUX)
+    message("Linking with libtbb")
     target_link_libraries(HowToScript
         PRIVATE tbb
     )
