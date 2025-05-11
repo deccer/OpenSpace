@@ -650,8 +650,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
 
     g_depthPrePassFramebuffer = CreateFramebuffer({
         .Label = "Depth PrePass",
+        .Label = "Depth PrePass FBO",
         .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
             .Label = "Depth",
+            .Label = "Depth PrePass FBO Depth",
             .Format = TFormat::D24_UNORM_S8_UINT,
             .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
             .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -660,24 +662,24 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_geometryFramebuffer = CreateFramebuffer({
-        .Label = "Geometry",
+        .Label = "Geometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "GeometryAlbedo",
+                .Label = "Geometry FBO Albedo",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "GeometryNormals",
+                .Label = "Geometry FBO Normals",
                 .Format = TFormat::R32G32B32A32_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "JitterVelocity",
+                .Label = "Geometry FBO TAA Velocity",
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Load,
@@ -689,10 +691,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_resolveGeometryFramebuffer = CreateFramebuffer({
-        .Label = "ResolveGeometry",
+        .Label = "ResolveGeometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "ResolvedGeometry",
+                .Label = "ResolveGeometry FBO Output",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -702,10 +704,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_fxaaFramebuffer = CreateFramebuffer({
-        .Label = "PostFX-FXAA",
+        .Label = "FXAA FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "PostFX-FXAA",
+                .Label = "FXAA FBO Output",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
@@ -715,10 +717,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_taaFramebuffer1 = CreateFramebuffer({
-        .Label = "TAA1",
+        .Label = "TAA1 FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "TAA1-History",
+                .Label = "TAA1 FBO History",
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -728,10 +730,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_taaFramebuffer2 = CreateFramebuffer({
-        .Label = "TAA2",
+        .Label = "TAA2 FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "TAA2-History",
+                .Label = "TAA2 FBO History",
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
