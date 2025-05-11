@@ -1480,10 +1480,10 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
                 glEnableVertexArrayAttrib(inputLayout, inputAttributeValue.Location);
                 glVertexArrayAttribBinding(inputLayout, inputAttributeValue.Location, inputAttributeValue.Binding);
 
-                auto type = FormatToUnderlyingOpenGLType(inputAttributeValue.Format);
-                auto componentCount = FormatToComponentCount(inputAttributeValue.Format);
-                auto isFormatNormalized = IsFormatNormalized(inputAttributeValue.Format);
-                auto formatClass = FormatToFormatClass(inputAttributeValue.Format);
+                const auto type = FormatToUnderlyingOpenGLType(inputAttributeValue.Format);
+                const auto componentCount = FormatToComponentCount(inputAttributeValue.Format);
+                const auto isFormatNormalized = IsFormatNormalized(inputAttributeValue.Format);
+                const auto formatClass = FormatToFormatClass(inputAttributeValue.Format);
                 switch (formatClass)
                 {
                     case TFormatClass::Float:
