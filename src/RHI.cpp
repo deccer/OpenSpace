@@ -25,6 +25,8 @@ std::unordered_map<TSamplerDescriptor, TSamplerId> g_samplerDescriptors;
 uint32_t g_defaultInputLayout = 0;
 uint32_t g_lastIndexBuffer = 0;
 
+float g_maxTextureAnisotropy = 0.0f;
+
 ///// Conversions
 
 constexpr auto PrimitiveTopologyToGL(TPrimitiveTopology primitiveTopology) -> uint32_t {
@@ -1006,7 +1008,7 @@ auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> T
             std::unreachable();
     }
 
-    const auto textureId = TTextureId(g_textures.size());
+    const auto textureId = static_cast<TTextureId>(g_textures.size());
     g_textures.emplace_back(texture);
 
     return textureId;
@@ -1100,18 +1102,19 @@ auto DeleteTextures() -> void {
 auto GetSampler(const TSamplerId& id) -> TSampler&
 {
     assert(id != TSamplerId::Invalid);
-    return g_samplers[size_t(id)];
+    return g_samplers[static_cast<size_t>(id)];
 }
 
 auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSamplerId {
 
-    if (auto existingSamplerDescriptor = g_samplerDescriptors.find(samplerDescriptor); existingSamplerDescriptor != g_samplerDescriptors.end()) {
+    if (const auto existingSamplerDescriptor = g_samplerDescriptors.find(samplerDescriptor); existingSamplerDescriptor != g_samplerDescriptors.end()) {
         return existingSamplerDescriptor->second;
     }
 
     TSampler sampler = {};
     glCreateSamplers(1, &sampler.Id);
     SetDebugLabel(sampler.Id, GL_SAMPLER, samplerDescriptor.Label);
+
     glSamplerParameteri(sampler.Id, GL_TEXTURE_WRAP_S, TextureAddressModeToGL(samplerDescriptor.AddressModeU));
     glSamplerParameteri(sampler.Id, GL_TEXTURE_WRAP_T, TextureAddressModeToGL(samplerDescriptor.AddressModeV));
     glSamplerParameteri(sampler.Id, GL_TEXTURE_WRAP_R, TextureAddressModeToGL(samplerDescriptor.AddressModeW));
@@ -1121,7 +1124,13 @@ auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSampler
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MIN_LOD, samplerDescriptor.LodMin);
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MAX_LOD, samplerDescriptor.LodMax);
 
-    const auto samplerId = TSamplerId(g_samplers.size());
+    if (samplerDescriptor.MinFilter == TTextureMinFilter::Linear ||
+        samplerDescriptor.MinFilter == TTextureMinFilter::NearestMipmapLinear ||
+        samplerDescriptor.MinFilter == TTextureMinFilter::LinearMipmapLinear) {
+        glSamplerParameterf(sampler.Id, GL_TEXTURE_MAX_ANISOTROPY, g_maxTextureAnisotropy);
+    }
+
+    const auto samplerId = static_cast<TSamplerId>(g_samplers.size());
     g_samplerDescriptors.insert({samplerDescriptor, samplerId});
     g_samplers.emplace_back(sampler);
 
@@ -1143,7 +1152,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
     for (auto colorAttachmentIndex = 0; auto colorAttachmentDescriptorValue : framebufferDescriptor.ColorAttachments) {
         if (colorAttachmentDescriptorValue.has_value()) {
             auto& colorAttachmentDescriptor = *colorAttachmentDescriptorValue;
-            auto colorAttachmentTextureId = CreateTexture({
+            const auto colorAttachmentTextureId = CreateTexture({
                 .TextureType = TTextureType::Texture2D,
                 .Format = colorAttachmentDescriptor.Format,
                 .Extent = TExtent3D(colorAttachmentDescriptor.Extent.Width, colorAttachmentDescriptor.Extent.Height, 1),
@@ -1152,7 +1161,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
                 .SampleCount = TSampleCount::One,
                 .Label = std::format("{}_{}x{}", colorAttachmentDescriptor.Label, colorAttachmentDescriptor.Extent.Width, colorAttachmentDescriptor.Extent.Height)
             });
-            auto& colorAttachmentTexture = GetTexture(colorAttachmentTextureId);
+            const auto& colorAttachmentTexture = GetTexture(colorAttachmentTextureId);
 
             framebuffer.ColorAttachments[colorAttachmentIndex] = {
                 .Texture = colorAttachmentTexture,
@@ -1160,7 +1169,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
                 .LoadOperation = colorAttachmentDescriptor.LoadOperation,
             };
 
-            auto attachmentType = FormatToAttachmentType(colorAttachmentDescriptor.Format, colorAttachmentIndex);
+            const auto attachmentType = FormatToAttachmentType(colorAttachmentDescriptor.Format, colorAttachmentIndex);
             glNamedFramebufferTexture(framebuffer.Id, AttachmentTypeToGL(attachmentType), colorAttachmentTexture.Id, 0);
 
             drawBuffers[colorAttachmentIndex] = AttachmentTypeToGL(attachmentType);
@@ -1190,9 +1199,9 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
                                      createDepthStencilAttachment->Extent.Width,
                                      createDepthStencilAttachment->Extent.Height)
             });
-            auto& depthTexture = g_textures[size_t(depthTextureId)];
+            const auto& depthTexture = g_textures[size_t(depthTextureId)];
 
-            auto attachmentType = FormatToAttachmentType(createDepthStencilAttachment->Format, 0);
+            const auto attachmentType = FormatToAttachmentType(createDepthStencilAttachment->Format, 0);
             glNamedFramebufferTexture(framebuffer.Id, AttachmentTypeToGL(attachmentType), depthTexture.Id, 0);
 
             framebuffer.DepthStencilAttachment = {
@@ -1201,7 +1210,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
                 .LoadOperation = createDepthStencilAttachment->LoadOperation,
             };
         } else if (auto* existingDepthStencilAttachment = std::get_if<TFramebufferExistingDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
-            auto& depthTexture = existingDepthStencilAttachment->ExistingDepthTexture;
+            const auto& depthTexture = existingDepthStencilAttachment->ExistingDepthTexture;
             glNamedFramebufferTexture(framebuffer.Id, GL_DEPTH_ATTACHMENT, depthTexture.Id, 0);
             framebuffer.DepthStencilAttachment = {
                 .Texture = depthTexture,
@@ -1285,8 +1294,8 @@ auto DeleteFramebuffer(const TFramebuffer& framebuffer) -> void {
 
 auto CreateGraphicsProgram(
     std::string_view label,
-    std::string_view vertexShaderFilePath,
-    std::string_view fragmentShaderFilePath) -> std::expected<uint32_t, std::string> {
+    const std::string_view vertexShaderFilePath,
+    const std::string_view fragmentShaderFilePath) -> std::expected<uint32_t, std::string> {
 
     PROFILER_ZONESCOPEDN("CreateGraphicsProgram");
 
@@ -1300,11 +1309,12 @@ auto CreateGraphicsProgram(
         return std::unexpected(fragmentShaderSourceResult.error());
     }
 
-    auto vertexShaderSource = *vertexShaderSourceResult;
-    auto fragmentShaderSource = *fragmentShaderSourceResult;
+    const auto vertexShaderSource = *vertexShaderSourceResult;
+    const auto fragmentShaderSource = *fragmentShaderSourceResult;
 
-    auto vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    auto vertexShaderSourcePtr = vertexShaderSource.data();
+    const auto vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    SetDebugLabel(vertexShader, GL_SHADER, std::format("{}-VS", label).data());
+    const auto vertexShaderSourcePtr = vertexShaderSource.data();
     glShaderSource(vertexShader, 1, &vertexShaderSourcePtr, nullptr);
     glCompileShader(vertexShader);
     int32_t status = 0;
@@ -1320,8 +1330,9 @@ auto CreateGraphicsProgram(
         return std::unexpected(std::format("Vertex shader in program {} has errors\n{}", label, infoLog));
     }
 
-    auto fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    auto fragmentShaderSourcePtr = fragmentShaderSource.data();
+    const auto fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    SetDebugLabel(fragmentShader, GL_SHADER, std::format("{}-FS", label).data());
+    const auto fragmentShaderSourcePtr = fragmentShaderSource.data();
     glShaderSource(fragmentShader, 1, &fragmentShaderSourcePtr, nullptr);
     glCompileShader(fragmentShader);
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
@@ -1337,6 +1348,7 @@ auto CreateGraphicsProgram(
     }
 
     auto program = glCreateProgram();
+    SetDebugLabel(program, GL_PROGRAM, std::format("{}-Program", label).data());
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
@@ -1363,7 +1375,7 @@ auto CreateGraphicsProgram(
 
 auto CreateComputeProgram(
     std::string_view label,
-    std::string_view computeShaderFilePath) -> std::expected<uint32_t, std::string> {
+    const std::string_view computeShaderFilePath) -> std::expected<uint32_t, std::string> {
 
     PROFILER_ZONESCOPEDN("CreateComputeProgram");
 
@@ -1374,8 +1386,9 @@ auto CreateComputeProgram(
 
     int32_t status = 0;
 
-    auto computeShader = glCreateShader(GL_COMPUTE_SHADER);
-    auto computeShaderSourcePtr = (*computeShaderSourceResult).data();
+    const auto computeShader = glCreateShader(GL_COMPUTE_SHADER);
+    SetDebugLabel(computeShader, GL_SHADER, std::format("{}-CS", label).data());
+    const auto computeShaderSourcePtr = (*computeShaderSourceResult).data();
     glShaderSource(computeShader, 1, &computeShaderSourcePtr, nullptr);
     glCompileShader(computeShader);
     glGetShaderiv(computeShader, GL_COMPILE_STATUS, &status);
@@ -1391,6 +1404,7 @@ auto CreateComputeProgram(
     }
 
     auto program = glCreateProgram();
+    SetDebugLabel(program, GL_PROGRAM, std::format("{}-Program", label).data());
     glAttachShader(program, computeShader);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -1600,28 +1614,34 @@ auto TGraphicsPipeline::Bind() -> void {
         glDisable(GL_DEPTH_TEST);
     }
 
-    /*
     glDepthMask(IsDepthWriteEnabled ? GL_TRUE : GL_FALSE);
     glColorMask((ColorMask & TColorMaskBits::R) == TColorMaskBits::R,
                 (ColorMask & TColorMaskBits::G) == TColorMaskBits::G,
                 (ColorMask & TColorMaskBits::B) == TColorMaskBits::B,
                 (ColorMask & TColorMaskBits::A) == TColorMaskBits::A);
-    */
 }
 
-auto TGraphicsPipeline::BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void {
+auto TGraphicsPipeline::BindBufferAsVertexBuffer(
+    const uint32_t buffer,
+    const uint32_t bindingIndex,
+    const size_t offset,
+    const size_t stride) -> void {
 
     if (InputLayout.has_value()) {
         glVertexArrayVertexBuffer(*InputLayout, bindingIndex, buffer, offset, stride);
     }
 }
 
-auto TGraphicsPipeline::DrawArrays(int32_t vertexOffset, size_t vertexCount) -> void {
+auto TGraphicsPipeline::DrawArrays(
+    const int32_t vertexOffset,
+    const size_t vertexCount) -> void {
 
     glDrawArrays(PrimitiveTopology, vertexOffset, vertexCount);
 }
 
-auto TGraphicsPipeline::DrawElements(uint32_t indexBuffer, size_t elementCount) -> void {
+auto TGraphicsPipeline::DrawElements(
+    const uint32_t indexBuffer,
+    const size_t elementCount) -> void {
 
     if (g_lastIndexBuffer != indexBuffer) {
         glVertexArrayElementBuffer(InputLayout.has_value() ? InputLayout.value() : g_defaultInputLayout, indexBuffer);
@@ -1631,7 +1651,10 @@ auto TGraphicsPipeline::DrawElements(uint32_t indexBuffer, size_t elementCount) 
     glDrawElements(PrimitiveTopology, elementCount, GL_UNSIGNED_INT, nullptr);
 }
 
-auto TGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t elementCount, size_t instanceCount) -> void {
+auto TGraphicsPipeline::DrawElementsInstanced(
+    const uint32_t indexBuffer,
+    const size_t elementCount,
+    const size_t instanceCount) -> void {
 
     if (g_lastIndexBuffer != indexBuffer) {
         glVertexArrayElementBuffer(InputLayout.has_value() ? InputLayout.value() : g_defaultInputLayout, indexBuffer);
@@ -1642,9 +1665,9 @@ auto TGraphicsPipeline::DrawElementsInstanced(uint32_t indexBuffer, size_t eleme
 }
 
 auto TComputePipeline::Dispatch(
-    int32_t workGroupSizeX,
-    int32_t workGroupSizeY,
-    int32_t workGroupSizeZ) -> void {
+    const int32_t workGroupSizeX,
+    const int32_t workGroupSizeY,
+    const int32_t workGroupSizeZ) -> void {
 
     glDispatchCompute(workGroupSizeX, workGroupSizeY, workGroupSizeZ);
 }
@@ -1655,6 +1678,8 @@ auto RhiInitialize() -> void {
 
     glCreateVertexArrays(1, &g_defaultInputLayout);
     SetDebugLabel(g_defaultInputLayout, GL_VERTEX_ARRAY, "InputLayout-Default");
+
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &g_maxTextureAnisotropy);
 }
 
 auto RhiShutdown() -> void {
