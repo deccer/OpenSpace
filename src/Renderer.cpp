@@ -1514,22 +1514,88 @@ auto UpdateAllTransforms(entt::registry& registry) -> void{
     }
 }
 
-auto GenerateHalton(
-    int32_t index,
-    const int32_t base) -> float {
+bool g_showMagnifier = true;
+float g_magnifierZoom = 1.0f;
+glm::vec2 magnifierLastCursorPos = {};
+glm::vec2 g_viewportContentOffset = {};
 
-    float result = 0.0f;
-    float f = 1.0f / base;
-    while (index > 0) {
-        result += f * (index % base);
-        index = index / base;
-        f /= base;
+auto RenderMagnifier(
+    TRenderContext& renderContext,
+    const glm::vec2 viewportContentSize,
+    const glm::vec2 viewportContentOffset,
+    const bool isViewportHovered) -> void {
+
+  if (!g_showMagnifier) {
+    return;
+  }
+
+  bool magnifierLock = true;
+
+  if (ImGui::IsKeyDown(ImGuiKey_LeftShift)/* && isViewportHovered*/) {
+    magnifierLock = false;
+  }
+
+  //char* title = (char*)ICON_MDI_MAGNIFY" Magnifier: " + std::string(magnifierLock ? "Locked" : "Unlocked").c_str() + " (Hold Space to unlock)" + "###mag";
+  if (ImGui::Begin((char*)ICON_MDI_MAGNIFY" Magnifier",
+        &g_showMagnifier,
+        ImGuiWindowFlags_NoFocusOnAppearing)) {
+    ImGui::TextUnformatted(std::string(magnifierLock ? "Locked" : "Unlocked").c_str());
+    ImGui::SliderFloat("Zoom (+, -)", &g_magnifierZoom, 1.0f, 50.0f, "%.2fx", ImGuiSliderFlags_Logarithmic);
+    if (ImGui::GetKeyPressedAmount(ImGuiKey_KeypadSubtract, 10000, 1)) {
+      g_magnifierZoom = std::max(g_magnifierZoom / 1.5f, 1.0f);
     }
-    return result;
-}
+    if (ImGui::GetKeyPressedAmount(ImGuiKey_KeypadAdd, 10000, 1)) {
+      g_magnifierZoom = std::min(g_magnifierZoom * 1.5f, 50.0f);
+    }
 
-auto GetHaltonJitter(const int32_t frameIndex) -> glm::vec2 {
-    return glm::vec2(GenerateHalton(frameIndex % 1024, 3), GenerateHalton(frameIndex % 256, 2));
+    // The actual size of the magnifier widget
+    // constexpr auto magnifierSize = ImVec2(400, 400);
+    const auto magnifierSize = ImGui::GetContentRegionAvail();
+
+    // The dimensions of the region viewed by the magnifier, equal to the magnifier's size (1x zoom) or less
+    const auto magnifierExtent =
+      ImVec2(std::min(viewportContentSize.x, magnifierSize.x / g_magnifierZoom), std::min(viewportContentSize.y, magnifierSize.y / g_magnifierZoom));
+
+    // Get window coords
+    double x{}, y{};
+    glfwGetCursorPos(renderContext.Window, &x, &y);
+
+    // Window to viewport
+    x += viewportContentOffset.x;
+    y += viewportContentOffset.y;
+
+    // Clamp to smaller region within the viewport so magnifier doesn't view OOB pixels
+    x = std::clamp(static_cast<float>(x), magnifierExtent.x / 2.f, viewportContentSize.x - magnifierExtent.x / 2.f);
+    y = std::clamp(static_cast<float>(y), magnifierExtent.y / 2.f, viewportContentSize.y - magnifierExtent.y / 2.f);
+
+    // Use stored cursor pos if magnifier is locked
+    glm::vec2 mp = magnifierLock ? magnifierLastCursorPos : glm::vec2{x, y};
+    magnifierLastCursorPos = mp;
+
+    // Y flip (+Y is up for textures)
+    //mp.y = viewportContentSize.y - mp.y;
+
+    // Mouse position in UV space
+    mp /= glm::vec2(viewportContentSize.x, viewportContentSize.y);
+    const glm::vec2 magnifierHalfExtentUv = {
+      magnifierExtent.x / 2.f / viewportContentSize.x,
+      -magnifierExtent.y / 2.f / viewportContentSize.y,
+    };
+
+    // Calculate the min and max UV of the magnifier window
+    const auto uv0{mp - magnifierHalfExtentUv};
+    const auto uv1{mp + magnifierHalfExtentUv};
+
+    const auto& taaOutput = g_taaHistoryIndex == 0
+      ? g_taaFramebuffer1.ColorAttachments[0]->Texture.Id
+      : g_taaFramebuffer2.ColorAttachments[0]->Texture.Id;
+
+    ImGui::Image(taaOutput,
+                 magnifierSize,
+                 ImVec2(uv0.x, uv0.y),
+                 ImVec2(uv1.x, uv1.y));
+  }
+  ImGui::End();
 }
 
 auto RendererRender(
@@ -1893,6 +1959,8 @@ auto RendererRender(
             ImGui::EndMainMenuBar();
         }
 
+        RenderMagnifier(renderContext, g_sceneViewerScaledSize, g_viewportContentOffset, ImGui::IsItemHovered());
+
         /*
          * UI - Scene Viewer
          */
@@ -1903,6 +1971,15 @@ auto RendererRender(
                 g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                 g_sceneViewerResized = true;
             }
+
+            g_viewportContentOffset = []() -> glm::vec2
+            {
+                auto vMin = ImGui::GetWindowContentRegionMin();
+                return {
+                    vMin.x + ImGui::GetWindowPos().x,
+                    vMin.y + ImGui::GetWindowPos().y,
+                  };
+            }();
 
             if (ImGui::BeginChild("Render Output", currentSceneWindowSize, ImGuiChildFlags_Border)) {
                 auto currentWindowPosition = ImGui::GetWindowPos();
