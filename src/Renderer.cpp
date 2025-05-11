@@ -650,10 +650,8 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
 
     g_depthPrePassFramebuffer = CreateFramebuffer({
-        .Label = "Depth PrePass",
         .Label = "Depth PrePass FBO",
         .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
-            .Label = "Depth",
             .Label = "Depth PrePass FBO Depth",
             .Format = TFormat::D24_UNORM_S8_UINT,
             .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
