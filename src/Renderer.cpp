@@ -142,7 +142,7 @@ TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
 
 bool g_isFxaaEnabled = false;
-bool g_isTaaEnabled = false;
+bool g_isTaaEnabled = true;
 float g_taaBlendFactor = 0.1f;
 
 glm::vec2 g_scaledFramebufferSize = {};
