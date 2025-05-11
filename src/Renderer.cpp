@@ -1883,6 +1883,8 @@ auto RendererRender(
         g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryFramebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
         g_taaGraphicsPipeline.BindTexture(3, g_geometryFramebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
         g_taaGraphicsPipeline.SetUniform(0, g_taaBlendFactor);
+        g_taaGraphicsPipeline.SetUniform(1, 0.1f);
+        g_taaGraphicsPipeline.SetUniform(2, 256.0f);
 
         g_taaGraphicsPipeline.DrawArrays(0, 3);
 
