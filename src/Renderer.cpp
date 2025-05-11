@@ -1612,7 +1612,7 @@ auto RendererRender(
         /*
          * ECS - Create Gpu Resources if necessary
          */
-        auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
+        const auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
         for (auto& entity : createGpuResourcesNecessaryView) {
 
             PROFILER_ZONESCOPEDN("Create Gpu Resource");
@@ -1647,8 +1647,8 @@ auto RendererRender(
 
             auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
             auto viewMatrix = glm::inverse(cameraMatrix);
-            glm::vec3 cameraPosition = cameraMatrix[3];
-            glm::vec3 cameraDirection = cameraMatrix[1];
+            const glm::vec3 cameraPosition = cameraMatrix[3];
+            const glm::vec3 cameraDirection = cameraMatrix[1];
 
             auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
             g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
