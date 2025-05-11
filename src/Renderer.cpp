@@ -111,6 +111,7 @@ TFramebuffer g_taaFramebuffer1 = {};
 TFramebuffer g_taaFramebuffer2 = {};
 TGraphicsPipeline g_taaGraphicsPipeline = {};
 int32_t g_taaHistoryIndex = 0;
+TSamplerId g_taaSampler = {};
 
 TFramebuffer g_fxaaFramebuffer = {};
 TGraphicsPipeline g_fxaaGraphicsPipeline = {};
@@ -740,6 +741,14 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             }
         }
+    });
+
+    g_taaSampler = GetOrCreateSampler(TSamplerDescriptor{
+        .Label = "TAA Sampler",
+        .AddressModeU = TTextureAddressMode::ClampToEdge,
+        .AddressModeV = TTextureAddressMode::ClampToEdge,
+        .MagFilter = TTextureMagFilter::Linear,
+        .MinFilter = TTextureMinFilter::Linear,
     });
 }
 
@@ -1795,14 +1804,14 @@ auto RendererRender(
             ? g_taaFramebuffer1
             : g_taaFramebuffer2;
 
-        g_taaGraphicsPipeline.Bind();
-        g_taaGraphicsPipeline.BindTexture(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id); // last color buffer
-        g_taaGraphicsPipeline.BindTexture(1, taaFramebuffer.ColorAttachments[0]->Texture.Id); // taa history buffer
-        g_taaGraphicsPipeline.BindTexture(2, g_geometryFramebuffer.ColorAttachments[2]->Texture.Id); // velocity buffer
-        g_taaGraphicsPipeline.BindTexture(3, g_geometryFramebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
+        const auto& taaSampler = GetSampler(g_taaSampler);
 
-        g_taaGraphicsPipeline.SetUniform(4, g_taaBlendFactor);
-        g_taaGraphicsPipeline.SetUniform(5, g_scaledFramebufferSize);
+        g_taaGraphicsPipeline.Bind();
+        g_taaGraphicsPipeline.BindTextureAndSampler(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryFramebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
+        g_taaGraphicsPipeline.BindTexture(3, g_geometryFramebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
+        g_taaGraphicsPipeline.SetUniform(0, g_taaBlendFactor);
 
         g_taaGraphicsPipeline.DrawArrays(0, 3);
 
