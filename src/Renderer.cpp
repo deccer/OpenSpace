@@ -63,9 +63,10 @@ struct TGpuDebugLine {
 };
 
 struct TGpuGlobalUniforms {
-
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
+    glm::mat4 CurrentJitteredViewProjectionMatrix;
+    glm::mat4 PreviousJitteredViewProjectionMatrix;
     glm::vec4 CameraPosition;
     glm::vec4 CameraDirection;
 };
@@ -106,12 +107,26 @@ TGraphicsPipeline g_geometryGraphicsPipeline = {};
 TFramebuffer g_resolveGeometryFramebuffer = {};
 TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
 
+TFramebuffer g_taaFramebuffer1 = {};
+TFramebuffer g_taaFramebuffer2 = {};
+TGraphicsPipeline g_taaGraphicsPipeline = {};
+int32_t g_taaHistoryIndex = 0;
+TSamplerId g_taaSampler = {};
+
+TFramebuffer g_fxaaFramebuffer = {};
+TGraphicsPipeline g_fxaaGraphicsPipeline = {};
+
 TTexture g_skyBoxTexture = {};
+TTexture g_skyBoxConvolvedTexture = {};
+uint32_t g_skyBoxSHCoefficients = {};
 
 std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
 
 TGpuGlobalUniforms g_globalUniforms = {};
+glm::mat4 g_previousViewMatrix = {};
+glm::mat4 g_previousJitteredProjectionMatrix = {};
+glm::mat4 g_currentJitteredProjectionMatrix = {};
 
 uint32_t g_globalUniformsBuffer = {};
 uint32_t g_objectsBuffer = {};
@@ -123,13 +138,12 @@ uint32_t g_debugInputLayout = 0;
 uint32_t g_debugLinesVertexBuffer = 0;
 TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 
-TFramebuffer g_fxaaFramebuffer = {};
-TGraphicsPipeline g_fxaaGraphicsPipeline = {};
-
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
 
 bool g_isFxaaEnabled = false;
+bool g_isTaaEnabled = true;
+float g_taaBlendFactor = 0.1f;
 
 glm::vec2 g_scaledFramebufferSize = {};
 
@@ -142,7 +156,27 @@ glm::ivec2 g_sceneViewerScaledSize = {};
 bool g_sceneViewerResized = false;
 bool g_isEditor = false;
 
+static constexpr int32_t g_jitterCount = 16;
+glm::vec2 g_jitter[g_jitterCount];
+int32_t g_jitterIndex = 0;
+
 entt::entity g_selectedEntity = entt::null;
+
+auto GetHaltonSequence(
+    const int prime,
+    const int index = 1) -> float {
+
+    float r = 0.f;
+    float f = 1.f;
+    int i = index;
+    while (i > 0)
+    {
+        f /= prime;
+        r += f * (i % prime);
+        i = static_cast<int>(floor(i / static_cast<float>(prime)));
+    }
+    return r;
+}
 
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
@@ -370,7 +404,7 @@ auto GetGpuMaterial(const std::string& assetMaterialName) -> TGpuMaterial& {
     return g_gpuMaterials[assetMaterialName];
 }
 
-auto ConvolveTextureCube(TTextureId textureId) -> std::expected<TTextureId, std::string> {
+auto ConvolveTextureCube(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
 
     auto convolveComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
         .Label = "ConvolveTexture",
@@ -381,13 +415,13 @@ auto ConvolveTextureCube(TTextureId textureId) -> std::expected<TTextureId, std:
         return std::unexpected(convolveComputePipelineResult.error());
     }
 
-    auto& environmentTexture = GetTexture(textureId);
+    const auto& environmentTexture = GetTexture(textureId);
 
     auto convolveComputePipeline = *convolveComputePipelineResult;
 
-    auto width = 128;
-    auto height = 128;
-    auto format = TFormat::R16G16B16A16_FLOAT;
+    constexpr auto width = 128;
+    constexpr auto height = 128;
+    constexpr auto format = TFormat::R16G16B16A16_FLOAT;
     
     auto convolvedTextureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::TextureCube,
@@ -399,11 +433,11 @@ auto ConvolveTextureCube(TTextureId textureId) -> std::expected<TTextureId, std:
         .Label = std::format("TextureCube-{}x{}-Irradiance", width, height),
     });
 
-    auto& convolvedTexture = GetTexture(convolvedTextureId);
+    const auto& convolvedTexture = GetTexture(convolvedTextureId);
 
-    auto groupX = static_cast<uint32_t>(width / 32);
-    auto groupY = static_cast<uint32_t>(height / 32);
-    auto groupZ = 6u;
+    constexpr auto groupX = static_cast<uint32_t>(width / 32);
+    constexpr auto groupY = static_cast<uint32_t>(height / 32);
+    constexpr auto groupZ = 6u;
 
     convolveComputePipeline.Bind();
     convolveComputePipeline.BindTexture(0, environmentTexture.Id);
@@ -414,6 +448,42 @@ auto ConvolveTextureCube(TTextureId textureId) -> std::expected<TTextureId, std:
     GenerateMipmaps(convolvedTextureId);
 
     return convolvedTextureId;
+}
+
+auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t, std::string> {
+
+    auto computeSHCoefficientsComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
+        .Label = "ComputeSHCoefficients",
+        .ComputeShaderFilePath = "data/shaders/ComputeSHCoefficients.cs.glsl",
+    });
+
+    if (!computeSHCoefficientsComputePipelineResult) {
+        return std::unexpected(computeSHCoefficientsComputePipelineResult.error());
+    }
+
+    auto computeSHCoefficientsComputePipeline = *computeSHCoefficientsComputePipelineResult;
+
+    constexpr auto faceSize = 128;
+
+    auto shCoefficientBuffer = CreateBuffer("CoefficientBuffer", sizeof(float) * 3 * 9, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    constexpr auto zeroValue = 0.0f;
+    UpdateBuffer(shCoefficientBuffer, 0, sizeof(float) * 3 * 9, &zeroValue);
+
+    const auto& convolvedTexture = GetTexture(textureId);
+
+    constexpr auto groupX = static_cast<uint32_t>(faceSize / 8);
+    constexpr auto groupY = static_cast<uint32_t>(faceSize / 8);
+    constexpr auto groupZ = 6u;
+
+    computeSHCoefficientsComputePipeline.Bind();
+    computeSHCoefficientsComputePipeline.BindTexture(0, convolvedTexture.Id);
+    computeSHCoefficientsComputePipeline.BindBufferAsShaderStorageBuffer(shCoefficientBuffer, 1);
+    computeSHCoefficientsComputePipeline.SetUniform(0, faceSize);
+    computeSHCoefficientsComputePipeline.Dispatch(groupX, groupY, groupZ);
+
+    computeSHCoefficientsComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
+
+    return shCoefficientBuffer;
 }
 
 auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName) -> int64_t {
@@ -512,7 +582,7 @@ constexpr auto ToMinFilter(std::optional<Assets::TAssetSamplerMinFilter> minFilt
         case Assets::TAssetSamplerMinFilter::NearestMipMapLinear: return TTextureMinFilter::NearestMipmapLinear;
         case Assets::TAssetSamplerMinFilter::NearestMipMapNearest: return TTextureMinFilter::NearestMipmapNearest;
         case Assets::TAssetSamplerMinFilter::LinearMipMapNearest: return TTextureMinFilter::LinearMipmapNearest;
-        case Assets::TAssetSamplerMinFilter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;        
+        case Assets::TAssetSamplerMinFilter::LinearMipMapLinear: return TTextureMinFilter::LinearMipmapLinear;
         default: std::unreachable();
     }
 }
@@ -580,9 +650,9 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
 
     g_depthPrePassFramebuffer = CreateFramebuffer({
-        .Label = "Depth PrePass",
+        .Label = "Depth PrePass FBO",
         .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
-            .Label = "Depth",
+            .Label = "Depth PrePass FBO Depth",
             .Format = TFormat::D24_UNORM_S8_UINT,
             .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
             .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -591,22 +661,28 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_geometryFramebuffer = CreateFramebuffer({
-        .Label = "Geometry",
+        .Label = "Geometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "GeometryAlbedo",
+                .Label = "Geometry FBO Albedo",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "GeometryNormals",
+                .Label = "Geometry FBO Normals",
                 .Format = TFormat::R32G32B32A32_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "Geometry FBO TAA Velocity",
+                .Format = TFormat::R16G16B16A16_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Load,
+            }
         },
         .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
             .ExistingDepthTexture = g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture,
@@ -614,10 +690,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_resolveGeometryFramebuffer = CreateFramebuffer({
-        .Label = "ResolveGeometry",
+        .Label = "ResolveGeometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "ResolvedGeometry",
+                .Label = "ResolveGeometry FBO Output",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -627,16 +703,50 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_fxaaFramebuffer = CreateFramebuffer({
-        .Label = "PostFX-FXAA",
+        .Label = "FXAA FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "PostFX-FXAA-Buffer",
+                .Label = "FXAA FBO Output",
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f }
             }
         }
+    });
+
+    g_taaFramebuffer1 = CreateFramebuffer({
+        .Label = "TAA1 FBO",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "TAA1 FBO History",
+                .Format = TFormat::R16G16B16A16_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            }
+        }
+    });
+
+    g_taaFramebuffer2 = CreateFramebuffer({
+        .Label = "TAA2 FBO",
+        .ColorAttachments = {
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "TAA2 FBO History",
+                .Format = TFormat::R16G16B16A16_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            }
+        }
+    });
+
+    g_taaSampler = GetOrCreateSampler(TSamplerDescriptor{
+        .Label = "TAA Sampler",
+        .AddressModeU = TTextureAddressMode::ClampToEdge,
+        .AddressModeV = TTextureAddressMode::ClampToEdge,
+        .MagFilter = TTextureMagFilter::Linear,
+        .MinFilter = TTextureMinFilter::Linear,
     });
 }
 
@@ -891,13 +1001,23 @@ auto RendererInitialize(
 
     Assets::AddDefaultAssets();
 
-    auto skyTextureId = LoadSkyTexture("Green");
-    auto convolveSkyTextureResult = ConvolveTextureCube(skyTextureId);
+    auto skyTextureId = LoadSkyTexture("Miramar");
+    const auto convolveSkyTextureResult = ConvolveTextureCube(skyTextureId);
     if (!convolveSkyTextureResult) {
         spdlog::error("Unable to convolve sky surface texture {}", convolveSkyTextureResult.error());
         return false;
     }
-    g_skyBoxTexture = GetTexture(/**convolveSkyTextureResult*/skyTextureId);
+    g_skyBoxTexture = GetTexture(skyTextureId);
+    g_skyBoxConvolvedTexture = GetTexture(*convolveSkyTextureResult);
+
+    const auto computeSHCoefficientsResult = ComputeSHCoefficients(*convolveSkyTextureResult);
+    if (!computeSHCoefficientsResult) {
+        spdlog::error("Unable to compute spherical harmonics coefficients {}", computeSHCoefficientsResult.error());
+        return false;
+    }
+    g_skyBoxSHCoefficients = *computeSHCoefficientsResult;
+
+
 
     /*
      * Renderer - Initialize Framebuffers
@@ -1046,17 +1166,48 @@ auto RendererInitialize(
 
     g_fxaaGraphicsPipeline = *fxaaGraphicsPipelineResult;
 
+    auto taaGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "TAA",
+        .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/TAA.fs.glsl",
+        .InputAssembly = {
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+        .RasterizerState = {
+            .FillMode = TFillMode::Solid,
+            .CullMode = TCullMode::Back,
+            .FaceWindingOrder = TFaceWindingOrder::CounterClockwise,
+        },
+    });
+    if (!taaGraphicsPipelineResult) {
+        spdlog::error(taaGraphicsPipelineResult.error());
+        return false;
+    }
+
+    g_taaGraphicsPipeline = *taaGraphicsPipelineResult;
+
     g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+
+    for (int i = 0; i < g_jitterCount; ++i) {
+        g_jitter[i].x = GetHaltonSequence(2, i + 1) - 0.5f;
+        g_jitter[i].y = GetHaltonSequence(3, i + 1) - 0.5f;
+    }
 
     auto cameraPosition = glm::vec3{-60.0f, -3.0f, 0.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
-    auto fieldOfView = glm::radians(170.0f);
-    auto aspectRatio = g_scaledFramebufferSize.x / static_cast<float>(g_scaledFramebufferSize.y);
+    auto fieldOfView = glm::radians(160.0f);
+    auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
+
     g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
     g_globalUniforms.ViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraDirection, cameraUp);
+    g_globalUniforms.CurrentJitteredViewProjectionMatrix = g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix;
+    g_globalUniforms.PreviousJitteredViewProjectionMatrix = g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix;
     g_globalUniforms.CameraPosition = glm::vec4{cameraPosition, fieldOfView};
     g_globalUniforms.CameraDirection = glm::vec4{cameraDirection, aspectRatio};
+
+    g_previousViewMatrix = g_globalUniforms.ViewMatrix;
+    g_previousJitteredProjectionMatrix = g_globalUniforms.ProjectionMatrix;
 
     g_globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &g_globalUniforms, GL_DYNAMIC_STORAGE_BIT);
     g_objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
@@ -1074,7 +1225,7 @@ auto RendererInitialize(
                                                             .AddressModeU = TTextureAddressMode::ClampToEdge,
                                                             .AddressModeV = TTextureAddressMode::ClampToEdge,
                                                             .MagFilter = TTextureMagFilter::Nearest,
-                                                            .MinFilter = TTextureMinFilter::NearestMipmapNearest
+                                                            .MinFilter = TTextureMinFilter::Nearest
                                                         });
 
     return true;
@@ -1107,7 +1258,9 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
         : (char*)ICON_MDI_CUBE_OUTLINE;
     ImGui::PushID(static_cast<int32_t>(entity));
 
-    auto treeNodeFlags = g_selectedEntity == entity ? ImGuiTreeNodeFlags_Selected : 0;
+    auto treeNodeFlags = g_selectedEntity == entity
+        ? ImGuiTreeNodeFlags_Selected
+        : 0;
     treeNodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_SpanAvailWidth;
 
     if (registry.all_of<TComponentHierarchy>(entity)) {
@@ -1151,7 +1304,12 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
     ImGui::PopID();
 }
 
-auto RenderTransformComponent(const char* name, glm::vec3& vector, float width, float defaultElementValue) {
+auto RenderTransformComponent(
+    const char* name,
+    glm::vec3& vector,
+    const float width,
+    const float defaultElementValue) {
+
     const float labelIndentation = ImGui::GetFontSize();
     bool updated = false;
 
@@ -1205,7 +1363,9 @@ auto RenderTransformComponent(const char* name, glm::vec3& vector, float width, 
     return updated;
 }
 
-auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> void {
+auto RenderEntityProperties(
+    entt::registry& registry,
+    const entt::entity entity) -> void {
 
     if (registry.all_of<TComponentName>(entity)) {
 
@@ -1314,7 +1474,7 @@ auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> vo
 }
 
 auto UpdateAllTransforms(entt::registry& registry) -> void{
-    auto view = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform, TComponentHierarchy>();
+    const auto view = registry.view<TComponentPosition, TComponentOrientationEuler, TComponentScale, TComponentTransform, TComponentHierarchy>();
     for (auto root : view) {
         const auto& hierarchy = view.get<TComponentHierarchy>(root);
         if (hierarchy.Parent != entt::null) {
@@ -1354,6 +1514,90 @@ auto UpdateAllTransforms(entt::registry& registry) -> void{
     }
 }
 
+bool g_showMagnifier = true;
+float g_magnifierZoom = 1.0f;
+glm::vec2 magnifierLastCursorPos = {};
+glm::vec2 g_viewportContentOffset = {};
+
+auto RenderMagnifier(
+    TRenderContext& renderContext,
+    const glm::vec2 viewportContentSize,
+    const glm::vec2 viewportContentOffset,
+    const bool isViewportHovered) -> void {
+
+    if (!g_showMagnifier) {
+        return;
+    }
+
+    bool magnifierLock = true;
+
+    if (ImGui::IsKeyDown(ImGuiKey_LeftShift)/* && isViewportHovered*/) {
+        magnifierLock = false;
+    }
+
+    if (ImGui::Begin((char*)ICON_MDI_MAGNIFY" Magnifier",
+        &g_showMagnifier,
+        ImGuiWindowFlags_NoFocusOnAppearing)) {
+        ImGui::TextUnformatted(std::string(magnifierLock ? "Locked" : "Unlocked").c_str());
+        ImGui::SliderFloat("Zoom (+, -)", &g_magnifierZoom, 1.0f, 50.0f, "%.2fx", ImGuiSliderFlags_Logarithmic);
+        if (ImGui::GetKeyPressedAmount(ImGuiKey_KeypadSubtract, 10000, 1)) {
+            g_magnifierZoom = std::max(g_magnifierZoom / 1.5f, 1.0f);
+        }
+        if (ImGui::GetKeyPressedAmount(ImGuiKey_KeypadAdd, 10000, 1)) {
+            g_magnifierZoom = std::min(g_magnifierZoom * 1.5f, 50.0f);
+        }
+
+        const auto magnifierSize = ImGui::GetContentRegionAvail();
+
+        // The dimensions of the region viewed by the magnifier, equal to the magnifier's size (1x zoom) or less
+        const auto magnifierExtent = ImVec2(
+            std::min(viewportContentSize.x, magnifierSize.x / g_magnifierZoom),
+            std::min(viewportContentSize.y, magnifierSize.y / g_magnifierZoom));
+
+        // Get window coords
+        double x{}, y{};
+        glfwGetCursorPos(renderContext.Window, &x, &y);
+
+        // Window to viewport
+        x += viewportContentOffset.x;
+        y += viewportContentOffset.y;
+
+        // Clamp to smaller region within the viewport so magnifier doesn't view OOB pixels
+        x = std::clamp(static_cast<float>(x), magnifierExtent.x / 2.f, viewportContentSize.x - magnifierExtent.x / 2.f);
+        y = std::clamp(static_cast<float>(y), magnifierExtent.y / 2.f, viewportContentSize.y - magnifierExtent.y / 2.f);
+
+        // Use stored cursor pos if magnifier is locked
+        glm::vec2 mp = magnifierLock ? magnifierLastCursorPos : glm::vec2{x, y};
+        magnifierLastCursorPos = mp;
+
+        // Y flip (+Y is up for textures)
+        mp.y = viewportContentSize.y - mp.y;
+
+        // Mouse position in UV space
+        mp /= glm::vec2(viewportContentSize.x, viewportContentSize.y);
+        const glm::vec2 magnifierHalfExtentUv = {
+            magnifierExtent.x / 2.f / viewportContentSize.x,
+            -magnifierExtent.y / 2.f / viewportContentSize.y,
+        };
+
+        // Calculate the min and max UV of the magnifier window
+        const auto uv0{mp - magnifierHalfExtentUv};
+        const auto uv1{mp + magnifierHalfExtentUv};
+
+        const auto& magnifierOutput = g_isTaaEnabled
+          ? g_taaHistoryIndex == 0
+            ? g_taaFramebuffer1.ColorAttachments[0]->Texture.Id
+            : g_taaFramebuffer2.ColorAttachments[0]->Texture.Id
+          : g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
+
+        ImGui::Image(magnifierOutput,
+                     magnifierSize,
+                     ImVec2(uv0.x, uv0.y),
+                     ImVec2(uv1.x, uv1.y));
+        }
+    ImGui::End();
+}
+
 auto RendererRender(
     TRenderContext& renderContext,
     entt::registry& registry) -> void {
@@ -1368,7 +1612,7 @@ auto RendererRender(
         /*
          * ECS - Create Gpu Resources if necessary
          */
-        auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
+        const auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
         for (auto& entity : createGpuResourcesNecessaryView) {
 
             PROFILER_ZONESCOPEDN("Create Gpu Resource");
@@ -1403,16 +1647,41 @@ auto RendererRender(
 
             auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
             auto viewMatrix = glm::inverse(cameraMatrix);
-            glm::vec3 cameraPosition = cameraMatrix[3];
-            glm::vec3 cameraDirection = cameraMatrix[1];
+            const glm::vec3 cameraPosition = cameraMatrix[3];
+            const glm::vec3 cameraDirection = cameraMatrix[1];
 
             auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
             g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
             g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
 
+            float jitterX = 0;
+            float jitterY = 0;
+            if (g_isTaaEnabled)
+            {
+                jitterX = g_jitter[g_jitterIndex].x;
+                jitterY = -g_jitter[g_jitterIndex].y;
+
+                ++g_jitterIndex;
+                if (g_jitterIndex >= g_jitterCount) {
+                    g_jitterIndex -= g_jitterCount;
+                }
+            }
+
+            constexpr float jitterScale = 2.0f;
+            g_currentJitteredProjectionMatrix = g_globalUniforms.ProjectionMatrix;
+            g_currentJitteredProjectionMatrix[2][0] += jitterX * jitterScale / g_scaledFramebufferSize.x;
+            g_currentJitteredProjectionMatrix[2][1] += jitterY * jitterScale / g_scaledFramebufferSize.y;
+
+            g_globalUniforms.CurrentJitteredViewProjectionMatrix = g_currentJitteredProjectionMatrix * g_globalUniforms.ViewMatrix;
+            g_globalUniforms.PreviousJitteredViewProjectionMatrix = g_previousJitteredProjectionMatrix * g_previousViewMatrix;
+
             g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
             g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
             UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
+
+            g_previousViewMatrix = g_globalUniforms.ViewMatrix;
+            g_previousJitteredProjectionMatrix = g_currentJitteredProjectionMatrix;
+
         });
     }
 
@@ -1499,7 +1768,7 @@ auto RendererRender(
 
     {
         PROFILER_ZONESCOPEDN("Draw Geometry All");
-        PushDebugGroup("Geometry");
+        PushDebugGroup("Geometry Pass");
         BindFramebuffer(g_geometryFramebuffer);
         {
             g_geometryGraphicsPipeline.Bind();
@@ -1538,16 +1807,22 @@ auto RendererRender(
         PushDebugGroup("ResolveGeometry");
         BindFramebuffer(g_resolveGeometryFramebuffer);
         {
+            const auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
+
             g_resolveGeometryGraphicsPipeline.Bind();
-            g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-            g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
+            //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+            //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
             g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
             g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
 
-            auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
             g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
+            g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
+            g_resolveGeometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(10, g_skyBoxSHCoefficients);
             g_resolveGeometryGraphicsPipeline.SetUniform(0, g_sunPosition);
+            g_resolveGeometryGraphicsPipeline.SetUniform(1, g_globalUniforms.CameraPosition);
+            g_resolveGeometryGraphicsPipeline.SetUniform(2, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
+            g_resolveGeometryGraphicsPipeline.SetUniform(3, g_scaledFramebufferSize);
 
             g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
         }
@@ -1587,15 +1862,49 @@ auto RendererRender(
         PopDebugGroup();
     }
 
+    if (g_isTaaEnabled) {
+        PROFILER_ZONESCOPEDN("PostFX TAA");
+        PushDebugGroup("PostFX TAA");
+        if (g_taaHistoryIndex == 0) {
+            BindFramebuffer(g_taaFramebuffer1);
+        } else {
+            BindFramebuffer(g_taaFramebuffer2);
+        }
+
+        const auto& taaFramebuffer = g_taaHistoryIndex == 0
+            ? g_taaFramebuffer1
+            : g_taaFramebuffer2;
+
+        const auto& taaSampler = GetSampler(g_taaSampler);
+
+        g_taaGraphicsPipeline.Bind();
+        g_taaGraphicsPipeline.BindTextureAndSampler(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryFramebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
+        g_taaGraphicsPipeline.BindTexture(3, g_geometryFramebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
+        g_taaGraphicsPipeline.SetUniform(0, g_taaBlendFactor);
+        g_taaGraphicsPipeline.SetUniform(1, 0.1f);
+        g_taaGraphicsPipeline.SetUniform(2, 256.0f);
+
+        g_taaGraphicsPipeline.DrawArrays(0, 3);
+
+        PopDebugGroup();
+
+        g_taaHistoryIndex ^= 1;
+    }
+
     /////////////// UI
 
+    PushDebugGroup("UI");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if (g_isEditor) {
         glClear(GL_COLOR_BUFFER_BIT);
     } else {
         glBlitNamedFramebuffer(g_isFxaaEnabled
-                               ? g_fxaaFramebuffer.Id
-                               : g_resolveGeometryFramebuffer.Id,
+                                   ? g_fxaaFramebuffer.Id
+                                   : g_isTaaEnabled
+                                       ? g_taaHistoryIndex == 0 ? g_taaFramebuffer1.Id : g_taaFramebuffer2.Id
+                                       : g_resolveGeometryFramebuffer.Id,
                                0,
                                0, 0, static_cast<int32_t>(g_scaledFramebufferSize.x), static_cast<int32_t>(g_scaledFramebufferSize.y),
                                0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
@@ -1628,9 +1937,9 @@ auto RendererRender(
 
             ImGui::Text("afps: %.0f rad/s", glm::two_pi<float>() * renderContext.FramesPerSecond);
             ImGui::Text("dfps: %.0f °/s", glm::degrees(glm::two_pi<float>() * renderContext.FramesPerSecond));
-            ImGui::Text("mfps: %.0f", renderContext.AverageFramesPerSecond);
-            ImGui::Text("rfps: %.0f", renderContext.FramesPerSecond);
-            ImGui::Text("rpms: %.0f", renderContext.FramesPerSecond * 60.0f);
+            ImGui::Text("mfps: %.0f Hz", renderContext.AverageFramesPerSecond);
+            ImGui::Text("rfps: %.0f Hz", renderContext.FramesPerSecond);
+            ImGui::Text("rpms: %.0f Hz", renderContext.FramesPerSecond * 60.0f);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
             ImGui::Text("   f: %lu", renderContext.FrameCounter);
             ImGui::PopFont();
@@ -1652,6 +1961,8 @@ auto RendererRender(
             ImGui::EndMainMenuBar();
         }
 
+        RenderMagnifier(renderContext, g_sceneViewerScaledSize, g_viewportContentOffset, ImGui::IsItemHovered());
+
         /*
          * UI - Scene Viewer
          */
@@ -1663,16 +1974,27 @@ auto RendererRender(
                 g_sceneViewerResized = true;
             }
 
+            g_viewportContentOffset = []() -> glm::vec2
+            {
+                auto vMin = ImGui::GetWindowContentRegionMin();
+                return {
+                    vMin.x + ImGui::GetWindowPos().x,
+                    vMin.y + ImGui::GetWindowPos().y,
+                  };
+            }();
+
             if (ImGui::BeginChild("Render Output", currentSceneWindowSize, ImGuiChildFlags_Border)) {
                 auto currentWindowPosition = ImGui::GetWindowPos();
 
                 auto GetCurrentSceneViewerTexture = [&](int32_t sceneViewerTextureIndex) -> uint32_t {
                     switch (sceneViewerTextureIndex) {
-                        case 0: return g_resolveGeometryFramebuffer.ColorAttachments[0].value().Texture.Id;
-                        case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture.Id;
-                        case 2: return g_geometryFramebuffer.ColorAttachments[0].value().Texture.Id;
-                        case 3: return g_geometryFramebuffer.ColorAttachments[1].value().Texture.Id;
-                        case 4: return g_fxaaFramebuffer.ColorAttachments[0].value().Texture.Id;
+                        case 0: return g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
+                        case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id;
+                        case 2: return g_geometryFramebuffer.ColorAttachments[0]->Texture.Id;
+                        case 3: return g_geometryFramebuffer.ColorAttachments[1]->Texture.Id;
+                        case 4: return g_geometryFramebuffer.ColorAttachments[2]->Texture.Id;
+                        case 5: return g_fxaaFramebuffer.ColorAttachments[0]->Texture.Id;
+                        case 6: return (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id;
                         default: std::unreachable();
                     }
 
@@ -1681,14 +2003,20 @@ auto RendererRender(
 
                 auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
                 g_sceneViewerImagePosition = ImGui::GetCursorPos();
-                ImGui::Image(static_cast<intptr_t>(texture), currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
+                ImGui::Image(texture, currentSceneWindowSize, g_imvec2UnitY, g_imvec2UnitX);
                 ImGui::SetCursorPos(g_sceneViewerImagePosition);
                 if (ImGui::CollapsingHeader((char*)ICON_MDI_MONITOR " Display")) {
                     ImGui::RadioButton("Final", &g_sceneViewerTextureIndex, 0);
                     ImGui::RadioButton("Depth", &g_sceneViewerTextureIndex, 1);
                     ImGui::RadioButton("Geometry Colors", &g_sceneViewerTextureIndex, 2);
                     ImGui::RadioButton("Geometry Normals", &g_sceneViewerTextureIndex, 3);
-                    ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 4);
+                    ImGui::RadioButton("Geometry Velocity", &g_sceneViewerTextureIndex, 4);
+                    if (g_isFxaaEnabled) {
+                        ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 5);
+                    }
+                    if (g_isTaaEnabled) {
+                        ImGui::RadioButton("TAA", &g_sceneViewerTextureIndex, 6);
+                    }
                 }
 
                 if (g_selectedEntity != entt::null) {
@@ -1759,6 +2087,11 @@ auto RendererRender(
                 g_windowFramebufferResized = !g_isEditor;
             }
             ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
+            ImGui::Checkbox("Enable TAA", &g_isTaaEnabled);
+            if (g_isTaaEnabled) {
+                ImGui::DragFloat("TAA Blend Factor", &g_taaBlendFactor, 0.01f, 0.01f, 1.0f, "%.2f");
+            }
+
         }
         ImGui::End();
 
@@ -1824,12 +2157,13 @@ auto RendererRender(
         PROFILER_ZONESCOPEDN("Draw ImGUI");
         ImGui::Render();
         if (auto* imGuiDrawData = ImGui::GetDrawData(); imGuiDrawData != nullptr) {
-            PushDebugGroup("UI");
+            PushDebugGroup("UI-ImGui");
             glViewport(0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y);
             ImGui_ImplOpenGL3_RenderDrawData(imGuiDrawData);
             PopDebugGroup();
         }
     }
+    PopDebugGroup();
 }
 
 auto RendererResizeWindowFramebuffer(

@@ -10,6 +10,8 @@ layout (binding = 0, std140) uniform GlobalUniforms
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
+    mat4 CurrentJitteredViewProjectionMatrix;
+    mat4 PreviousJitteredViewProjectionMatrix;
     vec4 CameraPosition; // xyz = position, w = fieldOfView
     vec4 CameraDirection; // xyz = direction, w = aspectRatio
 } globalUniforms;

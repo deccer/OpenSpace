@@ -299,7 +299,7 @@ constexpr auto HashString(std::string_view str) -> uint32_t {
     return hash;
 }
 
-constexpr auto operator"" _hash(const char* str, size_t) -> uint32_t {
+constexpr auto operator""_hash(const char* str, size_t) -> uint32_t {
     return HashString(str);
 }
 

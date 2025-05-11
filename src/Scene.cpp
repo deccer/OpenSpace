@@ -175,7 +175,8 @@ auto Load() -> bool {
 
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
-    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Cube_x1_y1_z1.glb");
+    //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Cube_x1_y1_z1.glb");
+    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_004.glb");
     //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
 
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Storage/Resources/Models/UnitySponza/UnitySponza.glb");
@@ -220,7 +221,7 @@ auto Load() -> bool {
         .Sensitivity = 0.0025f,
     });
 
-    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{50.0f, 1.0f, 50.0f}, "SM_Cube_x1_y1_z1", "");
+    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f, 1.0f, 1.0f}, "SM_Cube_x1_y1_z1", "");
     g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
 
     return true;

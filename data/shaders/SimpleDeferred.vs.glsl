@@ -10,11 +10,15 @@ layout (location = 0) out vec3 v_normal;
 layout (location = 1) out vec2 v_uv;
 layout (location = 2) out mat3 v_tbn;
 layout (location = 6) flat out uint v_material_id;
+layout (location = 7) out vec4 v_current_world_position;
+layout (location = 8) out vec4 v_previous_world_position;
 
 layout (binding = 0, std140) uniform TGpuGlobalUniformBuffer
 {
     mat4 ProjectionMatrix;
     mat4 ViewMatrix;
+    mat4 CurrentJitteredViewProjectionMatrix;
+    mat4 PreviousJitteredViewProjectionMatrix;
     vec4 CameraPosition; // xyz = position, w = fieldOfView
     vec4 CameraDirection; // xyz = direction, w = aspectRatio
 } u_camera_information;
@@ -58,9 +62,17 @@ void main()
 
     //v_normal = normalize(inverse(transpose(mat3(u_object_world_matrix))) * v_normal);
 
+    vec4 worldPosition = u_object_world_matrix * vec4(PackedToVec3(vertex_position.Position), 1.0);
+
+    v_current_world_position = u_camera_information.CurrentJitteredViewProjectionMatrix * worldPosition;
+    v_previous_world_position = u_camera_information.PreviousJitteredViewProjectionMatrix * worldPosition;
+
+/*
     gl_Position = u_camera_information.ProjectionMatrix *
                   u_camera_information.ViewMatrix *
 //                  object.WorldMatrix * 
-                  u_object_world_matrix *
-                  vec4(PackedToVec3(vertex_position.Position), 1.0);
+                  worldPosition;
+*/
+
+    gl_Position = v_current_world_position;
 }
