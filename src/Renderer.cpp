@@ -1304,7 +1304,12 @@ auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> voi
     ImGui::PopID();
 }
 
-auto RenderTransformComponent(const char* name, glm::vec3& vector, float width, float defaultElementValue) {
+auto RenderTransformComponent(
+    const char* name,
+    glm::vec3& vector,
+    const float width,
+    const float defaultElementValue) {
+
     const float labelIndentation = ImGui::GetFontSize();
     bool updated = false;
 
@@ -1358,7 +1363,9 @@ auto RenderTransformComponent(const char* name, glm::vec3& vector, float width, 
     return updated;
 }
 
-auto RenderEntityProperties(entt::registry& registry, entt::entity entity) -> void {
+auto RenderEntityProperties(
+    entt::registry& registry,
+    const entt::entity entity) -> void {
 
     if (registry.all_of<TComponentName>(entity)) {
 
