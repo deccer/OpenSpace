@@ -1506,8 +1506,6 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
             inputAttributeIndex++;
         }
 
-        SetDebugLabel(inputLayout, GL_VERTEX_ARRAY, std::format("InputLayout-{}", graphicsPipelineDescriptor.Label));
-
         pipeline.InputLayout = inputLayout;
     } else {
         pipeline.InputLayout = std::nullopt;
