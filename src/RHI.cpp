@@ -2,13 +2,7 @@
 #include "Profiler.hpp"
 #include "Images.hpp"
 
-#include <expected>
-#include <filesystem>
-#include <format>
-#include <utility>
-
 #include <glad/gl.h>
-#include <glm/gtc/type_ptr.hpp>
 
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL

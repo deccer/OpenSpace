@@ -1,20 +1,5 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <expected>
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <variant>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-
-#include "Core.hpp"
-
 using TTextureId = TId<struct GTextureId>;
 using TSamplerId = TId<struct GSamplerId>;
 using TFramebufferId = TId<struct GFramebufferId>;

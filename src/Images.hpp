@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <filesystem>
-
 namespace Image {
 
 auto FreeImage(void* pixels) -> void;

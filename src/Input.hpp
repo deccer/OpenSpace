@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Key.hpp"
-#include <glm/vec2.hpp>
-#include <array>
 
 /* The unknown key */
 #define INPUT_KEY_UNKNOWN            -1

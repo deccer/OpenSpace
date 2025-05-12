@@ -1,15 +1,5 @@
 #pragma once
 
-#include <glm/mat4x4.hpp>
-#include <glm/trigonometric.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <entt/entt.hpp>
-
-#include <string>
-#include <vector>
-
 struct TComponentHierarchy {
     auto AddChild(entt::entity child) -> void;
     auto RemoveChild(entt::entity child) -> void;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Key.hpp"
-#include <glm/vec2.hpp>
 
 struct TControlState {
 
