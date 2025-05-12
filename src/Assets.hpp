@@ -1,20 +1,5 @@
 #pragma once
 
-#include <entt/entt.hpp>
-
-#include <expected>
-#include <filesystem>
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/quaternion.hpp>
-
 #include <parallel_hashmap/phmap_fwd_decl.h>
 
 namespace Assets {

@@ -3,9 +3,6 @@
 #include "Renderer.hpp"
 #include "Controls.hpp"
 
-#include <entt/entt.hpp>
-#include <glm/mat4x4.hpp>
-
 namespace Scene {
 
 auto Load() -> bool;

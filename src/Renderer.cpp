@@ -1,7 +1,6 @@
 #include "Renderer.hpp"
 #include "RHI.hpp"
 #include "Components.hpp"
-#include "Profiler.hpp"
 #include "Assets.hpp"
 #include "Images.hpp"
 
@@ -12,13 +11,7 @@
 
 #include <entt/entity/fwd.hpp>
 
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 #include <imgui.h>

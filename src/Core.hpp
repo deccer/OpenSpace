@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <string_view>
-
 #define nameof(name) #name
 
 struct TExtent2D

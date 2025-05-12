@@ -27,6 +27,34 @@ target_compile_definitions(HowToScript
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
+target_precompile_headers(HowToScript
+    PUBLIC <array>
+    PUBLIC <chrono>
+    PUBLIC "Core.hpp"
+    PUBLIC <cstdint>
+    PUBLIC <entt/entity/registry.hpp>
+    PUBLIC <entt/entity/entity.hpp>
+    PUBLIC <expected>
+    PUBLIC <filesystem>
+    PUBLIC <glm/gtc/quaternion.hpp>
+    PUBLIC <glm/gtc/type_ptr.hpp>
+    PUBLIC <glm/mat4x4.hpp>
+    PUBLIC <glm/vec2.hpp>
+    PUBLIC <glm/vec3.hpp>
+    PUBLIC <glm/vec4.hpp>
+    PUBLIC <iomanip>
+    PUBLIC <memory>
+    PUBLIC <optional>
+    PUBLIC <parallel_hashmap/phmap.h>
+    PUBLIC "Profiler.hpp"
+    PUBLIC <ranges>
+    PUBLIC <sstream>
+    PUBLIC <string>
+    PUBLIC <string_view>
+    PUBLIC <utility>
+    PUBLIC <vector>
+)
+
 target_link_libraries(HowToScript
     PRIVATE glfw
     PRIVATE glad

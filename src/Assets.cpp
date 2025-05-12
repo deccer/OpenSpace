@@ -1,8 +1,6 @@
-#include "Core.hpp"
 #include "Assets.hpp"
 #include "Io.hpp"
 #include "Images.hpp"
-#include "Profiler.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 

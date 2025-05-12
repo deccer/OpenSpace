@@ -1,19 +1,9 @@
 #include "Scene.hpp"
 #include "Components.hpp"
-#include "Profiler.hpp"
-#include "Core.hpp"
 #include "Assets.hpp"
 #include "Renderer.hpp"
 #include "Input.hpp"
-#include "entt/entity/fwd.hpp"
 
-#include <format>
-#include <optional>
-
-#include <glm/ext/scalar_constants.hpp>
-#include "glm/gtc/quaternion.hpp"
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
