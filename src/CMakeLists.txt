@@ -2,7 +2,7 @@ add_custom_target(CopyData ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
 )
 
-add_executable(HowToScript
+add_executable(Xacor
     Io.cpp
     Images.cpp
     Components.cpp
@@ -12,11 +12,11 @@ add_executable(HowToScript
     Scene.cpp
     Main.cpp
 )
-add_dependencies(HowToScript
+add_dependencies(Xacor
     CopyData
 )
 
-target_compile_definitions(HowToScript
+target_compile_definitions(Xacor
     PRIVATE GLM_FORCE_CXX2A
     PRIVATE GLM_FORCE_RADIANS
     PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -27,7 +27,7 @@ target_compile_definitions(HowToScript
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
-target_precompile_headers(HowToScript
+target_precompile_headers(Xacor
     PUBLIC <array>
     PUBLIC <chrono>
     PUBLIC "Core.hpp"
@@ -49,13 +49,14 @@ target_precompile_headers(HowToScript
     PUBLIC "Profiler.hpp"
     PUBLIC <ranges>
     PUBLIC <sstream>
+    PUBLIC <stack>
     PUBLIC <string>
     PUBLIC <string_view>
     PUBLIC <utility>
     PUBLIC <vector>
 )
 
-target_link_libraries(HowToScript
+target_link_libraries(Xacor
     PRIVATE glfw
     PRIVATE glad
     PRIVATE glm
@@ -76,20 +77,20 @@ target_link_libraries(HowToScript
 # tbb is not required on windows for some reason
 if(LINUX)
     message("Linking with libtbb")
-    target_link_libraries(HowToScript
+    target_link_libraries(Xacor
         PRIVATE tbb
     )
 endif()
 
-target_sources(HowToScript
+target_sources(Xacor
     PRIVATE ${glm_SOURCE_DIR}/util/glm.natvis
 )
 
 if(USE_PROFILER)
-    target_compile_definitions(HowToScript
+    target_compile_definitions(Xacor
         PRIVATE USE_PROFILER
     )
-    target_link_libraries(HowToScript
+    target_link_libraries(Xacor
         PRIVATE TracyClient
     )
 endif()

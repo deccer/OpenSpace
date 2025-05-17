@@ -1,4 +1,4 @@
-# HowToScript
+# Xacor
 
 Just me trying out yet another way to write an engine from scratch. This time in C++23. ~~Trying to keep everything
 in [Main.cpp](src/Main.cpp) and then abstract parts out into separate units or class when needed/necessary.~~ Looks like I just went past this point and did separate things out into separate units.

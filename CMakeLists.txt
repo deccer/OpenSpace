@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29.4)
 
-project(HowToScript
+project(Xacor
     VERSION 1.0.0
 )
 
