@@ -33,8 +33,6 @@
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
-#include <stack>
-
 enum class TImGuizmoOperation
 {
     Translate,
@@ -743,7 +741,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 }
 
-auto RendererInitialize(
+auto Renderer::Initialize(
     const TWindowSettings& windowSettings,
     GLFWwindow* window,
     const glm::vec2& initialFramebufferSize) -> bool {
@@ -1224,7 +1222,7 @@ auto RendererInitialize(
     return true;
 }
 
-auto RendererUnload() -> void {
+auto Renderer::Unload() -> void {
 
     DeleteBuffer(g_globalLightsBuffer);
     DeleteBuffer(g_globalUniformsBuffer);
@@ -1513,7 +1511,7 @@ glm::vec2 magnifierLastCursorPos = {};
 glm::vec2 g_viewportContentOffset = {};
 
 auto RenderMagnifier(
-    TRenderContext& renderContext,
+    Renderer::TRenderContext& renderContext,
     const glm::vec2 viewportContentSize,
     const glm::vec2 viewportContentOffset,
     const bool isViewportHovered) -> void {
@@ -1591,7 +1589,7 @@ auto RenderMagnifier(
     ImGui::End();
 }
 
-auto RendererRender(
+auto Renderer::Render(
     TRenderContext& renderContext,
     entt::registry& registry) -> void {
 
@@ -2159,7 +2157,7 @@ auto RendererRender(
     PopDebugGroup();
 }
 
-auto RendererResizeWindowFramebuffer(
+auto Renderer::ResizeWindowFramebuffer(
     int32_t width,
     int32_t height) -> void {
 
@@ -2167,7 +2165,7 @@ auto RendererResizeWindowFramebuffer(
     g_windowFramebufferResized = true;
 }
 
-auto RendererToggleEditorMode() -> void {
+auto Renderer::ToggleEditorMode() -> void {
     g_isEditor = !g_isEditor;
     g_windowFramebufferResized = !g_isEditor;
     g_sceneViewerResized = g_isEditor;

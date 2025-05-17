@@ -63,7 +63,7 @@ auto OnWindowKey(
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
     if (g_inputState.Keys[INPUT_KEY_F1].JustPressed) {
-        RendererToggleEditorMode();
+        Renderer::ToggleEditorMode();
     }
 }
 
@@ -117,7 +117,7 @@ auto OnWindowFramebufferSizeChanged(
     const int32_t width,
     const int32_t height) -> void {
 
-    RendererResizeWindowFramebuffer(width, height);
+    Renderer::ResizeWindowFramebuffer(width, height);
 }
 
 auto ResetInputState() -> void {
@@ -255,7 +255,7 @@ auto main(
 
     auto scaledFramebufferSize = glm::vec2(windowFramebufferWidth, windowFramebufferHeight) * windowSettings.ResolutionScale;
 
-    if (!RendererInitialize(windowSettings, g_window, scaledFramebufferSize)) {
+    if (!Renderer::Initialize(windowSettings, g_window, scaledFramebufferSize)) {
         spdlog::error("Renderer: Unable to initialize");
         return 0;
     }
@@ -291,7 +291,7 @@ auto main(
     auto averageFramesPerSecond = 0.0f;
     auto updateIntervalInSeconds = 1.0f;
 
-    TRenderContext renderContext = {};
+    Renderer::TRenderContext renderContext = {};
     renderContext.Window = g_window;
 
     TControlState controlState = {};
@@ -326,7 +326,7 @@ auto main(
 
         auto& registry = Scene::GetRegistry();
         Scene::Update(renderContext, registry, controlState);
-        RendererRender(renderContext, registry);
+        Renderer::Render(renderContext, registry);
 
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");
@@ -349,7 +349,7 @@ auto main(
      */
 
     Scene::Unload();
-    RendererUnload();
+    Renderer::Unload();
 
     glfwSetKeyCallback(g_window, nullptr);
     glfwSetCursorEnterCallback(g_window, nullptr);

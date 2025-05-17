@@ -222,7 +222,7 @@ auto Unload() -> void {
 }
 
 auto PlayerControlShip(
-    TRenderContext& renderContext,
+    Renderer::TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
 
@@ -288,7 +288,7 @@ auto PlayerControlShip(
 }
 
 auto PlayerControlPlayer(
-    TRenderContext& renderContext,
+    Renderer::TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
 
@@ -343,7 +343,7 @@ auto PlayerControlPlayer(
 }
 
 auto Update(
-    TRenderContext& renderContext,
+    Renderer::TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
 
