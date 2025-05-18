@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
-#include <stack>
 #include <unordered_map>
 #include <utility>
 
@@ -46,12 +45,15 @@ auto GetSafeResourceName(
     const char* const resourceType,
     const std::size_t resourceIndex) -> std::string {
 
-    return (text == nullptr) || strlen(text) == 0
+    return text == nullptr || strlen(text) == 0
            ? std::format("{}-{}-{}", baseName, resourceType, resourceIndex)
            : std::format("{}-{}", baseName, text);
 }
 
-auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetImageIndex(
+    const fastgltf::Asset& fgAsset,
+    const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -60,7 +62,10 @@ auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf:
     return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
 }
 
-auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetImageIndex(
+    const fastgltf::Asset& fgAsset,
+    const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -69,7 +74,10 @@ auto GetImageIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf:
     return fgTexture.ddsImageIndex.value_or(fgTexture.basisuImageIndex.value_or(fgTexture.imageIndex.value()));
 }
 
-auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetSamplerIndex(
+    const fastgltf::Asset& fgAsset,
+    const std::optional<fastgltf::TextureInfo>& textureInfo) -> std::optional<size_t> {
+
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -78,7 +86,10 @@ auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastglt
     return fgTexture.samplerIndex;
 }
 
-auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+auto GetSamplerIndex(
+    const fastgltf::Asset& fgAsset,
+    const std::optional<fastgltf::NormalTextureInfo>& textureInfo) -> std::optional<size_t> {
+
     if (!textureInfo.has_value()) {
         return std::nullopt;
     }
@@ -87,7 +98,7 @@ auto GetSamplerIndex(const fastgltf::Asset& fgAsset, const std::optional<fastglt
     return fgTexture.samplerIndex;
 }
 
-auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageType {
+auto MimeTypeToImageDataType(const fastgltf::MimeType mimeType) -> TAssetImageType {
     if (mimeType == fastgltf::MimeType::KTX2) {
         return TAssetImageType::CompressedKtx;
     }
@@ -99,7 +110,7 @@ auto MimeTypeToImageDataType(fastgltf::MimeType mimeType) -> TAssetImageType {
     return TAssetImageType::Uncompressed;
 }
 
-constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
+constexpr auto ConvertMagFilter(const std::optional<fastgltf::Filter> magFilter) -> TAssetSamplerMagFilter {
     if (!magFilter) {
         return TAssetSamplerMagFilter::Linear;
     }
@@ -111,7 +122,7 @@ constexpr auto ConvertMagFilter(std::optional<fastgltf::Filter> magFilter) -> TA
     }
 }
 
-constexpr auto ConvertMinFilter(std::optional<fastgltf::Filter> minFilter) -> TAssetSamplerMinFilter {
+constexpr auto ConvertMinFilter(const std::optional<fastgltf::Filter> minFilter) -> TAssetSamplerMinFilter {
     if (!minFilter) {
         return TAssetSamplerMinFilter::Linear;
     }
@@ -127,7 +138,7 @@ constexpr auto ConvertMinFilter(std::optional<fastgltf::Filter> minFilter) -> TA
     }
 }
 
-constexpr auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
+constexpr auto ConvertWrapMode(const fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode {
     switch (wrapMode) {
         case fastgltf::Wrap::ClampToEdge: return TAssetSamplerWrapMode::ClampToEdge;
         case fastgltf::Wrap::MirroredRepeat: return TAssetSamplerWrapMode::MirroredRepeat;
@@ -136,7 +147,7 @@ constexpr auto ConvertWrapMode(fastgltf::Wrap wrapMode) -> TAssetSamplerWrapMode
     }
 }
 
-constexpr auto ToString(std::optional<fastgltf::Filter> filter) -> std::string {
+constexpr auto ToString(const std::optional<fastgltf::Filter> filter) -> std::string {
     if (!filter) {
         return "L";
     }
@@ -152,7 +163,7 @@ constexpr auto ToString(std::optional<fastgltf::Filter> filter) -> std::string {
     }
 }
 
-constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
+constexpr auto ToString(const fastgltf::Wrap wrapMode) -> std::string {
     switch (wrapMode) {
         case fastgltf::Wrap::ClampToEdge: return "C2E";
         case fastgltf::Wrap::MirroredRepeat: return "MR";
@@ -163,9 +174,9 @@ constexpr auto ToString(fastgltf::Wrap wrapMode) -> std::string {
 
 auto CreateAssetRawImageData(
     const void* data,
-    std::size_t dataSize,
-    fastgltf::MimeType mimeType,
-    std::string_view name) -> TAssetRawImageData {
+    const std::size_t dataSize,
+    const fastgltf::MimeType mimeType,
+    const std::string_view name) -> TAssetRawImageData {
 
     PROFILER_ZONESCOPEDN("CreateAssetImage");
 
@@ -181,7 +192,7 @@ auto CreateAssetRawImageData(
 }
 
 auto LoadImages(
-    std::string_view assetModelName,
+    const std::string_view assetModelName,
     TAssetModel& assetModel,
     const fastgltf::Asset& fgAsset,
     const std::filesystem::path& filePath) -> void {
@@ -294,7 +305,7 @@ auto LoadSamplers(
 }
 
 auto LoadMaterials(
-    std::string_view assetModelName,
+    const std::string_view assetModelName,
     TAssetModel& asset,
     const fastgltf::Asset& fgAsset) -> void {
 
@@ -308,15 +319,15 @@ auto LoadMaterials(
         poolstl::execution::par,
         materialIndices.begin(),
         materialIndices.end(),
-        [&](size_t materialIndex) -> void {
+        [&](const size_t materialIndex) -> void {
 
         const auto& fgMaterial = fgAsset.materials[materialIndex];
         auto& material = assetMaterials[materialIndex];
 
         material.Name = GetSafeResourceName(assetModelName.data(), fgMaterial.name.data(), "material", materialIndex);
 
-        auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
-        auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        const auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        const auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
 
         material.BaseColorTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Color,
@@ -324,8 +335,8 @@ auto LoadMaterials(
             .TextureName = baseColorTextureIndex.has_value() ? asset.Images[baseColorTextureIndex.value()] : "T_Default_B",
         };
 
-        auto normalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
-        auto normalSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.normalTexture);
+        const auto normalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
+        const auto normalSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.normalTexture);
 
         material.NormalTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Normals,
@@ -334,8 +345,8 @@ auto LoadMaterials(
         };
 
         if (fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr) {
-            auto armTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
-            auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            const auto armTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            const auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
             material.ArmTextureChannel = TAssetMaterialChannelData{
                 .Channel = TAssetMaterialChannel::Scalar,
                 .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_L_L_C2E_C2E",
@@ -343,8 +354,8 @@ auto LoadMaterials(
             };
         }
 
-        auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
-        auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
+        const auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+        const auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
 
         material.EmissiveTextureChannel = TAssetMaterialChannelData {
             .Channel = TAssetMaterialChannel::Color,
@@ -448,7 +459,7 @@ auto LoadNodes(
         TAssetModelNode&)>;
 
     TParseNodeDelegate parseNode = [&](
-        std::string_view baseName,
+        const std::string_view baseName,
         uint32_t nodeId,
         const fastgltf::Node& fgNode,
         const std::vector<std::string>& meshNames,
@@ -463,7 +474,7 @@ auto LoadNodes(
         assetNode.LocalScale = glm::make_vec3(scale.data());
 
         if (fgNode.meshIndex && !meshNames.empty()) {
-            size_t meshId = *fgNode.meshIndex;
+            const size_t meshId = *fgNode.meshIndex;
             if (meshId < meshNames.size()) {
                 assetNode.MeshName = meshNames[meshId];
             } else {
@@ -474,7 +485,7 @@ auto LoadNodes(
         }
 
         if (!fgNode.children.empty() && allNodes) {
-            for (size_t childIndex : fgNode.children) {
+            for (const size_t childIndex : fgNode.children) {
                 if (childIndex < allNodes->size()) {
                     const auto& childNode = (*allNodes)[childIndex];
                     TAssetModelNode childAssetNode;
@@ -543,7 +554,6 @@ auto LoadNodes(
             parent = &assetModel.Hierarchy.back();
         }
 
-        // Push children
         //if (srcNode.children..has_value()) {
         for (const auto childIndex : srcNode.children) {
             stack.push({ childIndex, parent });
@@ -610,32 +620,7 @@ auto LoadAssetModelFromFile(
     LoadImages(assetModelName, assetModel, fgAsset, filePath);
     LoadSamplers(assetModel, fgAsset);
     LoadMaterials(assetModelName, assetModel, fgAsset);
-
-    /*
-    std::vector<std::pair<size_t, size_t>> meshOffsets;
-    meshOffsets.resize(fgAsset.meshes.size());
-
-    // determine how many meshes we will end up with
-    auto primitiveCount = 0;
-    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
-        primitiveCount += fgAsset.meshes[meshIndex].primitives.size();
-    }
-    assetModel.Meshes.resize(primitiveCount);
-    */
-
     LoadMeshes(fgAsset, assetModel);
-
-    /*
-    auto assetGlobalPrimitiveIndex = 0u;
-    for(auto meshIndex = 0; meshIndex < fgAsset.meshes.size(); meshIndex++) {
-        meshOffsets[meshIndex].first = assetModel.Meshes.size();
-        meshOffsets[meshIndex].second = fgAsset.meshes[meshIndex].primitives.size();
-        for (auto primitiveIndex = 0; primitiveIndex < fgAsset.meshes[meshIndex].primitives.size(); primitiveIndex++) {
-            LoadMesh(assetModelName, fgAsset, assetModel, meshIndex, primitiveIndex, assetGlobalPrimitiveIndex++);
-        }
-    }
-    */
-
     LoadNodes(fgAsset, assetModel);
 
     return assetModel;
@@ -696,7 +681,7 @@ auto AddImage(
 
     auto [fileData, fileDataSize] = ReadBinaryFromFile(filePath);
 
-    auto dataCopy = std::make_unique<std::byte[]>(fileDataSize);
+    const auto dataCopy = std::make_unique<std::byte[]>(fileDataSize);
     std::copy_n(static_cast<const std::byte*>(fileData.get()), fileDataSize, dataCopy.get());
 
     auto* pixels = Image::LoadImageFromMemory(dataCopy.get(), fileDataSize, &width, &height, &components);
@@ -718,7 +703,7 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
 
     auto getNumFaces = [](const SMikkTSpaceContext* context) -> int32_t {
 
-        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        const auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
         return primitive->Indices.size() / 3;
     };
 
@@ -735,8 +720,8 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
-        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        const auto index = primitive->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& pos = primitive->Positions[index];
         posOut[0] = pos.x;
         posOut[1] = pos.y;
@@ -749,8 +734,8 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
-        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        const auto index = primitive->Indices[faceIndex * 3 + vertIndex];
         const glm::vec3& normal = primitive->Normals[index];
         normOut[0] = normal.x;
         normOut[1] = normal.y;
@@ -763,8 +748,8 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
         const int32_t faceIndex,
         const int32_t vertIndex) -> void {
 
-        auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
-        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
+        const auto index = primitive->Indices[faceIndex * 3 + vertIndex];
         const glm::vec2& uv = primitive->Uvs[index];
         uvOut[0] = uv.x;
         uvOut[1] = uv.y;
@@ -778,9 +763,9 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
         const int32_t vertIndex) {
 
         auto* primitive = static_cast<TAssetPrimitive*>(context->m_pUserData);
-        auto index = primitive->Indices[faceIndex * 3 + vertIndex];
+        const auto index = primitive->Indices[faceIndex * 3 + vertIndex];
 
-        glm::vec3 t(tangent[0], tangent[1], tangent[2]);
+        const glm::vec3 t(tangent[0], tangent[1], tangent[2]);
         primitive->Tangents[index] = glm::vec4(glm::normalize(t), sign);
     };
 
@@ -793,7 +778,7 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
         .m_setTSpaceBasic = setTSpaceBasic,
     };
 
-    auto context = SMikkTSpaceContext{
+    const auto context = SMikkTSpaceContext{
         .m_pInterface = &interface,
         .m_pUserData = &assetPrimitive
     };
@@ -803,9 +788,9 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
 
 auto CreateUvSphereMeshData(
     const std::string& name,
-    float radius,
-    int32_t rings,
-    int32_t segments) -> TAssetMesh {
+    const float radius,
+    const int32_t rings,
+    const int32_t segments) -> TAssetMesh {
 
     TAssetPrimitive assetPrimitive;
     assetPrimitive.Positions.resize(rings * segments * 4);
@@ -818,15 +803,15 @@ auto CreateUvSphereMeshData(
 
     for (auto ring = 0; ring <= rings; ++ring) {
 
-        auto theta = ring * pi / rings;
-        auto sinTheta = glm::sin(theta);
-        auto cosTheta = glm::cos(theta);
+        const auto theta = ring * pi / rings;
+        const auto sinTheta = glm::sin(theta);
+        const auto cosTheta = glm::cos(theta);
 
         for (auto segment = 0; segment <= segments; ++segment) {
 
-            auto phi = segment * 2.0f * pi / segments;
-            auto sinPhi = glm::sin(phi);
-            auto cosPhi = glm::cos(phi);
+            const auto phi = segment * 2.0f * pi / segments;
+            const auto sinPhi = glm::sin(phi);
+            const auto cosPhi = glm::cos(phi);
 
             glm::vec3 position;
             position.x = radius * cosPhi * sinTheta;
@@ -839,7 +824,7 @@ auto CreateUvSphereMeshData(
                 sinPhi * sinTheta
             };
 
-            glm::vec2 uv = {
+            const glm::vec2 uv = {
                 static_cast<float>(segment) / segments,
                 static_cast<float>(ring) / rings,
             };
@@ -857,8 +842,8 @@ auto CreateUvSphereMeshData(
     index = 0;
     for (auto ring = 0; ring < rings; ++ring) {
         for (auto segment = 0; segment < segments; ++segment) {
-            auto first = (ring * (segments + 1)) + segment;
-            auto second = first + segments + 1;
+            const auto first = ring * (segments + 1) + segment;
+            const auto second = first + segments + 1;
 
             assetPrimitive.Indices[index + 0] = first;
             assetPrimitive.Indices[index + 1] = first + 1;
@@ -907,8 +892,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = (static_cast<float>(ix)/(static_cast<float>(segmentsX) - 1.0f));
-            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
+            uv.x = static_cast<float>(ix)/(static_cast<float>(segmentsX) - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f);
 
             glm::vec3 position;
             position.x = uv.x * width - halfWidth;
@@ -924,13 +909,13 @@ auto CreateCuboid(
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
-            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveFront.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
             assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveFront.Indices.push_back(y * segmentsX + x + vertOffset);
 
             assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
             assetPrimitiveFront.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveFront.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveFront.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
         }
     }
 
@@ -945,8 +930,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsZ; ix++) {
 
             glm::vec2 uv;
-            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f));
-            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
+            uv.x = static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f);
 
             glm::vec3 position;
             position.x = halfWidth;
@@ -962,13 +947,13 @@ auto CreateCuboid(
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsZ - 1; x++) {
-            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveRight.Indices.push_back(y * segmentsZ + x + 1 + vertOffset);
             assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + vertOffset);
+            assetPrimitiveRight.Indices.push_back(y * segmentsZ + x + vertOffset);
 
             assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
             assetPrimitiveRight.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetPrimitiveRight.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveRight.Indices.push_back(y * segmentsZ + x + 1 + vertOffset);
         }
     }
 
@@ -983,8 +968,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsZ; ix++) {
 
             glm::vec2 uv;
-            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f));
-            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
+            uv.x = static_cast<float>(ix) / (static_cast<float>(segmentsZ) - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f);
 
             glm::vec3 position;
             position.x = -halfWidth;
@@ -1000,13 +985,13 @@ auto CreateCuboid(
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsZ - 1; x++) {
-            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveLeft.Indices.push_back(y * segmentsZ + x + 1 + vertOffset);
             assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + vertOffset);
+            assetPrimitiveLeft.Indices.push_back(y * segmentsZ + x + vertOffset);
 
             assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + 1 + vertOffset);
             assetPrimitiveLeft.Indices.push_back((y + 1) * segmentsZ + x + vertOffset);
-            assetPrimitiveLeft.Indices.push_back((y) * segmentsZ + x + 1 + vertOffset);
+            assetPrimitiveLeft.Indices.push_back(y * segmentsZ + x + 1 + vertOffset);
         }
     }
 
@@ -1021,8 +1006,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f));
-            uv.y = 1.0f - (static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f));
+            uv.x = static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / (static_cast<float>(segmentsY) - 1.0f);
 
             glm::vec3 position;
             position.x = uv.x * -width + halfWidth;
@@ -1038,13 +1023,13 @@ auto CreateCuboid(
 
     for (auto y = 0; y < segmentsY - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
-            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBack.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
             assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveBack.Indices.push_back(y * segmentsX + x + vertOffset);
 
             assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
             assetPrimitiveBack.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveBack.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBack.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
         }
     }
 
@@ -1060,8 +1045,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = (static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f));
-            uv.y = 1.f - (static_cast<float>(iy) / (static_cast<float>(segmentsZ) - 1.0f));
+            uv.x = static_cast<float>(ix) / (static_cast<float>(segmentsX) - 1.0f);
+            uv.y = 1.f - static_cast<float>(iy) / (static_cast<float>(segmentsZ) - 1.0f);
 
             glm::vec3 position;
             position.x = uv.x * width - halfWidth;
@@ -1078,12 +1063,12 @@ auto CreateCuboid(
     for (auto y = 0; y < segmentsZ - 1; y++) {
         for (auto x = 0; x < segmentsX - 1; x++) {
             assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveTop.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveTop.Indices.push_back(y * segmentsX + x + vertOffset);
 
             assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
             assetPrimitiveTop.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetPrimitiveTop.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveTop.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
         }
     }
 
@@ -1098,8 +1083,8 @@ auto CreateCuboid(
         for (auto ix = 0; ix < segmentsX; ix++) {
 
             glm::vec2 uv;
-            uv.x = static_cast<float>(ix) / static_cast<float>(segmentsX - 1.0f);
-            uv.y = 1.0f - static_cast<float>(iy) / static_cast<float>(segmentsZ - 1.0f);
+            uv.x = static_cast<float>(ix) / (segmentsX - 1.0f);
+            uv.y = 1.0f - static_cast<float>(iy) / (segmentsZ - 1.0f);
 
             glm::vec3 position;
             position.x = uv.x * width - halfWidth;
@@ -1116,12 +1101,12 @@ auto CreateCuboid(
     for (auto y = 0; y < segmentsZ-1; y++) {
         for (auto x = 0; x < segmentsX-1; x++) {
             assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
-            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
-            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + vertOffset);
+            assetPrimitiveBottom.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBottom.Indices.push_back(y * segmentsX + x + vertOffset);
             
             assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + vertOffset);
             assetPrimitiveBottom.Indices.push_back((y + 1) * segmentsX + x + 1 + vertOffset);
-            assetPrimitiveBottom.Indices.push_back((y) * segmentsX + x + 1 + vertOffset);
+            assetPrimitiveBottom.Indices.push_back(y * segmentsX + x + 1 + vertOffset);
         }
     }
 
@@ -1143,12 +1128,12 @@ auto CreateCuboid(
 
 auto CreateCuboid(
     const std::string& name,
-    float width,
-    float height,
-    float depth,
-    uint32_t segmentsX,
-    uint32_t segmentsY,
-    uint32_t segmentsZ,
+    const float width,
+    const float height,
+    const float depth,
+    const uint32_t segmentsX,
+    const uint32_t segmentsY,
+    const uint32_t segmentsZ,
     const std::string& materialName) -> void {
 
     TAssetModel cuboid = {};

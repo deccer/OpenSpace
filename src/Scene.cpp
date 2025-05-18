@@ -29,13 +29,13 @@ constexpr glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
 constexpr glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
 
 auto CreateEntity(
-    entt::entity parent,
+    const entt::entity parent,
     const std::string& name,
-    glm::vec3 position,
-    glm::vec3 orientation,
-    glm::vec3 scale) -> entt::entity {
+    const glm::vec3 position,
+    const glm::vec3 orientation,
+    const glm::vec3 scale) -> entt::entity {
 
-    auto entity = g_registry.create();
+    const auto entity = g_registry.create();
     g_registry.emplace<TComponentHierarchy>(entity);
 
     g_registry.emplace<TComponentName>(entity, name);
@@ -55,11 +55,11 @@ auto CreateEntity(
 }
 
 auto CreateEntityWithGraphics(
-    entt::entity parent,
+    const entt::entity parent,
     const std::string& name,
-    glm::vec3 position,
-    glm::vec3 orientation,
-    glm::vec3 scale,
+    const glm::vec3 position,
+    const glm::vec3 orientation,
+    const glm::vec3 scale,
     const std::string& assetPrimitiveName,
     std::optional<std::string_view> overrideAssetMaterialName) -> entt::entity {
 
@@ -80,11 +80,11 @@ auto CreateEntityWithGraphics(
 }
 
 auto CreateAssetEntity(
-    entt::entity parent,
+    const entt::entity parent,
     const std::string& name,
-    glm::vec3 position,
-    glm::vec3 orientation,
-    glm::vec3 scale,
+    const glm::vec3 position,
+    const glm::vec3 orientation,
+    const glm::vec3 scale,
     const std::string& assetModelName,
     const std::string& assetMaterialNameOverride) -> entt::entity {
 
@@ -231,7 +231,7 @@ auto PlayerControlShip(
 
     auto& shipPosition = registry.get<TComponentPosition>(g_shipEntity);
     auto& shipOrientationEuler = registry.get<TComponentOrientationEuler>(g_shipEntity);
-    glm::quat shipOrientation = glm::eulerAngleYXZ(shipOrientationEuler.Yaw, shipOrientationEuler.Pitch, shipOrientationEuler.Roll);
+    const glm::quat shipOrientation = glm::eulerAngleYXZ(shipOrientationEuler.Yaw, shipOrientationEuler.Pitch, shipOrientationEuler.Roll);
 
     glm::vec3 forward = glm::normalize(shipOrientation * -g_unitZ);
     glm::vec3 right = glm::normalize(shipOrientation * g_unitX);
@@ -296,7 +296,7 @@ auto PlayerControlPlayer(
     auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
     auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
 
-    glm::quat playerCameraOrientation = glm::eulerAngleYXZ(playerOrientation.Yaw, playerOrientation.Pitch, playerOrientation.Roll);
+    const glm::quat playerCameraOrientation = glm::eulerAngleYXZ(playerOrientation.Yaw, playerOrientation.Pitch, playerOrientation.Roll);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
     if (controlState.Fast.IsDown) {
@@ -313,8 +313,8 @@ auto PlayerControlPlayer(
     forward.y = 0;
     forward = glm::normalize(forward) * tempCameraSpeed;
 
-    glm::vec3 right = glm::normalize(playerCameraOrientation * g_unitX) * tempCameraSpeed;
-    glm::vec3 up = glm::normalize(playerCameraOrientation * g_unitY) * tempCameraSpeed;
+    const glm::vec3 right = glm::normalize(playerCameraOrientation * g_unitX) * tempCameraSpeed;
+    const glm::vec3 up = glm::normalize(playerCameraOrientation * g_unitY) * tempCameraSpeed;
 
     if (controlState.MoveForward.IsDown) {
         playerPosition += forward;

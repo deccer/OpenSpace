@@ -69,18 +69,18 @@ auto OnWindowKey(
 
 auto OnWindowCursorEntered(
     [[maybe_unused]] GLFWwindow* window,
-    int32_t entered) -> void {
+    const int32_t entered) -> void {
 
     g_windowHasFocus = entered == GLFW_TRUE;
 }
 
 auto OnWindowMouseMove(
     [[maybe_unused]] GLFWwindow* window,
-    double mousePositionX,
-    double mousePositionY) -> void {
+    const double mousePositionX,
+    const double mousePositionY) -> void {
 
-    glm::vec2 mousePosition = {mousePositionX, mousePositionY};
-    auto mousePositionDelta = mousePosition - g_inputState.MousePosition;
+    const glm::vec2 mousePosition = {mousePositionX, mousePositionY};
+    const auto mousePositionDelta = mousePosition - g_inputState.MousePosition;
    
     g_inputState.MousePositionDelta += mousePositionDelta;
     g_inputState.MousePosition = mousePosition;
@@ -88,8 +88,8 @@ auto OnWindowMouseMove(
 
 auto OnWindowMouseClick(
     [[maybe_unused]] GLFWwindow* window,
-    int32_t button,
-    int32_t action,
+    const int32_t button,
+    const int32_t action,
     [[maybe_unused]] int32_t modifier) {
 
     if (action == GLFW_PRESS)
@@ -106,8 +106,8 @@ auto OnWindowMouseClick(
 
 auto OnWindowMouseScroll(
     [[maybe_unused]] GLFWwindow* window,
-    double offsetX,
-    double offsetY) {
+    const double offsetX,
+    const double offsetY) {
 
     g_inputState.ScrollDelta += glm::vec2(offsetX, offsetY);
 }

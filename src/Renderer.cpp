@@ -171,7 +171,7 @@ auto GetHaltonSequence(
 
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
-    uint32_t type,
+    const uint32_t type,
     [[maybe_unused]] uint32_t id,
     [[maybe_unused]] uint32_t severity,
     [[maybe_unused]] int32_t length,
@@ -314,20 +314,22 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
     return textureId;
 }
 
-auto SignNotZero(glm::vec2 v) -> glm::vec2 {
+auto SignNotZero(const glm::vec2 v) -> glm::vec2 {
 
     return glm::vec2((v.x >= 0.0f) ? +1.0f : -1.0f, (v.y >= 0.0f) ? +1.0f : -1.0f);
 }
 
-auto EncodeNormal(glm::vec3 normal) -> glm::vec2 {
+auto EncodeNormal(const glm::vec3 normal) -> glm::vec2 {
 
-    glm::vec2 encodedNormal = glm::vec2{normal.x, normal.y} * (1.0f / (abs(normal.x) + abs(normal.y) + abs(normal.z)));
+    const auto encodedNormal = glm::vec2{normal.x, normal.y} * (1.0f / (abs(normal.x) + abs(normal.y) + abs(normal.z)));
     return (normal.z <= 0.0f)
-           ? ((1.0f - glm::abs(glm::vec2{encodedNormal.x, encodedNormal.y})) * SignNotZero(encodedNormal)) //TODO(deccer) check if its encNor.y, encNor.x or not
+           ? (1.0f - glm::abs(glm::vec2{encodedNormal.x, encodedNormal.y})) * SignNotZero(encodedNormal) //TODO(deccer) check if its encNor.y, encNor.x or not
            : encodedNormal;
 }
 
-auto RendererCreateGpuMesh(const Assets::TAssetPrimitive& assetPrimitive, const std::string& label) -> void {
+auto RendererCreateGpuMesh(
+    const Assets::TAssetPrimitive& assetPrimitive,
+    const std::string& label) -> void {
 
     std::vector<TGpuVertexPosition> vertexPositions;
     std::vector<TGpuPackedVertexNormalTangentUvTangentSign> vertexNormalUvTangents;
@@ -361,7 +363,7 @@ auto RendererCreateGpuMesh(const Assets::TAssetPrimitive& assetPrimitive, const 
         glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetPrimitive.Indices.size(), assetPrimitive.Indices.data(), 0);
     }
 
-    auto gpuMesh = TGpuMesh{
+    const auto gpuMesh = TGpuMesh{
         .Name = label,
         .VertexPositionBuffer = buffers[0],
         .VertexNormalUvTangentBuffer = buffers[1],
@@ -509,7 +511,9 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
     return MakeTextureResident(textureId);
 }
 
-auto CreateTextureForMaterialChannel(const std::string& imageDataName, Assets::TAssetMaterialChannel channel) -> uint32_t {
+auto CreateTextureForMaterialChannel(
+    const std::string& imageDataName,
+    const Assets::TAssetMaterialChannel channel) -> uint32_t {
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
@@ -541,7 +545,7 @@ auto CreateTextureForMaterialChannel(const std::string& imageDataName, Assets::T
     return GetTexture(textureId).Id;
 }
 
-constexpr auto ToAddressMode(Assets::TAssetSamplerWrapMode wrapMode) -> TTextureAddressMode {
+constexpr auto ToAddressMode(const Assets::TAssetSamplerWrapMode wrapMode) -> TTextureAddressMode {
     switch (wrapMode) {
         case Assets::TAssetSamplerWrapMode::ClampToEdge: return TTextureAddressMode::ClampToEdge;
         case Assets::TAssetSamplerWrapMode::MirroredRepeat: return TTextureAddressMode::RepeatMirrored;
@@ -550,7 +554,7 @@ constexpr auto ToAddressMode(Assets::TAssetSamplerWrapMode wrapMode) -> TTexture
     }
 }
 
-constexpr auto ToMagFilter(std::optional<Assets::TAssetSamplerMagFilter> magFilter) -> TTextureMagFilter {
+constexpr auto ToMagFilter(const std::optional<Assets::TAssetSamplerMagFilter> magFilter) -> TTextureMagFilter {
     if (!magFilter.has_value()) {
         return TTextureMagFilter::Linear;
     }
@@ -562,7 +566,7 @@ constexpr auto ToMagFilter(std::optional<Assets::TAssetSamplerMagFilter> magFilt
     }
 }
 
-constexpr auto ToMinFilter(std::optional<Assets::TAssetSamplerMinFilter> minFilter) -> TTextureMinFilter {
+constexpr auto ToMinFilter(const std::optional<Assets::TAssetSamplerMinFilter> minFilter) -> TTextureMinFilter {
     if (!minFilter.has_value()) {
         return TTextureMinFilter::Linear;
     }
@@ -789,7 +793,7 @@ auto Renderer::Initialize(
 
     g_fontRobotoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize, &fontConfig, fontRanges);
     {
-        static const ImWchar iconRange[] = {
+        static constexpr ImWchar iconRange[] = {
             ICON_MIN_MDI,
             ICON_MAX_MDI,
             0
@@ -1241,7 +1245,9 @@ auto Renderer::Unload() -> void {
     RhiShutdown();
 }
 
-auto RenderEntityHierarchy(entt::registry& registry, entt::entity entity) -> void {
+auto RenderEntityHierarchy(
+    entt::registry& registry,
+    entt::entity entity) -> void {
 
     const auto& entityName = registry.get<TComponentName>(entity);
     const auto* icon = registry.any_of<TComponentMesh>(entity)
@@ -1336,9 +1342,9 @@ auto RenderTransformComponent(
         static const ImU32 colourY = IM_COL32(112, 162, 22, 255);
         static const ImU32 colourZ = IM_COL32(51, 122, 210, 255);
 
-        const ImVec2 size = ImVec2(ImGui::GetFontSize() / 4.0f, ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f);
+        const auto size = ImVec2(ImGui::GetFontSize() / 4.0f, ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f);
         posPostLabel = ImVec2(posPostLabel.x - 1.0f, posPostLabel.y + 0.0f); // ImGui::GetStyle().FramePadding.y / 2.0f);
-        ImRect axisColorRectangle = ImRect(posPostLabel.x, posPostLabel.y, posPostLabel.x + size.x, posPostLabel.y + size.y);
+        const auto axisColorRectangle = ImRect(posPostLabel.x, posPostLabel.y, posPostLabel.x + size.x, posPostLabel.y + size.y);
         ImGui::GetWindowDrawList()->AddRectFilled(axisColorRectangle.Min, axisColorRectangle.Max, axis == 0 ? colourX : axis == 1 ? colourY : colourZ);
     };
 
@@ -1440,7 +1446,7 @@ auto RenderEntityProperties(
     if (registry.all_of<TComponentMesh>(entity)) {
 
         if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Mesh", ImGuiTreeNodeFlags_Leaf)) {
-            auto& mesh = registry.get<TComponentMesh>(entity);
+            const auto& mesh = registry.get<TComponentMesh>(entity);
 
             ImGui::Indent();
             ImGui::PushItemWidth(-1.0f);
@@ -1453,7 +1459,7 @@ auto RenderEntityProperties(
     if (registry.all_of<TComponentMaterial>(entity)) {
 
         if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Material", ImGuiTreeNodeFlags_Leaf)) {
-            auto& material = registry.get<TComponentMaterial>(entity);
+            const auto& material = registry.get<TComponentMaterial>(entity);
 
             ImGui::Indent();
             ImGui::PushItemWidth(-1.0f);
@@ -2158,8 +2164,8 @@ auto Renderer::Render(
 }
 
 auto Renderer::ResizeWindowFramebuffer(
-    int32_t width,
-    int32_t height) -> void {
+    const int32_t width,
+    const int32_t height) -> void {
 
     g_windowFramebufferSize = glm::ivec2{width, height};
     g_windowFramebufferResized = true;
