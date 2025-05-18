@@ -3,6 +3,8 @@
 #include "Images.hpp"
 
 #include <glad/gl.h>
+#include <debugbreak.h>
+#include <spdlog/spdlog.h>
 
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL
@@ -20,6 +22,21 @@ uint32_t g_defaultInputLayout = 0;
 uint32_t g_lastIndexBuffer = 0;
 
 float g_maxTextureAnisotropy = 0.0f;
+
+auto OnOpenGLDebugMessage(
+    [[maybe_unused]] uint32_t source,
+    const uint32_t type,
+    [[maybe_unused]] uint32_t id,
+    [[maybe_unused]] uint32_t severity,
+    [[maybe_unused]] int32_t length,
+    const char* message,
+    [[maybe_unused]] const void* userParam) -> void {
+
+    if (type == GL_DEBUG_TYPE_ERROR) {
+        spdlog::error(message);
+        debug_break();
+    }
+}
 
 ///// Conversions
 
@@ -1666,9 +1683,16 @@ auto TComputePipeline::Dispatch(
     glDispatchCompute(workGroupSizeX, workGroupSizeY, workGroupSizeZ);
 }
 
-auto RhiInitialize() -> void {
+auto RhiInitialize(bool isDebug) -> void {
+
     g_samplers.reserve(128);
     g_textures.reserve(16384);
+
+    if (isDebug) {
+        glDebugMessageCallback(OnOpenGLDebugMessage, nullptr);
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    }
 
     glCreateVertexArrays(1, &g_defaultInputLayout);
     SetDebugLabel(g_defaultInputLayout, GL_VERTEX_ARRAY, "InputLayout-Default");

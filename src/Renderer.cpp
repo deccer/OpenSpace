@@ -6,7 +6,6 @@
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#include <debugbreak.h>
 #include <spdlog/spdlog.h>
 
 #include <entt/entity/fwd.hpp>
@@ -167,21 +166,6 @@ auto GetHaltonSequence(
         i = static_cast<int>(floor(i / static_cast<float>(prime)));
     }
     return r;
-}
-
-auto OnOpenGLDebugMessage(
-    [[maybe_unused]] uint32_t source,
-    const uint32_t type,
-    [[maybe_unused]] uint32_t id,
-    [[maybe_unused]] uint32_t severity,
-    [[maybe_unused]] int32_t length,
-    const char* message,
-    [[maybe_unused]] const void* userParam) -> void {
-
-    if (type == GL_DEBUG_TYPE_ERROR) {
-        spdlog::error(message);
-        debug_break();
-    }
 }
 
 struct TGpuVertexPosition {
@@ -754,15 +738,9 @@ auto Renderer::Initialize(
         return false;
     }
 
-    RhiInitialize();
+    RhiInitialize(windowSettings.IsDebug);
 
     g_windowSettings = windowSettings;
-
-    if (g_windowSettings.IsDebug) {
-        glDebugMessageCallback(OnOpenGLDebugMessage, nullptr);
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    }
 
 #ifdef USE_PROFILER
     TracyGpuContext
@@ -1011,8 +989,6 @@ auto Renderer::Initialize(
         return false;
     }
     g_skyBoxSHCoefficients = *computeSHCoefficientsResult;
-
-
 
     /*
      * Renderer - Initialize Framebuffers

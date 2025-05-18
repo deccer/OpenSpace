@@ -627,5 +627,5 @@ auto DeleteFramebuffer(const TFramebuffer& framebuffer) -> void;
 auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<TGraphicsPipeline, std::string>;
 auto CreateComputePipeline(const TComputePipelineDescriptor& computePipelineDescriptor) -> std::expected<TComputePipeline, std::string>;
 
-auto RhiInitialize() -> void;
+auto RhiInitialize(bool isDebug) -> void;
 auto RhiShutdown() -> void;
