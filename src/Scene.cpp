@@ -166,7 +166,7 @@ auto Load() -> bool {
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
     //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Cube_x1_y1_z1.glb");
-    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_004.glb");
+    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_005.glb");
     //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
 
     //Assets::AddAssetModelFromFile("axes", "/home/deccer/Storage/Resources/Models/UnitySponza/UnitySponza.glb");
