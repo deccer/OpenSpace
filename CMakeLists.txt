@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29.4)
 
-project(Xacor
+project(OpenSpace
     VERSION 1.0.0
 )
 

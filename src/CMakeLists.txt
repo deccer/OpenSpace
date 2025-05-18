@@ -2,7 +2,7 @@ add_custom_target(CopyData ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
 )
 
-add_executable(Xacor
+add_executable(OpenSpace
     Io.cpp
     Images.cpp
     Components.cpp
@@ -12,11 +12,11 @@ add_executable(Xacor
     Scene.cpp
     Main.cpp
 )
-add_dependencies(Xacor
+add_dependencies(OpenSpace
     CopyData
 )
 
-target_compile_definitions(Xacor
+target_compile_definitions(OpenSpace
     PRIVATE GLM_FORCE_CXX2A
     PRIVATE GLM_FORCE_RADIANS
     PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -27,7 +27,7 @@ target_compile_definitions(Xacor
     PRIVATE GLM_ENABLE_EXPERIMENTAL
 )
 
-target_precompile_headers(Xacor
+target_precompile_headers(OpenSpace
     PUBLIC <array>
     PUBLIC <chrono>
     PUBLIC "Core.hpp"
@@ -56,7 +56,7 @@ target_precompile_headers(Xacor
     PUBLIC <vector>
 )
 
-target_link_libraries(Xacor
+target_link_libraries(OpenSpace
     PRIVATE glfw
     PRIVATE glad
     PRIVATE glm
@@ -77,20 +77,20 @@ target_link_libraries(Xacor
 # tbb is not required on windows for some reason
 if(LINUX)
     message("Linking with libtbb")
-    target_link_libraries(Xacor
+    target_link_libraries(OpenSpace
         PRIVATE tbb
     )
 endif()
 
-target_sources(Xacor
+target_sources(OpenSpace
     PRIVATE ${glm_SOURCE_DIR}/util/glm.natvis
 )
 
 if(USE_PROFILER)
-    target_compile_definitions(Xacor
+    target_compile_definitions(OpenSpace
         PRIVATE USE_PROFILER
     )
-    target_link_libraries(Xacor
+    target_link_libraries(OpenSpace
         PRIVATE TracyClient
     )
 endif()
