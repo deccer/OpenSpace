@@ -1,5 +1,5 @@
-#ifndef OBJECTTYPES_INCLUDE_GLSL
-#define OBJECTTYPES_INCLUDE_GLSL
+#ifndef OBJECT_TYPES_INCLUDE_GLSL
+#define OBJECT_TYPES_INCLUDE_GLSL
 
 struct TObject
 {
@@ -12,4 +12,4 @@ layout (binding = 3, std430) restrict readonly buffer TObjectsBuffer
     TObject Objects[];
 };
 
-#endif // OBJECTTYPES_INCLUDE_GLSL
+#endif // OBJECT_TYPES_INCLUDE_GLSL

@@ -1,5 +1,5 @@
-#ifndef BASICTYPES_INCLUDE_GLSL
-#define BASICTYPES_INCLUDE_GLSL
+#ifndef BASIC_TYPES_INCLUDE_GLSL
+#define BASIC_TYPES_INCLUDE_GLSL
 
 struct TPackedVec2
 {
@@ -52,4 +52,4 @@ TPackedVec4 Vec4ToPacked(in vec4 v)
     return TPackedVec4(v.x, v.y, v.z, v.w);
 }
 
-#endif // BASICTYPES_INCLUDE_GLSL
+#endif // BASIC_TYPES_INCLUDE_GLSL

@@ -1,5 +1,5 @@
-#ifndef VERTEXTYPES_INCLUDE_GLSL
-#define VERTEXTYPES_INCLUDE_GLSL
+#ifndef VERTEX_TYPES_INCLUDE_GLSL
+#define VERTEX_TYPES_INCLUDE_GLSL
 
 #include "BasicTypes.include.glsl"
 
@@ -15,4 +15,4 @@ struct TVertexNormalTangentUvSign
     TPackedVec4 UvAndTangentSign;
 };
 
-#endif // VERTEXTYPES_INCLUDE_GLSL
+#endif // VERTEX_TYPES_INCLUDE_GLSL
