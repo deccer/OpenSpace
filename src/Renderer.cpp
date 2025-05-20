@@ -265,7 +265,7 @@ std::unordered_map<std::string, TGpuMaterial> g_gpuMaterials = {};
 
 auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
 
-    std::array<std::string, 6> skyBoxNames = {
+    const std::array<std::string, 6> skyBoxNames = {
         std::format("data/sky/TC_{}_Xp.png", skyBoxName),
         std::format("data/sky/TC_{}_Xn.png", skyBoxName),
         std::format("data/sky/TC_{}_Yp.png", skyBoxName),
@@ -283,7 +283,7 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
         int32_t imageWidth = 0;
         int32_t imageHeight = 0;
         int32_t imageComponents = 0;
-        auto imageData = Image::LoadImageFromFile(imageName, &imageWidth, &imageHeight, &imageComponents);
+        const auto imageData = Image::LoadImageFromFile(imageName, &imageWidth, &imageHeight, &imageComponents);
 
         if (imageIndex == 0) {
             textureId = CreateTexture(TCreateTextureDescriptor{
@@ -484,9 +484,9 @@ auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImage(materialDataName);
+    const auto& imageData = Assets::GetAssetImage(materialDataName);
 
-    auto textureId = CreateTexture(TCreateTextureDescriptor{
+    const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
         .Format = TFormat::R8G8B8A8_UNORM,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
@@ -518,9 +518,9 @@ auto CreateTextureForMaterialChannel(
 
     PROFILER_ZONESCOPEDN("CreateTextureForMaterialChannel");
 
-    auto& imageData = Assets::GetAssetImage(imageDataName);
+    const auto& imageData = Assets::GetAssetImage(imageDataName);
 
-    auto textureId = CreateTexture(TCreateTextureDescriptor{
+    const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
         .Format = channel == Assets::TAssetMaterialChannel::Color ? TFormat::R8G8B8A8_SRGB : TFormat::R8G8B8A8_UNORM,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
@@ -602,31 +602,31 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         return;
     }
 
-    auto& assetMaterialData = Assets::GetAssetMaterial(assetMaterialName);
+    const auto& assetMaterialData = Assets::GetAssetMaterial(assetMaterialName);
 
     auto cpuMaterial = TCpuMaterial{
         .BaseColor = assetMaterialData.BaseColor,
     };
 
-    auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
+    const auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
     if (baseColorChannel.has_value()) {
-        auto& baseColor = *baseColorChannel;
-        auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
+        const auto& baseColor = *baseColorChannel;
+        const auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
 
         cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel);
-        auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
-        auto& sampler = GetSampler(samplerId);
+        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
+        const auto& sampler = GetSampler(samplerId);
         cpuMaterial.BaseColorTextureSamplerId = sampler.Id;
     }
 
-    auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
+    const auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel.has_value()) {
-        auto& normalTexture = *normalTextureChannel;
-        auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
+        const auto& normalTexture = *normalTextureChannel;
+        const auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
 
         cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel);
-        auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
-        auto& sampler = GetSampler(samplerId);
+        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
+        const auto& sampler = GetSampler(samplerId);
         cpuMaterial.NormalTextureSamplerId = sampler.Id;
     }
 
@@ -1853,7 +1853,7 @@ auto UiRender(
          */
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         if (ImGui::Begin((char*)ICON_MDI_GRID " Scene")) {
-            auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
+            const auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
             if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
                 g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                 g_sceneViewerResized = true;
@@ -1869,9 +1869,9 @@ auto UiRender(
             }();
 
             if (ImGui::BeginChild("Render Output", currentSceneWindowSize, ImGuiChildFlags_Border)) {
-                auto currentWindowPosition = ImGui::GetWindowPos();
+                const auto currentWindowPosition = ImGui::GetWindowPos();
 
-                auto GetCurrentSceneViewerTexture = [&](int32_t sceneViewerTextureIndex) -> uint32_t {
+                auto GetCurrentSceneViewerTexture = [&](const int32_t sceneViewerTextureIndex) -> uint32_t {
                     switch (sceneViewerTextureIndex) {
                         case 0: return g_isTaaEnabled
                             ? (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id
@@ -1896,7 +1896,7 @@ auto UiRender(
                     ImGuizmo::SetDrawlist();
                     ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-                    auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
+                    const auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
                     glm::mat4 temp = transformComponent;
 
                     static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
