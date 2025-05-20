@@ -112,7 +112,7 @@ glm::mat4 g_currentJitteredProjectionMatrix = {};
 
 uint32_t g_globalUniformsBuffer = {};
 uint32_t g_objectsBuffer = {};
-glm::vec3 g_sunPosition = glm::vec3{100, 100, 100};
+glm::vec3 g_sunPosition = glm::vec3{100, 110, 120};
 
 bool g_drawDebugLines = true;
 std::vector<TGpuDebugLine> g_debugLines;
