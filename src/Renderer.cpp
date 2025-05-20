@@ -1814,7 +1814,6 @@ auto UiRender(
                         case 3: return g_geometryFramebuffer.ColorAttachments[1]->Texture.Id;
                         case 4: return g_geometryFramebuffer.ColorAttachments[2]->Texture.Id;
                         case 5: return g_fxaaFramebuffer.ColorAttachments[0]->Texture.Id;
-                        case 6: return (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id;
                         default: std::unreachable();
                     }
 
