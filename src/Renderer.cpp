@@ -644,6 +644,8 @@ auto DeleteRendererFramebuffers() -> void {
     DeleteFramebuffer(g_geometryFramebuffer);
     DeleteFramebuffer(g_resolveGeometryFramebuffer);
     DeleteFramebuffer(g_fxaaFramebuffer);
+    DeleteFramebuffer(g_taaFramebuffer1);
+    DeleteFramebuffer(g_taaFramebuffer2);
 }
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
