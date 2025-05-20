@@ -1028,6 +1028,7 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_geometryGraphicsPipeline);
     DeletePipeline(g_resolveGeometryGraphicsPipeline);
     DeletePipeline(g_fxaaGraphicsPipeline);
+    DeletePipeline(g_taaGraphicsPipeline);
 
     RhiShutdown();
 }
