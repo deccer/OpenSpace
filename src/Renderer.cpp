@@ -1030,6 +1030,8 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_fxaaGraphicsPipeline);
     DeletePipeline(g_taaGraphicsPipeline);
 
+    UiUnload();
+
     RhiShutdown();
 }
 
@@ -1636,9 +1638,12 @@ auto Renderer::ToggleEditorMode() -> void {
     g_sceneViewerResized = g_isEditor;
 }
 
-
 auto UiUnload() -> void {
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext(g_uiContext);
+    g_uiContext = nullptr;
 }
 
 auto UiInitialize(GLFWwindow* window) -> bool {
