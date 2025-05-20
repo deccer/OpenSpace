@@ -1004,11 +1004,11 @@ auto Renderer::Initialize(
     g_globalLightsBuffer = CreateBuffer("TGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
     g_fstSamplerNearestClampToEdge = GetOrCreateSampler({
-                                                            .AddressModeU = TTextureAddressMode::ClampToEdge,
-                                                            .AddressModeV = TTextureAddressMode::ClampToEdge,
-                                                            .MagFilter = TTextureMagFilter::Nearest,
-                                                            .MinFilter = TTextureMinFilter::Nearest
-                                                        });
+        .AddressModeU = TTextureAddressMode::ClampToEdge,
+        .AddressModeV = TTextureAddressMode::ClampToEdge,
+        .MagFilter = TTextureMagFilter::Nearest,
+        .MinFilter = TTextureMinFilter::Nearest
+    });
 
     return true;
 }
