@@ -1780,8 +1780,6 @@ auto UiRender(
             ImGui::EndMainMenuBar();
         }
 
-        RenderMagnifier(renderContext, g_sceneViewerScaledSize, g_viewportContentOffset, ImGui::IsItemHovered());
-
         /*
          * UI - Scene Viewer
          */
