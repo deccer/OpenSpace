@@ -743,14 +743,6 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
             }
         }
     });
-
-    g_taaSampler = GetOrCreateSampler(TSamplerDescriptor{
-        .Label = "TAA Sampler",
-        .AddressModeU = TTextureAddressMode::ClampToEdge,
-        .AddressModeV = TTextureAddressMode::ClampToEdge,
-        .MagFilter = TTextureMagFilter::Linear,
-        .MinFilter = TTextureMinFilter::Linear,
-    });
 }
 
 auto Renderer::Initialize(
@@ -967,6 +959,14 @@ auto Renderer::Initialize(
     }
 
     g_taaGraphicsPipeline = *taaGraphicsPipelineResult;
+
+    g_taaSampler = GetOrCreateSampler(TSamplerDescriptor{
+        .Label = "TAA Sampler",
+        .AddressModeU = TTextureAddressMode::ClampToEdge,
+        .AddressModeV = TTextureAddressMode::ClampToEdge,
+        .MagFilter = TTextureMagFilter::Linear,
+        .MinFilter = TTextureMinFilter::Linear,
+    });
 
     g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
