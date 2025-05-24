@@ -171,8 +171,6 @@ static constexpr int32_t g_jitterCount = 16;
 glm::vec2 g_jitter[g_jitterCount];
 int32_t g_jitterIndex = 0;
 
-entt::entity g_selectedEntity = entt::null;
-
 auto GetHaltonSequence(
     const int prime,
     const int index = 1) -> float {
