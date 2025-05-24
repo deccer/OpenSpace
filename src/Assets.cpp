@@ -39,6 +39,8 @@ std::unordered_map<std::string, TAssetMaterial> g_assetMaterials = {};
 std::unordered_map<std::string, TAssetPrimitive> g_assetPrimitives = {};
 std::unordered_map<std::string, TAssetMesh> g_assetMeshes = {};
 
+auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void;
+
 auto GetSafeResourceName(
     const char* const baseName,
     const char* const text,
