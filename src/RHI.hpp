@@ -493,6 +493,7 @@ struct TPipeline {
     auto SetUniform(int32_t location, float value1, float value2, float value3, float value4) const -> void;
     auto SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) const -> void;
     auto SetUniform(int32_t location, const glm::vec4& value) const -> void;
+    auto SetUniform(int32_t location, const glm::mat3& value) const -> void;
     auto SetUniform(int32_t location, const glm::mat4& value) const -> void;
 };
 
