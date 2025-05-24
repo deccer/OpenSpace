@@ -323,17 +323,29 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> TTextureId {
     return textureId;
 }
 
-auto SignNotZero(const glm::vec2 v) -> glm::vec2 {
+auto EncodeNormal(const glm::vec3& normal) -> glm::vec2 {
 
-    return glm::vec2((v.x >= 0.0f) ? +1.0f : -1.0f, (v.y >= 0.0f) ? +1.0f : -1.0f);
+    auto OctWrap = [](const glm::vec2& v) -> glm::vec2 {
+        return (glm::vec2(1.0f) - glm::abs(glm::vec2(v.y, v.x))) * glm::sign(v);
+    };
+
+
+    const glm::vec3 normalized = normal / (glm::abs(normal.x) + glm::abs(normal.y) + glm::abs(normal.z));
+    const glm::vec2 encodedNormal = normalized.z >= 0.0f
+        ? glm::vec2(normalized.x, normalized.y)
+        : OctWrap(glm::vec2(normalized.x, normalized.y));
+    return encodedNormal * 0.5f + 0.5f;
 }
 
-auto EncodeNormal(const glm::vec3 normal) -> glm::vec2 {
+auto DecodeNormal(const glm::vec2& encodedNormal) -> glm::vec3 {
+    const glm::vec2 p = encodedNormal * 2.0f - 1.0f;
+    glm::vec3 n(p.x, p.y, 1.0f - glm::abs(p.x) - glm::abs(p.y));
 
-    const auto encodedNormal = glm::vec2{normal.x, normal.y} * (1.0f / (abs(normal.x) + abs(normal.y) + abs(normal.z)));
-    return (normal.z <= 0.0f)
-           ? (1.0f - glm::abs(glm::vec2{encodedNormal.x, encodedNormal.y})) * SignNotZero(encodedNormal) //TODO(deccer) check if its encNor.y, encNor.x or not
-           : encodedNormal;
+    float t = glm::clamp(-n.z, 0.0f, 1.0f);
+    n.x += p.x >= 0.0f ? -t : t;
+    n.y += p.y >= 0.0f ? -t : t;
+
+    return glm::normalize(n);
 }
 
 auto RendererCreateGpuMesh(

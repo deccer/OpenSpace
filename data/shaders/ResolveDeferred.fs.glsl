@@ -10,39 +10,11 @@ layout(binding = 2) uniform sampler2D s_texture_depth;
 
 layout(binding = 8) uniform samplerCube s_texture_sky;
 layout(binding = 9) uniform samplerCube s_convolved_sky;
-layout(binding = 10, std430) buffer SHBuffer {
-    float shR[9];
-    float shG[9];
-    float shB[9];
-};
 
 layout(location = 0) uniform vec3 u_sun_position;
 layout(location = 1) uniform vec4 u_camera_position;
 layout(location = 2) uniform mat4 u_camera_inverse_view_projection;
 layout(location = 3) uniform vec2 u_screen_size;
-
-vec3 EvaluateSH(vec3 normal) {
-    float x = normal.x;
-    float y = normal.y;
-    float z = normal.z;
-
-    float shBasis[9];
-    shBasis[0] = 0.282095;
-    shBasis[1] = 0.488603 * y;
-    shBasis[2] = 0.488603 * z;
-    shBasis[3] = 0.488603 * x;
-    shBasis[4] = 1.092548 * x * y;
-    shBasis[5] = 1.092548 * y * z;
-    shBasis[6] = 0.315392 * (3.0 * z * z - 1.0);
-    shBasis[7] = 1.092548 * x * z;
-    shBasis[8] = 0.546274 * (x * x - y * y);
-
-    vec3 result = vec3(0.0);
-    for (int i = 0; i < 9; ++i) {
-        result += vec3(shR[i], shG[i], shB[i]) * shBasis[i];
-    }
-    return result;
-}
 
 vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
@@ -66,8 +38,8 @@ void main()
     vec3 normal = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0).rgb;
     float depth = texelFetch(s_texture_depth, ivec2(gl_FragCoord.xy), 0).r;
 
-    vec3 worldPosition = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
-    vec3 v = normalize(u_camera_position.xyz - worldPosition);
+    vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
+    vec3 v = normalize(u_camera_position.xyz - fragmentPosition_ws);
 
     if (depth >= 1.0) {
         vec3 color = texture(s_texture_sky, v_sky_ray).rgb;
@@ -84,9 +56,12 @@ void main()
     vec3 kS = FresnelSchlickRoughness(max(dot(normal, v), 0.0), F0, 0.5);
     vec3 kD = 1.0 - kS;
     float ao = 1.0;
-    vec3 irradiance = texture(s_texture_sky, normalize(normal)).rgb;
+    vec3 irradiance = texture(s_convolved_sky, normalize(normal)).rgb;
     vec3 diffuse = irradiance * albedo.rgb;
     vec3 ambient = (kD * diffuse) * ao;
 
-    o_color = vec4(ambient * sun_n_dot_l, 1.0);
+    //float x = dot(normal, v);
+    //float x = sun_n_dot_l;
+    //float x = irradiance.r;
+    o_color = vec4(ambient * sun_n_dot_l, 1.0);// + 0.00000001 * vec4(normal, 1.0);
 }
