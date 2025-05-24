@@ -89,7 +89,7 @@ auto CreateAssetEntity(
     const std::string& assetMaterialNameOverride) -> entt::entity {
 
     using TVisitNodesDelegate = std::function<void(entt::entity, const Assets::TAssetModelNode&)>;
-    TVisitNodesDelegate visitNodes = [&](entt::entity parentEntity, const Assets::TAssetModelNode& assetModelNode) -> void {
+    TVisitNodesDelegate visitNodes = [&](const entt::entity parentEntity, const Assets::TAssetModelNode& assetModelNode) -> void {
 
         const auto& nodeName = assetModelNode.Name;
         const auto& localPosition = assetModelNode.LocalPosition;
@@ -125,7 +125,7 @@ auto CreateAssetEntity(
     };
 
     const auto& assetModel = Assets::GetAssetModel(assetModelName);
-    auto entity = CreateEntity(parent, name, position, orientation, scale);
+    const auto entity = CreateEntity(parent, name, position, orientation, scale);
     for (const auto& assetModelNode : assetModel.Hierarchy) {
         visitNodes(entity, assetModelNode);
     }

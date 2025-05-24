@@ -542,7 +542,9 @@ auto CreateTextureForMaterialChannel(
 
     const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
-        .Format = channel == Assets::TAssetMaterialChannel::Color ? TFormat::R8G8B8A8_SRGB : TFormat::R8G8B8A8_UNORM,
+        .Format = channel == Assets::TAssetMaterialChannel::Color
+            ? TFormat::R8G8B8A8_SRGB
+            : TFormat::R8G8B8A8_UNORM,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
@@ -800,13 +802,6 @@ auto Renderer::Initialize(
     }
     g_skyBoxTexture = GetTexture(skyTextureId);
     g_skyBoxConvolvedTexture = GetTexture(*convolveSkyTextureResult);
-
-    const auto computeSHCoefficientsResult = ComputeSHCoefficients(*convolveSkyTextureResult);
-    if (!computeSHCoefficientsResult) {
-        spdlog::error("Unable to compute spherical harmonics coefficients {}", computeSHCoefficientsResult.error());
-        return false;
-    }
-    g_skyBoxSHCoefficients = *computeSHCoefficientsResult;
 
     /*
      * Renderer - Initialize Framebuffers
@@ -1081,8 +1076,8 @@ auto RenderEntityHierarchy(
             ImGui::TextUnformatted(entityName.Name.data());
         }
         if (isOpen) {
-            auto& children = registry.get<TComponentHierarchy>(entity).Children;
-            for (auto& child : children) {
+            const auto& children = registry.get<TComponentHierarchy>(entity).Children;
+            for (const auto& child : children) {
                 RenderEntityHierarchy(registry, child);
             }
             if (!isRootEntity) {
@@ -1189,8 +1184,8 @@ auto RenderEntityProperties(
         if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
 
             ImGui::Indent();
-            auto& hierarchy = registry.get<TComponentHierarchy>(entity);
-            auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
+            const auto& hierarchy = registry.get<TComponentHierarchy>(entity);
+            const auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
 
             ImGui::TextUnformatted(parentName.Name.data());
             ImGui::Unindent();
