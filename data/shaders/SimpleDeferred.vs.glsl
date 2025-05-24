@@ -32,8 +32,6 @@ layout(binding = 2, std430) restrict readonly buffer TGpuVertexNormalUvTangentBu
     TPackedVertexNormalTangentUvSign VertexNormalUvTangents[];
 };
 
-//#include "ObjectBuffer.include.glsl"
-
 layout(location = 0) uniform mat4 u_object_world_matrix;
 layout(location = 4) uniform ivec4 u_object_parameters;
 
