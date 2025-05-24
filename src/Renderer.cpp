@@ -840,8 +840,8 @@ auto Renderer::Initialize(
 
     auto geometryGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "GeometryPipeline",
-        .VertexShaderFilePath = "data/shaders/SimpleDeferred.vs.glsl",
-        .FragmentShaderFilePath = "data/shaders/SimpleDeferred.fs.glsl",
+        .VertexShaderFilePath = "data/shaders/Geometry.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/Geometry.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
