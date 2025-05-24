@@ -213,7 +213,7 @@ auto LoadImages(
 
         const auto imageData = [&]{
 
-            auto imageName = GetSafeResourceName(assetModelName.data(), fgImage.name.data(), "image", imageIndex);
+            const auto imageName = GetSafeResourceName(assetModelName.data(), fgImage.name.data(), "image", imageIndex);
             if (const auto* filePathUri = std::get_if<fastgltf::sources::URI>(&fgImage.data)) {
                 auto filePathFixed = std::filesystem::path(filePathUri->uri.path());
                 auto filePathParent = filePath.parent_path();
@@ -280,14 +280,14 @@ auto LoadSamplers(
     std::for_each(
         samplerIndices.begin(),
         samplerIndices.end(),
-        [&](size_t samplerIndex) -> void {
+        [&](const size_t samplerIndex) -> void {
 
         auto& fgSampler = fgAsset.samplers[samplerIndex];
         auto magFilter = ToString(fgSampler.magFilter);
         auto minFilter = ToString(fgSampler.minFilter);
         auto wrapS = ToString(fgSampler.wrapS);
         auto wrapT = ToString(fgSampler.wrapT);
-        auto samplerName = std::format("S_{}_{}_{}_{}", magFilter, minFilter, wrapS, wrapT);
+        const auto samplerName = std::format("S_{}_{}_{}_{}", magFilter, minFilter, wrapS, wrapT);
 
         auto assetSamplerData = TAssetSampler {
             .Name = samplerName,

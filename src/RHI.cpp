@@ -40,7 +40,7 @@ auto OnOpenGLDebugMessage(
 
 ///// Conversions
 
-constexpr auto PrimitiveTopologyToGL(TPrimitiveTopology primitiveTopology) -> uint32_t {
+constexpr auto PrimitiveTopologyToGL(const TPrimitiveTopology primitiveTopology) -> uint32_t {
     switch (primitiveTopology) {
         case TPrimitiveTopology::Lines: return GL_LINES;
         case TPrimitiveTopology::TriangleFan: return GL_TRIANGLE_FAN;
@@ -50,7 +50,7 @@ constexpr auto PrimitiveTopologyToGL(TPrimitiveTopology primitiveTopology) -> ui
     }
 }
 
-constexpr auto TextureAddressModeToGL(TTextureAddressMode textureAddressMode) -> uint32_t {
+constexpr auto TextureAddressModeToGL(const TTextureAddressMode textureAddressMode) -> uint32_t {
     switch (textureAddressMode) {
         case TTextureAddressMode::ClampToBorder : return GL_CLAMP_TO_BORDER;
         case TTextureAddressMode::ClampToEdge : return GL_CLAMP_TO_EDGE;
@@ -61,7 +61,7 @@ constexpr auto TextureAddressModeToGL(TTextureAddressMode textureAddressMode) ->
     }
 }
 
-constexpr auto TextureMagFilterToGL(TTextureMagFilter textureMagFilter) -> uint32_t {
+constexpr auto TextureMagFilterToGL(const TTextureMagFilter textureMagFilter) -> uint32_t {
     switch (textureMagFilter) {
         case TTextureMagFilter::Linear: return GL_LINEAR;
         case TTextureMagFilter::Nearest: return GL_NEAREST;
@@ -69,7 +69,7 @@ constexpr auto TextureMagFilterToGL(TTextureMagFilter textureMagFilter) -> uint3
     }
 }
 
-constexpr auto TextureMinFilterToGL(TTextureMinFilter textureMinFilter) -> uint32_t {
+constexpr auto TextureMinFilterToGL(const TTextureMinFilter textureMinFilter) -> uint32_t {
     switch (textureMinFilter) {
         case TTextureMinFilter::Linear: return GL_LINEAR;
         case TTextureMinFilter::Nearest: return GL_NEAREST;
@@ -81,7 +81,7 @@ constexpr auto TextureMinFilterToGL(TTextureMinFilter textureMinFilter) -> uint3
     }
 }
 
-constexpr auto TextureTypeToGL(TTextureType textureType) -> uint32_t {
+constexpr auto TextureTypeToGL(const TTextureType textureType) -> uint32_t {
 
     switch (textureType)
     {
@@ -98,7 +98,7 @@ constexpr auto TextureTypeToGL(TTextureType textureType) -> uint32_t {
     }
 }
 
-constexpr auto UploadFormatToGL(TUploadFormat uploadFormat) -> uint32_t {
+constexpr auto UploadFormatToGL(const TUploadFormat uploadFormat) -> uint32_t {
 
     switch (uploadFormat) {
         case TUploadFormat::R: return GL_RED;
@@ -120,7 +120,7 @@ constexpr auto UploadFormatToGL(TUploadFormat uploadFormat) -> uint32_t {
     }
 }
 
-constexpr auto UploadTypeToGL(TUploadType uploadType) -> uint32_t {
+constexpr auto UploadTypeToGL(const TUploadType uploadType) -> uint32_t {
 
     switch (uploadType) {
         case TUploadType::UnsignedByte: return GL_UNSIGNED_BYTE;
@@ -146,7 +146,7 @@ constexpr auto UploadTypeToGL(TUploadType uploadType) -> uint32_t {
     }
 }
 
-constexpr auto SampleCountToGL(TSampleCount sampleCount) -> uint32_t {
+constexpr auto SampleCountToGL(const TSampleCount sampleCount) -> uint32_t {
 
     switch (sampleCount) {
         case TSampleCount::One: return 1;
@@ -159,7 +159,8 @@ constexpr auto SampleCountToGL(TSampleCount sampleCount) -> uint32_t {
     }
 }
 
-constexpr auto MemoryAccessToGL(TMemoryAccess memoryAccess) -> uint32_t {
+constexpr auto MemoryAccessToGL(const TMemoryAccess memoryAccess) -> uint32_t {
+
     switch (memoryAccess) {
         case TMemoryAccess::ReadOnly: return GL_READ_ONLY;
         case TMemoryAccess::WriteOnly: return GL_WRITE_ONLY;
@@ -168,7 +169,8 @@ constexpr auto MemoryAccessToGL(TMemoryAccess memoryAccess) -> uint32_t {
     }
 }
 
-auto FormatToGL(TFormat format) -> uint32_t {
+auto FormatToGL(const TFormat format) -> uint32_t {
+
     switch (format) {
         case TFormat::R8_UNORM: return GL_R8;
         case TFormat::R8_SNORM: return GL_R8_SNORM;
@@ -259,13 +261,14 @@ auto FormatToGL(TFormat format) -> uint32_t {
         case TFormat::BC7_RGBA_UNORM: return GL_COMPRESSED_RGBA_BPTC_UNORM;
         case TFormat::BC7_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
         default:
-            std::string message = "Format not mappable";
+            const std::string message = "Format not mappable";
             glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
             return -1;
     }
 }
 
-auto AttachmentTypeToGL(TAttachmentType attachmentType) -> uint32_t {
+auto AttachmentTypeToGL(const TAttachmentType attachmentType) -> uint32_t {
+
     switch (attachmentType) {
         case TAttachmentType::ColorAttachment0: return GL_COLOR_ATTACHMENT0;
         case TAttachmentType::ColorAttachment1: return GL_COLOR_ATTACHMENT1;
@@ -278,16 +281,15 @@ auto AttachmentTypeToGL(TAttachmentType attachmentType) -> uint32_t {
         case TAttachmentType::DepthAttachment: return GL_DEPTH_ATTACHMENT;
         case TAttachmentType::StencilAttachment: return GL_STENCIL_ATTACHMENT;
         default:
-            std::string message = "AttachmentType not mappable";
+            const std::string message = "AttachmentType not mappable";
             glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
             return -1;
     }
 }
 
-auto FormatToUploadFormat(TFormat format) -> TUploadFormat {
+auto FormatToUploadFormat(const TFormat format) -> TUploadFormat {
 
-    switch (format)
-    {
+    switch (format) {
         case TFormat::R8_UNORM:
         case TFormat::R8_SNORM:
         case TFormat::R16_UNORM:
@@ -373,10 +375,9 @@ auto FormatToUploadFormat(TFormat format) -> TUploadFormat {
 	}
 }
 
-auto FormatToUnderlyingOpenGLType(TFormat format) -> uint32_t {
+auto FormatToUnderlyingOpenGLType(const TFormat format) -> uint32_t {
 
-    switch (format)
-    {
+    switch (format) {
         case TFormat::R8_UNORM:
         case TFormat::R8G8_UNORM:
         case TFormat::R8G8B8_UNORM:
@@ -441,7 +442,7 @@ auto FormatToUnderlyingOpenGLType(TFormat format) -> uint32_t {
     }
 }
 
-constexpr auto TextureTypeToDimension(TTextureType textureType) -> uint32_t {
+constexpr auto TextureTypeToDimension(const TTextureType textureType) -> uint32_t {
 
     switch (textureType) {
         case TTextureType::Texture1D:
@@ -461,10 +462,9 @@ constexpr auto TextureTypeToDimension(TTextureType textureType) -> uint32_t {
     }
 }
 
-auto FormatToBaseTypeClass(TFormat format) -> TBaseTypeClass
+auto FormatToBaseTypeClass(const TFormat format) -> TBaseTypeClass
 {
-    switch (format)
-    {
+    switch (format) {
         case TFormat::R8_UNORM:
         case TFormat::R8_SNORM:
         case TFormat::R16_UNORM:
@@ -534,7 +534,9 @@ auto FormatToBaseTypeClass(TFormat format) -> TBaseTypeClass
     }
 }
 
-constexpr auto FormatToAttachmentType(TFormat attachmentFormat, size_t colorAttachmentIndex) -> TAttachmentType {
+constexpr auto FormatToAttachmentType(
+    const TFormat attachmentFormat,
+    const size_t colorAttachmentIndex) -> TAttachmentType {
 
     switch (attachmentFormat) {
         case TFormat::D24_UNORM:
@@ -548,7 +550,8 @@ constexpr auto FormatToAttachmentType(TFormat attachmentFormat, size_t colorAtta
     }
 }
 
-auto FormatToComponentCount(TFormat format) -> int32_t {
+auto FormatToComponentCount(const TFormat format) -> int32_t {
+
     switch (format) {
         case TFormat::R8_UNORM:
         case TFormat::R8_SNORM:
@@ -606,7 +609,7 @@ auto FormatToComponentCount(TFormat format) -> int32_t {
     }
 }
 
-auto IsFormatNormalized(TFormat format) -> int32_t {
+auto IsFormatNormalized(const TFormat format) -> int32_t {
 
     switch (format) {
         case TFormat::R8_UNORM:
@@ -663,10 +666,9 @@ auto IsFormatNormalized(TFormat format) -> int32_t {
     }
 }
 
-auto FormatToFormatClass(TFormat format) -> TFormatClass
-  {
-    switch (format)
-    {
+auto FormatToFormatClass(const TFormat format) -> TFormatClass {
+
+    switch (format) {
         case TFormat::R8_UNORM:
         case TFormat::R8_SNORM:
         case TFormat::R16_UNORM:
@@ -726,7 +728,7 @@ auto ReadShaderSourceFromFile(const std::filesystem::path& filePath) -> std::exp
     std::string pathStr = filePath.string();
     std::string parentPathStr = filePath.parent_path().string();
     char error[256]{};
-    auto processedSource = std::unique_ptr<char, decltype([](char* ptr) { free(ptr); })>(stb_include_file(pathStr.data(), nullptr, parentPathStr.data(), error));
+    const auto processedSource = std::unique_ptr<char, decltype([](char* ptr) { free(ptr); })>(stb_include_file(pathStr.data(), nullptr, parentPathStr.data(), error));
     if (!processedSource)
     {
         return std::unexpected(std::format("Failed to process includes for {}", filePath.string()));
@@ -755,10 +757,10 @@ auto PopDebugGroup() -> void {
 
 
 auto CreateBuffer(
-    std::string_view label,
-    int64_t sizeInBytes,
+    const std::string_view label,
+    const int64_t sizeInBytes,
     const void* data,
-    uint32_t flags) -> uint32_t {
+    const uint32_t flags) -> uint32_t {
 
     uint32_t buffer = 0;
     glCreateBuffers(1, &buffer);
@@ -768,20 +770,20 @@ auto CreateBuffer(
 }
 
 auto UpdateBuffer(
-    uint32_t buffer,
-    int64_t offsetInBytes,
-    int64_t sizeInBytes,
+    const uint32_t buffer,
+    const int64_t offsetInBytes,
+    const int64_t sizeInBytes,
     const void* data) -> void {
 
     glNamedBufferSubData(buffer, offsetInBytes, sizeInBytes, data);
 }
 
-auto DeleteBuffer(uint32_t buffer) -> void {
+auto DeleteBuffer(const uint32_t buffer) -> void {
 
     glDeleteBuffers(1, &buffer);
 }
 
-auto DeletePipeline(TPipeline& pipeline) -> void {
+auto DeletePipeline(const TPipeline& pipeline) -> void {
 
     glDeleteProgram(pipeline.Id);
 }
@@ -792,33 +794,33 @@ auto TPipeline::Bind() -> void {
 }
 
 auto TPipeline::BindBufferAsUniformBuffer(
-    uint32_t buffer,
-    int32_t bindingIndex) const -> void {
+    const uint32_t buffer,
+    const int32_t bindingIndex) const -> void {
 
     glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, buffer);
 }
 
 auto TPipeline::BindBufferAsUniformBuffer(
-    uint32_t buffer,
-    int32_t bindingIndex,
-    int64_t offset,
-    int64_t size) const -> void {
+    const uint32_t buffer,
+    const int32_t bindingIndex,
+    const int64_t offset,
+    const int64_t size) const -> void {
 
     glBindBufferRange(GL_UNIFORM_BUFFER, bindingIndex, buffer, offset, size);
 }
 
 auto TPipeline::BindBufferAsShaderStorageBuffer(
-    uint32_t buffer,
-    int32_t bindingIndex) const -> void {
+    const uint32_t buffer,
+    const int32_t bindingIndex) const -> void {
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer);
 }
 
 auto TPipeline::BindBufferAsShaderStorageBuffer(
-    uint32_t buffer,
-    int32_t bindingIndex,
-    int64_t offset,
-    int64_t size) const -> void {
+    const uint32_t buffer,
+    const int32_t bindingIndex,
+    const int64_t offset,
+    const int64_t size) const -> void {
 
     glBindBufferRange(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer, offset, size);
 }
@@ -831,66 +833,110 @@ auto TPipeline::BindTexture(
 }
 
 auto TPipeline::BindTextureAndSampler(
-    int32_t bindingIndex,
-    uint32_t texture,
-    uint32_t sampler) const  -> void {
+    const int32_t bindingIndex,
+    const uint32_t texture,
+    const uint32_t sampler) const  -> void {
 
     glBindTextureUnit(bindingIndex, texture);
     glBindSampler(bindingIndex, sampler);
 }
 
 auto TPipeline::BindImage(
-    uint32_t bindingIndex,
-    uint32_t texture,
-    int32_t level,
-    int32_t layer,
-    TMemoryAccess memoryAccess,
-    TFormat format) -> void {
+    const uint32_t bindingIndex,
+    const uint32_t texture,
+    const int32_t level,
+    const int32_t layer,
+    const TMemoryAccess memoryAccess,
+    const TFormat format) -> void {
 
     glBindImageTexture(bindingIndex, texture, level, GL_TRUE, layer, MemoryAccessToGL(memoryAccess), FormatToGL(format));
 }
 
-auto TPipeline::InsertMemoryBarrier(TMemoryBarrierMask memoryBarrierMask) -> void {
+auto TPipeline::InsertMemoryBarrier(const TMemoryBarrierMask memoryBarrierMask) -> void {
+
     glMemoryBarrier(static_cast<uint32_t>(memoryBarrierMask));
 }
 
-auto TPipeline::SetUniform(int32_t location, float value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const float value) const -> void {
+
     glProgramUniform1f(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, int32_t value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const int32_t value) const -> void {
+
     glProgramUniform1i(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, uint32_t value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const uint32_t value) const -> void {
+
     glProgramUniform1ui(Id, location, value);
 }
 
-auto TPipeline::SetUniform(int32_t location, uint64_t value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const uint64_t value) const -> void {
+
     glProgramUniformHandleui64ARB(Id, location, value); //TODO(deccer) add check for bindless support
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec2& value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const glm::vec2& value) const -> void {
+
     glProgramUniform2fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec3& value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const glm::vec3& value) const -> void {
+
     glProgramUniform3fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, float value1, float value2, float value3, float value4) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const float value1,
+    const float value2,
+    const float value3,
+    const float value4) const -> void {
+
     glProgramUniform4f(Id, location, value1, value2, value3, value4);
 }
 
-auto TPipeline::SetUniform(int32_t location, int32_t value1, int32_t value2, int32_t value3, int32_t value4) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const int32_t value1,
+    const int32_t value2,
+    const int32_t value3,
+    const int32_t value4) const -> void {
+
     glProgramUniform4i(Id, location, value1, value2, value3, value4);
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::vec4& value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const glm::vec4& value) const -> void {
+
     glProgramUniform4fv(Id, location, 1, glm::value_ptr(value));
 }
 
-auto TPipeline::SetUniform(int32_t location, const glm::mat4& value) const -> void {
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const glm::mat3& value) const -> void {
+
+    glProgramUniformMatrix3fv(Id, location, 1, GL_FALSE, glm::value_ptr(value));
+}
+
+auto TPipeline::SetUniform(
+    const int32_t location,
+    const glm::mat4& value) const -> void {
+
     glProgramUniformMatrix4fv(Id, location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
@@ -900,14 +946,16 @@ auto GetTexture(TTextureId id) -> TTexture& {
     return g_textures[size_t(id)];
 }
 
-auto CreateTexture2DFromFile(const std::filesystem::path& filePath, TFormat format) -> TTextureId {
+auto CreateTexture2DFromFile(
+    const std::filesystem::path& filePath,
+    const TFormat format) -> TTextureId {
 
     int32_t imageWidth = 0;
     int32_t imageHeight = 0;
     int32_t imageComponents = 0;
-    auto imageData = Image::LoadImageFromFile(filePath, &imageWidth, &imageHeight, &imageComponents);
+    const auto imageData = Image::LoadImageFromFile(filePath, &imageWidth, &imageHeight, &imageComponents);
 
-    auto textureId = CreateTexture(TCreateTextureDescriptor{
+    const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
         .Format = format,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
@@ -1025,10 +1073,12 @@ auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> T
     return textureId;
 }
 
-auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& updateTextureDescriptor) -> void {
+auto UploadTexture(
+    const TTextureId& textureId,
+    const TUploadTextureDescriptor& updateTextureDescriptor) -> void {
 
     PROFILER_ZONESCOPEDN("UploadTexture");
-    auto& texture = GetTexture(textureId);
+    const auto& texture = GetTexture(textureId);
 
     uint32_t format = 0;
     if (updateTextureDescriptor.UploadFormat == TUploadFormat::Auto)
@@ -1090,9 +1140,9 @@ auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& 
 
 auto MakeTextureResident(const TTextureId& textureId) -> uint64_t {
 
-    auto& texture = GetTexture(textureId);
+    const auto& texture = GetTexture(textureId);
 
-    auto textureHandle = glGetTextureHandleARB(texture.Id);
+    const auto textureHandle = glGetTextureHandleARB(texture.Id);
     glMakeTextureHandleResidentARB(textureHandle);
 
     return textureHandle;
@@ -1100,7 +1150,7 @@ auto MakeTextureResident(const TTextureId& textureId) -> uint64_t {
 
 auto GenerateMipmaps(const TTextureId& textureId) -> void {
 
-    auto& texture = GetTexture(textureId);
+    const auto& texture = GetTexture(textureId);
     glGenerateTextureMipmap(texture.Id);
 }
 
@@ -1162,7 +1212,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
 
     for (auto colorAttachmentIndex = 0; auto colorAttachmentDescriptorValue : framebufferDescriptor.ColorAttachments) {
         if (colorAttachmentDescriptorValue.has_value()) {
-            auto& colorAttachmentDescriptor = *colorAttachmentDescriptorValue;
+            const auto& colorAttachmentDescriptor = *colorAttachmentDescriptorValue;
             const auto colorAttachmentTextureId = CreateTexture({
                 .TextureType = TTextureType::Texture2D,
                 .Format = colorAttachmentDescriptor.Format,
@@ -1198,7 +1248,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
     if (framebufferDescriptor.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebufferDescriptor.DepthStencilAttachment;
         if (auto* createDepthStencilAttachment = std::get_if<TFramebufferDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
-            auto depthTextureId = CreateTexture({
+            const auto depthTextureId = CreateTexture({
                 .TextureType = TTextureType::Texture2D,
                 .Format = createDepthStencilAttachment->Format,
                 .Extent = TExtent3D(createDepthStencilAttachment->Extent.Width,
@@ -1232,9 +1282,9 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
         framebuffer.DepthStencilAttachment = std::nullopt;
     }
 
-    auto framebufferStatus = glCheckNamedFramebufferStatus(framebuffer.Id, GL_FRAMEBUFFER);
+    const auto framebufferStatus = glCheckNamedFramebufferStatus(framebuffer.Id, GL_FRAMEBUFFER);
     if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
-        auto message = std::format("Framebuffer {} is incomplete", framebufferDescriptor.Label);
+        const auto message = std::format("Framebuffer {} is incomplete", framebufferDescriptor.Label);
         glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 1, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
     }
 
@@ -1248,11 +1298,11 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
     auto hasColorAttachment = true;
     for (auto colorAttachmentIndex = 0; auto colorAttachmentValue : framebuffer.ColorAttachments) {
         if (colorAttachmentValue.has_value()) {
-            auto& colorAttachment = *colorAttachmentValue;
+            const auto& colorAttachment = *colorAttachmentValue;
             glViewportIndexedf(colorAttachmentIndex, 0, 0, colorAttachment.Texture.Extent.Width, colorAttachment.Texture.Extent.Height);
             glColorMaski(colorAttachmentIndex, true, true, true, true);
             if (colorAttachment.LoadOperation == TFramebufferAttachmentLoadOperation::Clear) {
-                auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
+                const auto baseTypeClass = FormatToBaseTypeClass(colorAttachment.Texture.Format);
                 switch (baseTypeClass) {
                     case TBaseTypeClass::Float:
                         glClearNamedFramebufferfv(framebuffer.Id, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<float, 4>>(&colorAttachment.ClearColor.Data)->data());
@@ -1436,7 +1486,7 @@ auto CreateComputeProgram(
     return program;
 }
 
-auto FillModeToGL(TFillMode fillMode) -> uint32_t {
+auto FillModeToGL(const TFillMode fillMode) -> uint32_t {
     switch (fillMode) {
     case TFillMode::Solid: return GL_FILL;
     case TFillMode::Wireframe: return GL_LINE;
@@ -1445,7 +1495,7 @@ auto FillModeToGL(TFillMode fillMode) -> uint32_t {
     }
 }
 
-auto CullModeToGL(TCullMode cullMode) -> uint32_t {
+auto CullModeToGL(const TCullMode cullMode) -> uint32_t {
     switch (cullMode) {
     case TCullMode::None: return GL_NONE;
     case TCullMode::Back: return GL_BACK;
@@ -1455,7 +1505,7 @@ auto CullModeToGL(TCullMode cullMode) -> uint32_t {
     }
 }
 
-auto FaceWindingOrderToGL(TFaceWindingOrder faceWindingOrder) -> uint32_t {
+auto FaceWindingOrderToGL(const TFaceWindingOrder faceWindingOrder) -> uint32_t {
     switch (faceWindingOrder) {
     case TFaceWindingOrder::CounterClockwise: return GL_CCW;
     case TFaceWindingOrder::Clockwise: return GL_CW;
@@ -1463,7 +1513,7 @@ auto FaceWindingOrderToGL(TFaceWindingOrder faceWindingOrder) -> uint32_t {
     }
 }
 
-auto DepthFunctionToGL(TDepthFunction depthFunction) -> uint32_t {
+auto DepthFunctionToGL(const TDepthFunction depthFunction) -> uint32_t {
     switch (depthFunction) {
     case TDepthFunction::Never: return GL_NEVER;
     case TDepthFunction::Less: return GL_LESS;
@@ -1498,10 +1548,10 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
         glCreateVertexArrays(1, &inputLayout);
         SetDebugLabel(inputLayout, GL_VERTEX_ARRAY, std::format("InputLayout-{}", graphicsPipelineDescriptor.Label));
 
-        auto& vertexInput = *graphicsPipelineDescriptor.VertexInput;
+        const auto& vertexInput = *graphicsPipelineDescriptor.VertexInput;
         for(auto inputAttributeIndex = 0; auto& inputAttribute : vertexInput.VertexInputAttributes) {
             if (inputAttribute.has_value()) {
-                auto& inputAttributeValue = *inputAttribute;
+                const auto& inputAttributeValue = *inputAttribute;
 
                 glEnableVertexArrayAttrib(inputLayout, inputAttributeValue.Location);
                 glVertexArrayAttribBinding(inputLayout, inputAttributeValue.Location, inputAttributeValue.Binding);
@@ -1522,7 +1572,7 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
                         glVertexArrayAttribLFormat(inputLayout, inputAttributeValue.Location, componentCount, type, inputAttributeValue.Offset);
                         break;
                     default:
-                        std::string message = "Unsupported Format Class";
+                        const std::string message = "Unsupported Format Class";
                         glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, message.size(), message.data());
                         break;
                 }

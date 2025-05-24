@@ -608,7 +608,7 @@ auto UpdateBuffer(
     int64_t sizeInBytes,
     const void* data) -> void;
 auto DeleteBuffer(uint32_t buffer) -> void;
-auto DeletePipeline(TPipeline& pipeline) -> void;
+auto DeletePipeline(const TPipeline& pipeline) -> void;
 
 auto GetTexture(TTextureId id) -> TTexture&;
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId;
