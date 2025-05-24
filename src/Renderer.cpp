@@ -193,6 +193,12 @@ struct TGpuVertexPosition {
     glm::vec3 Position;
 };
 
+struct TGpuVertexNormalTangentUvTangentSign {
+    glm::vec4 Normal;
+    glm::vec4 Tangent;
+    glm::vec4 UvAndTangentSign;
+};
+
 struct TGpuPackedVertexNormalTangentUvTangentSign {
     uint32_t Normal;
     uint32_t Tangent;
