@@ -100,7 +100,6 @@ TGraphicsPipeline g_fxaaGraphicsPipeline = {};
 
 TTexture g_skyBoxTexture = {};
 TTexture g_skyBoxConvolvedTexture = {};
-uint32_t g_skyBoxSHCoefficients = {};
 
 std::vector<TGpuGlobalLight> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
@@ -1526,7 +1525,7 @@ auto Renderer::Render(
 
             g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
             g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
-            g_resolveGeometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(10, g_skyBoxSHCoefficients);
+
             g_resolveGeometryGraphicsPipeline.SetUniform(0, g_sunPosition);
             g_resolveGeometryGraphicsPipeline.SetUniform(1, g_globalUniforms.CameraPosition);
             g_resolveGeometryGraphicsPipeline.SetUniform(2, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
