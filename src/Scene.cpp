@@ -139,8 +139,6 @@ auto Load() -> bool {
      * Load Assets
      */
 
-
-    //Assets::AddAssetModelFromFile("axes", "data/default/SM_Deccer_Cubes_Textured_Complex.gltf");
     /*
     Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
     Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
@@ -153,45 +151,10 @@ auto Load() -> bool {
     Assets::AddAssetModelFromFile("fform9", "data/basic/fform_10.glb");
     */
 
-    //Assets::AddAssetModelFromFile("axes", "data/scenes/survival_guitar_backpack.glb");
-    //Assets::AddAssetModelFromFile("axes", "data/default/SM_Axis_Names.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/hintze-hall_-_vr_tour-1k.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponzaCurtains/NewSponza_Curtains_glTF.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/IntelSponza/NewSponza_Main_glTF_002.gltf");
-    //Assets::AddAssetModelFromFile("LessSillyShip", "/home/deccer/Code/scenes/GearboxAssy.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/Buggy.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Hierarchy_2_Empty_2.gltf");
-
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
-    //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Cube_x1_y1_z1.glb");
-    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_005.glb");
-    //Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z2", "data/scenes/SM_Cube_x1_y1_z2.glb");
+    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Storage/Resources/Models/UnitySponza/UnitySponza.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/OrientationTest.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_UnitCube_NoYUp.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/frigate.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/helghast_rifleman.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/illegal_in_67_countries.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/l_m_mule_model_to_3_d_printer.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/low_poly_hero_ship.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/low_poly_humanoid_robot.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/low-poly_ship_practice.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/mechanical_shapes.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/monigote_hombre__base_male_humanoid.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/ring_ship.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/sponza_textured_separated.glb"); // draco
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Storage/Resources/Models/_Random/SM_Cube_OneMaterialPerFace.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/free_3d_modular_low_poly_assets_for_prototyping.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/Cornel_holes_white.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/abstract_shapes.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/calacona_santa_muerte.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/hover_bike_-_the_rocket.glb");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/SM_Cube_TwoPrimitives_2.gltf");
-    //Assets::AddAssetModelFromFile("axes", "/home/deccer/Code/scenes/structure.glb");
-    //Assets::AddAssetModelFromFile("SM_Tower", "data/scenes/Tower/scene.gltf");
 
     /// Setup Scene ////////////
     g_rootEntity = CreateEntity(entt::null, "Root", glm::vec3{0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f});
