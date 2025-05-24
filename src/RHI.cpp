@@ -11,10 +11,10 @@
 #include <stb_include.h>
 
 std::vector<TTexture> g_textures;
-TTextureId g_textureCounter = TTextureId::Invalid;
+auto g_textureCounter = TTextureId::Invalid;
 
 std::vector<TSampler> g_samplers;
-TSamplerId g_samplerCounter = TSamplerId::Invalid;
+auto g_samplerCounter = TSamplerId::Invalid;
 
 std::unordered_map<TSamplerDescriptor, TSamplerId> g_samplerDescriptors;
 
@@ -83,8 +83,7 @@ constexpr auto TextureMinFilterToGL(const TTextureMinFilter textureMinFilter) ->
 
 constexpr auto TextureTypeToGL(const TTextureType textureType) -> uint32_t {
 
-    switch (textureType)
-    {
+    switch (textureType) {
         case TTextureType::Texture1D: return GL_TEXTURE_1D;
         case TTextureType::Texture2D: return GL_TEXTURE_2D;
         case TTextureType::Texture3D: return GL_TEXTURE_3D;
@@ -826,8 +825,8 @@ auto TPipeline::BindBufferAsShaderStorageBuffer(
 }
 
 auto TPipeline::BindTexture(
-    int32_t bindingIndex,
-    uint32_t texture) const  -> void {
+    const int32_t bindingIndex,
+    const uint32_t texture) const  -> void {
 
     glBindTextureUnit(bindingIndex, texture);
 }
@@ -943,7 +942,7 @@ auto TPipeline::SetUniform(
 auto GetTexture(TTextureId id) -> TTexture& {
 
     assert(id != TTextureId::Invalid);
-    return g_textures[size_t(id)];
+    return g_textures[static_cast<size_t>(id)];
 }
 
 auto CreateTexture2DFromFile(
@@ -1260,7 +1259,7 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
                                      createDepthStencilAttachment->Extent.Width,
                                      createDepthStencilAttachment->Extent.Height)
             });
-            const auto& depthTexture = g_textures[size_t(depthTextureId)];
+            const auto& depthTexture = GetTexture(depthTextureId);
 
             const auto attachmentType = FormatToAttachmentType(createDepthStencilAttachment->Format, 0);
             glNamedFramebufferTexture(framebuffer.Id, AttachmentTypeToGL(attachmentType), depthTexture.Id, 0);
