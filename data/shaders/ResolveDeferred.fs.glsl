@@ -35,7 +35,7 @@ vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat
 void main()
 {
     vec4 albedo = texelFetch(s_texture_gbuffer_albedo, ivec2(gl_FragCoord.xy), 0);
-    vec3 normal = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0).rgb;
+    vec3 normal = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0).rgb * 2.0 - 1.0;
     float depth = texelFetch(s_texture_depth, ivec2(gl_FragCoord.xy), 0).r;
 
     vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
@@ -51,17 +51,15 @@ void main()
     float sun_n_dot_l = clamp(dot(normal, normalize(u_sun_position)), 0.001, 0.999);
 
     float metallic = 0.25;
+    float roughness = 0.5;
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo.rgb, metallic);
-    vec3 kS = FresnelSchlickRoughness(max(dot(normal, v), 0.0), F0, 0.5);
+    vec3 kS = FresnelSchlickRoughness(max(dot(normal, v), 0.0), F0, roughness);
     vec3 kD = 1.0 - kS;
     float ao = 1.0;
     vec3 irradiance = texture(s_convolved_sky, normalize(normal)).rgb;
     vec3 diffuse = irradiance * albedo.rgb;
     vec3 ambient = (kD * diffuse) * ao;
 
-    //float x = dot(normal, v);
-    //float x = sun_n_dot_l;
-    //float x = irradiance.r;
-    o_color = vec4(ambient * sun_n_dot_l, 1.0);// + 0.00000001 * vec4(normal, 1.0);
+    o_color = vec4(ambient * sun_n_dot_l, 1.0);
 }
