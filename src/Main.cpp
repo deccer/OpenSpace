@@ -219,7 +219,7 @@ auto main(
         ? primaryMonitor
         : nullptr;
 
-    g_window = glfwCreateWindow(windowWidth, windowHeight, "How To Script", monitor, nullptr);
+    g_window = glfwCreateWindow(windowWidth, windowHeight, "OpenSpace", monitor, nullptr);
     if (g_window == nullptr) {
         spdlog::error("Glfw: Unable to create a window");
         return 0;
