@@ -300,16 +300,6 @@ auto main(
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
         accumulatedTimeInSeconds += deltaTimeInSeconds;
 
-        frameTimes[renderContext.FrameCounter % frameTimes.size()] = framesPerSecond;
-        if (accumulatedTimeInSeconds >= updateIntervalInSeconds) {
-            auto summedFrameTime = 0.0f;
-            for (auto i = 0; i < frameTimes.size(); i++) {
-                summedFrameTime += frameTimes[i];
-            }
-            averageFramesPerSecond = summedFrameTime / frameTimes.size();
-            accumulatedTimeInSeconds = 0.0f;
-        }
-
         renderContext.DeltaTimeInSeconds = static_cast<float>(deltaTimeInSeconds);
         renderContext.FramesPerSecond = FrameTimer::GetCurrentFPS();
         renderContext.FramesPerSecond1P = FrameTimer::Get1PercentLow();
