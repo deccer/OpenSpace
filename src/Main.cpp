@@ -7,22 +7,15 @@
 #include "FrameTimer.hpp"
 
 //#include <mimalloc.h>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <cassert>
 #include <cstdlib>
 #include <chrono>
 #include <thread>
-#include <vector>
 
 #include <spdlog/spdlog.h>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-
-#include <imgui.h>
 
 #include <entt/entt.hpp>
 
