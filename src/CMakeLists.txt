@@ -3,6 +3,7 @@ add_custom_target(CopyData ALL
 )
 
 add_executable(OpenSpace
+    FrameTimer.cpp
     Io.cpp
     Images.cpp
     Components.cpp

@@ -4,6 +4,7 @@
 #include "WindowSettings.hpp"
 #include "Input.hpp"
 #include "Controls.hpp"
+#include "FrameTimer.hpp"
 
 //#include <mimalloc.h>
 #include <glm/vec2.hpp>
@@ -265,8 +266,6 @@ auto main(
         return 0;
     }
 
-    std::vector<float> frameTimes(512, 60.0f);
-
     /*
     uint32_t g_gridTexture;
 
@@ -288,8 +287,6 @@ auto main(
     /// Start Render Loop ///////
 
     auto accumulatedTimeInSeconds = 0.0;
-    auto averageFramesPerSecond = 0.0f;
-    auto updateIntervalInSeconds = 1.0f;
 
     Renderer::TRenderContext renderContext = {};
     renderContext.Window = g_window;
@@ -299,6 +296,7 @@ auto main(
     while (!glfwWindowShouldClose(g_window)) {
 
         PROFILER_ZONESCOPEDN("Frame");
+        FrameTimer::FrameStart();
 
         glfwPollEvents();
         TInputState inputState = g_inputState;
@@ -307,7 +305,6 @@ auto main(
 
         auto currentTimeInSeconds = glfwGetTime();
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
-        auto framesPerSecond = 1.0f / deltaTimeInSeconds;
         accumulatedTimeInSeconds += deltaTimeInSeconds;
 
         frameTimes[renderContext.FrameCounter % frameTimes.size()] = framesPerSecond;
@@ -321,8 +318,10 @@ auto main(
         }
 
         renderContext.DeltaTimeInSeconds = static_cast<float>(deltaTimeInSeconds);
-        renderContext.FramesPerSecond = static_cast<float>(framesPerSecond);
-        renderContext.AverageFramesPerSecond = averageFramesPerSecond;
+        renderContext.FramesPerSecond = FrameTimer::GetCurrentFPS();
+        renderContext.FramesPerSecond1P = FrameTimer::Get1PercentLow();
+        renderContext.FramesPerSecond01P = FrameTimer::Get01PercentLow();
+        renderContext.AverageFramesPerSecond = FrameTimer::GetAverageFrameTime();
 
         auto& registry = Scene::GetRegistry();
         Scene::Update(renderContext, registry, controlState);

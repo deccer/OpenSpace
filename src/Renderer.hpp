@@ -9,6 +9,8 @@ namespace Renderer {
         GLFWwindow* Window;
         float DeltaTimeInSeconds;
         float FramesPerSecond;
+        float FramesPerSecond1P;
+        float FramesPerSecond01P;
         float AverageFramesPerSecond;
         uint64_t FrameCounter;
     };
