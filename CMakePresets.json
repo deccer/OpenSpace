@@ -1,5 +1,5 @@
 ﻿{
-   "version": 2,
+   "version": 9,
    "configurePresets": [
       {
          "name": "MSVC-Debug",
@@ -21,6 +21,11 @@
                   "Windows"
                ]
             }
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Windows"
          }
       },
       {
@@ -43,6 +48,11 @@
                   "Windows"
                ]
             }
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Windows"
          }
       },
       {
@@ -56,6 +66,11 @@
             "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install/${presetName}",
             "CMAKE_C_COMPILER": "clang",
             "CMAKE_CXX_COMPILER": "clang++"
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
          }
       },
       {
@@ -69,6 +84,11 @@
             "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install/${presetName}",
             "CMAKE_C_COMPILER": "clang",
             "CMAKE_CXX_COMPILER": "clang++"
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
          }
       },
       {
@@ -82,6 +102,11 @@
             "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install/${presetName}",
             "CMAKE_C_COMPILER": "gcc",
             "CMAKE_CXX_COMPILER": "g++"
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
          }
       },
       {
@@ -95,6 +120,11 @@
             "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install/${presetName}",
             "CMAKE_C_COMPILER": "gcc",
             "CMAKE_CXX_COMPILER": "g++"
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
          }
       }
    ]
