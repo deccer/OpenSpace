@@ -153,6 +153,7 @@ auto Load() -> bool {
 
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
 
@@ -176,6 +177,7 @@ auto Load() -> bool {
 
     g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f, 1.0f, 1.0f}, "SM_Cube_x1_y1_z1", "");
     g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
+    CreateAssetEntity(g_rootEntity, "Capital 001", glm::vec3{0.0f, 30.0f, -200.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "SM_Capital_001", "M_Orange");
 
     return true;
 }
