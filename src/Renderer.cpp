@@ -1537,10 +1537,10 @@ auto Renderer::Render(
             g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
             g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
 
-            g_resolveGeometryGraphicsPipeline.SetUniform(0, g_sunPosition);
-            g_resolveGeometryGraphicsPipeline.SetUniform(1, g_globalUniforms.CameraPosition);
-            g_resolveGeometryGraphicsPipeline.SetUniform(2, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
-            g_resolveGeometryGraphicsPipeline.SetUniform(3, g_scaledFramebufferSize);
+            g_resolveGeometryGraphicsPipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
+            g_resolveGeometryGraphicsPipeline.SetUniform(4, g_globalUniforms.CameraPosition);
+            g_resolveGeometryGraphicsPipeline.SetUniform(5, g_sunPosition);
+            g_resolveGeometryGraphicsPipeline.SetUniform(6, g_scaledFramebufferSize);
 
             g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
         }

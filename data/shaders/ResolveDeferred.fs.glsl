@@ -11,10 +11,10 @@ layout(binding = 2) uniform sampler2D s_texture_depth;
 layout(binding = 8) uniform samplerCube s_texture_sky;
 layout(binding = 9) uniform samplerCube s_convolved_sky;
 
-layout(location = 0) uniform vec3 u_sun_position;
-layout(location = 1) uniform vec4 u_camera_position;
-layout(location = 2) uniform mat4 u_camera_inverse_view_projection;
-layout(location = 3) uniform vec2 u_screen_size;
+layout(location = 0) uniform mat4 u_camera_inverse_view_projection;
+layout(location = 4) uniform vec4 u_camera_position;
+layout(location = 5) uniform vec3 u_sun_position;
+layout(location = 6) uniform vec2 u_screen_size;
 
 vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
