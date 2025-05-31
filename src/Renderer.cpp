@@ -1755,7 +1755,7 @@ auto UiRender(
 
             ImGui::Text("afps: %.0f rad/s", glm::two_pi<float>() * renderContext.FramesPerSecond);
             ImGui::Text("dfps: %.0f °/s", glm::degrees(glm::two_pi<float>() * renderContext.FramesPerSecond));
-            ImGui::Text("mfps: %.0f Hz", renderContext.AverageFramesPerSecond);
+            ImGui::Text("mfps: %.2f ms", renderContext.AverageFramesPerSecond);
             ImGui::Text("rfps: %.0f Hz", renderContext.FramesPerSecond);
             ImGui::Text("      %.0f Hz (1%%)", renderContext.FramesPerSecond1P);
             ImGui::Text("      %.0f Hz (0.1%%)", renderContext.FramesPerSecond01P);

@@ -300,6 +300,7 @@ auto main(
         auto deltaTimeInSeconds = currentTimeInSeconds - previousTimeInSeconds;
         accumulatedTimeInSeconds += deltaTimeInSeconds;
 
+        renderContext.ElapsedTime = static_cast<float>(accumulatedTimeInSeconds);
         renderContext.DeltaTimeInSeconds = static_cast<float>(deltaTimeInSeconds);
         renderContext.FramesPerSecond = FrameTimer::GetCurrentFPS();
         renderContext.FramesPerSecond1P = FrameTimer::Get1PercentLow();

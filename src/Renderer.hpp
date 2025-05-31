@@ -7,6 +7,7 @@ struct GLFWwindow;
 namespace Renderer {
     struct TRenderContext {
         GLFWwindow* Window;
+        float ElapsedTime;
         float DeltaTimeInSeconds;
         float FramesPerSecond;
         float FramesPerSecond1P;
