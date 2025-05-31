@@ -655,7 +655,7 @@ auto CalculateTangents(TAssetPrimitive& assetPrimitive) -> void {
 
     auto getNumVerticesOfFace = [](
         const SMikkTSpaceContext* context,
-        const int32_t iFace) -> int32_t {
+        const int32_t faceIndex) -> int32_t {
 
         return 3;
     };
@@ -813,7 +813,7 @@ auto CreateUvSphereMeshData(
     return assetMeshData;
 }
 
-auto CreateCuboid(
+auto CreateCuboidMesh(
     const std::string& name,
     float width,
     float height,
@@ -1094,7 +1094,7 @@ auto CreateCuboid(
     });
    
     g_assetModels[name] = std::move(cuboid);
-    g_assetMeshes[name] = CreateCuboid(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
+    g_assetMeshes[name] = CreateCuboidMesh(name, width, height, depth, segmentsX, segmentsY, segmentsZ);
 }
 
 auto AddAssetModel(const std::string& assetName, const TAssetModel& asset) -> void {
