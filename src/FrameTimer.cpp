@@ -1,12 +1,7 @@
 #include "FrameTimer.hpp"
+#include <poolstl/algorithm>
 
-#include <vector>
-
-#include <chrono>
-
-#include "poolstl/algorithm"
-
-static constexpr size_t MaxSamples = 1000;
+static constexpr size_t MaxSamples = 256;
 auto g_frameTimes = std::vector<float>(MaxSamples, 0.0f);
 std::chrono::high_resolution_clock::time_point g_lastTime = {};
 bool g_isInitialized = false;
