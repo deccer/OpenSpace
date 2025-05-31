@@ -114,14 +114,14 @@ struct TAssetModel {
 auto AddAssetModel(const std::string& assetName, const TAssetModel& asset) -> void;
 auto AddAssetModelFromFile(const std::string& assetName, const std::filesystem::path& filePath) -> void;
 auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>&;
-auto GetAssetModel(const std::string& assetName) -> TAssetModel&;
-auto IsAssetLoaded(const std::string& assetName) -> bool;
+auto GetAssetModel(std::string_view assetName) -> TAssetModel&;
+auto IsAssetLoaded(std::string_view assetName) -> bool;
 
-auto GetAssetImage(const std::string& imageDataName) -> TAssetImage&;
-auto GetAssetSampler(const std::string& samplerDataName) -> TAssetSampler&;
-auto GetAssetMaterial(const std::string& materialDataName) -> TAssetMaterial&;
-auto GetAssetMesh(const std::string& meshDataName) -> TAssetMesh&;
-auto GetAssetPrimitive(const std::string& assetPrimitiveName) -> TAssetPrimitive&;
+auto GetAssetImage(std::string_view imageDataName) -> TAssetImage&;
+auto GetAssetSampler(std::string_view samplerDataName) -> TAssetSampler&;
+auto GetAssetMaterial(std::string_view materialDataName) -> TAssetMaterial&;
+auto GetAssetMesh(std::string_view meshDataName) -> TAssetMesh&;
+auto GetAssetPrimitive(std::string_view assetPrimitiveName) -> TAssetPrimitive&;
 auto AddDefaultAssets() -> void;
 
 }

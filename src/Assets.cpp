@@ -645,32 +645,32 @@ auto GetAssetModels() -> std::unordered_map<std::string, TAssetModel>& {
     return g_assetModels;
 }
 
-auto GetAssetModel(const std::string& assetName) -> TAssetModel& {
-    return g_assetModels[assetName];
+auto GetAssetModel(const std::string_view assetName) -> TAssetModel& {
+    return g_assetModels[assetName.data()];
 }
 
-auto GetAssetPrimitive(const std::string& assetPrimitiveName) -> TAssetPrimitive& {
-    return g_assetPrimitives[assetPrimitiveName];
+auto GetAssetPrimitive(const std::string_view assetPrimitiveName) -> TAssetPrimitive& {
+    return g_assetPrimitives[assetPrimitiveName.data()];
 }
 
-auto IsAssetLoaded(const std::string& assetName) -> bool {
-    return g_assetModels.contains(assetName);
+auto IsAssetLoaded(const std::string_view assetName) -> bool {
+    return g_assetModels.contains(assetName.data());
 }
 
-auto GetAssetImage(const std::string& imageDataName) -> TAssetImage& {
-    return g_assetImages[imageDataName];
+auto GetAssetImage(const std::string_view imageDataName) -> TAssetImage& {
+    return g_assetImages[imageDataName.data()];
 }
 
-auto GetAssetSampler(const std::string& samplerDataName) -> TAssetSampler& {
-    return g_assetSamplers[samplerDataName];
+auto GetAssetSampler(const std::string_view samplerDataName) -> TAssetSampler& {
+    return g_assetSamplers[samplerDataName.data()];
 }
 
-auto GetAssetMaterial(const std::string& materialDataName) -> TAssetMaterial& {
-    return g_assetMaterials[materialDataName];
+auto GetAssetMaterial(const std::string_view materialDataName) -> TAssetMaterial& {
+    return g_assetMaterials[materialDataName.data()];
 }
 
-auto GetAssetMesh(const std::string& meshDataName) -> TAssetMesh& {
-    return g_assetMeshes[meshDataName];
+auto GetAssetMesh(const std::string_view meshDataName) -> TAssetMesh& {
+    return g_assetMeshes[meshDataName.data()];
 }
 
 auto AddImage(
