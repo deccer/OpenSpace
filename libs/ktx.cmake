@@ -25,7 +25,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${TEMPORARY_RUNTIME_OUTPUT_DIRECTORY})
 target_compile_options(ktx
     PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
-    -Wno-everything>
+        -Wno-everything>
     $<$<CXX_COMPILER_ID:MSVC>:
-    -w>
+        -w>
 )
