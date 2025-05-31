@@ -94,9 +94,12 @@ TFramebuffer g_taaFramebuffer2 = {};
 TGraphicsPipeline g_taaGraphicsPipeline = {};
 int32_t g_taaHistoryIndex = 0;
 TSamplerId g_taaSampler = {};
+bool g_isTaaEnabled = true;
+float g_taaBlendFactor = 0.1f;
 
 TFramebuffer g_fxaaFramebuffer = {};
 TGraphicsPipeline g_fxaaGraphicsPipeline = {};
+bool g_isFxaaEnabled = false;
 
 TTexture g_skyBoxTexture = {};
 TTexture g_skyBoxConvolvedTexture = {};
@@ -122,12 +125,7 @@ TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
 
-bool g_isFxaaEnabled = false;
-bool g_isTaaEnabled = true;
-float g_taaBlendFactor = 0.1f;
-
 glm::vec2 g_scaledFramebufferSize = {};
-
 glm::ivec2 g_windowFramebufferSize = {};
 glm::ivec2 g_windowFramebufferScaledSize = {};
 bool g_windowFramebufferResized = false;
@@ -156,9 +154,9 @@ auto UiRender(
     entt::registry& registry) -> void;auto ImGuiSetDarkStyle() -> void;
 auto UiMagnifier(
     Renderer::TRenderContext& renderContext,
-    const glm::vec2 viewportContentSize,
-    const glm::vec2 viewportContentOffset,
-    const bool isViewportHovered) -> void;
+    glm::vec2 viewportContentSize,
+    glm::vec2 viewportContentOffset,
+    bool isViewportHovered) -> void;
 auto UiSetDarkStyle() -> void;
 auto UiSetValveStyle() -> void;
 auto UiSetDarkWithFuchsiaStyle() -> void;
@@ -400,22 +398,22 @@ auto RendererCreateGpuMesh(
     }
 }
 
-auto GetGpuMesh(const std::string& assetMeshName) -> TGpuMesh& {
+auto GetGpuMesh(const std::string_view assetMeshName) -> TGpuMesh& {
     assert(!assetMeshName.empty());
 
-    return g_gpuMeshes[assetMeshName];
+    return g_gpuMeshes[assetMeshName.data()];
 }
 
-auto GetCpuMaterial(const std::string& assetMaterialName) -> TCpuMaterial& {
+auto GetCpuMaterial(const std::string_view assetMaterialName) -> TCpuMaterial& {
     assert(!assetMaterialName.empty());
 
-    return g_cpuMaterials[assetMaterialName];
+    return g_cpuMaterials[assetMaterialName.data()];
 }
 
-auto GetGpuMaterial(const std::string& assetMaterialName) -> TGpuMaterial& {
+auto GetGpuMaterial(const std::string_view assetMaterialName) -> TGpuMaterial& {
     assert(!assetMaterialName.empty());
 
-    return g_gpuMaterials[assetMaterialName];
+    return g_gpuMaterials[assetMaterialName.data()];
 }
 
 auto ConvolveTextureCube(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
@@ -500,11 +498,11 @@ auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t
     return shCoefficientBuffer;
 }
 
-auto CreateResidentTextureForMaterialChannel(const std::string& materialDataName) -> int64_t {
+auto CreateResidentTextureForMaterialChannel(const std::string_view materialDataName) -> int64_t {
 
     PROFILER_ZONESCOPEDN("CreateResidentTextureForMaterialChannel");
 
-    const auto& imageData = Assets::GetAssetImage(materialDataName);
+    const auto& imageData = Assets::GetAssetImage(materialDataName.data());
 
     const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
