@@ -83,8 +83,10 @@ struct TDepthPrePass {
     TGraphicsPipeline Pipeline = {};
 } g_depthPrePass;
 
-TFramebuffer g_geometryFramebuffer = {};
-TGraphicsPipeline g_geometryGraphicsPipeline = {};
+struct TGeometryPass {
+    TFramebuffer Framebuffer = {};
+    TGraphicsPipeline Pipeline = {};
+} g_geometryPass;
 
 TFramebuffer g_resolveGeometryFramebuffer = {};
 TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
@@ -656,7 +658,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 auto DeleteRendererFramebuffers() -> void {
 
     DeleteFramebuffer(g_depthPrePass.Framebuffer);
-    DeleteFramebuffer(g_geometryFramebuffer);
+    DeleteFramebuffer(g_geometryPass.Framebuffer);
     DeleteFramebuffer(g_resolveGeometryFramebuffer);
     DeleteFramebuffer(g_fxaaFramebuffer);
     DeleteFramebuffer(g_taaFramebuffer1);
@@ -678,7 +680,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
         }
     });
 
-    g_geometryFramebuffer = CreateFramebuffer({
+    g_geometryPass.Framebuffer = CreateFramebuffer({
         .Label = "Geometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
@@ -860,7 +862,7 @@ auto Renderer::Initialize(
         spdlog::error(geometryGraphicsPipelineResult.error());
         return false;
     }
-    g_geometryGraphicsPipeline = *geometryGraphicsPipelineResult;
+    g_geometryPass.Pipeline = *geometryGraphicsPipelineResult;
 
     auto resolveGeometryGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "ResolveGeometryPipeline",
@@ -1033,7 +1035,7 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_fstGraphicsPipeline);
 
     DeletePipeline(g_depthPrePass.Pipeline);
-    DeletePipeline(g_geometryGraphicsPipeline);
+    DeletePipeline(g_geometryPass.Pipeline);
     DeletePipeline(g_resolveGeometryGraphicsPipeline);
     DeletePipeline(g_fxaaGraphicsPipeline);
     DeletePipeline(g_taaGraphicsPipeline);
@@ -1474,10 +1476,10 @@ auto inline RenderDepthPrePass(entt::registry& registry) -> void {
 auto inline RenderGeometryPass(const entt::registry& registry) -> void {
     PROFILER_ZONESCOPEDN("Draw Geometry All");
     PushDebugGroup("Geometry Pass");
-    BindFramebuffer(g_geometryFramebuffer);
+    BindFramebuffer(g_geometryPass.Framebuffer);
     {
-        g_geometryGraphicsPipeline.Bind();
-        g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+        g_geometryPass.Pipeline.Bind();
+        g_geometryPass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
         const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentRenderTransform>();
         renderablesView.each([&](
@@ -1492,14 +1494,14 @@ auto inline RenderGeometryPass(const entt::registry& registry) -> void {
             auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
             auto worldMatrix = transformComponent;
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-            g_geometryGraphicsPipeline.SetUniform(0, worldMatrix);
+            g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
+            g_geometryPass.Pipeline.SetUniform(0, worldMatrix);
 
-            g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
-            g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
+            g_geometryPass.Pipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
+            g_geometryPass.Pipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
 
-            g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+            g_geometryPass.Pipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
         });
     }
     PopDebugGroup();
@@ -1515,8 +1517,8 @@ auto inline RenderResolvePass() -> void {
         g_resolveGeometryGraphicsPipeline.Bind();
         //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
         //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
-        g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
-        g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
+        g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
+        g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);
         g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
 
         g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
@@ -1586,8 +1588,8 @@ auto inline RenderTaaPass() -> void {
         g_taaGraphicsPipeline.Bind();
         g_taaGraphicsPipeline.BindTextureAndSampler(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
         g_taaGraphicsPipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
-        g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryFramebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
-        g_taaGraphicsPipeline.BindTexture(3, g_geometryFramebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
+        g_taaGraphicsPipeline.BindTexture(3, g_geometryPass.Framebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
         g_taaGraphicsPipeline.SetUniform(0, g_taaBlendFactor);
         g_taaGraphicsPipeline.SetUniform(1, 0.1f);
         g_taaGraphicsPipeline.SetUniform(2, 256.0f);
@@ -1837,9 +1839,9 @@ auto UiRender(
                             ? (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id
                             : g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
                         case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
-                        case 2: return g_geometryFramebuffer.ColorAttachments[0]->Texture.Id;
-                        case 3: return g_geometryFramebuffer.ColorAttachments[1]->Texture.Id;
-                        case 4: return g_geometryFramebuffer.ColorAttachments[2]->Texture.Id;
+                        case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
+                        case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
+                        case 4: return g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id;
                         case 5: return g_fxaaFramebuffer.ColorAttachments[0]->Texture.Id;
                         default: std::unreachable();
                     }
