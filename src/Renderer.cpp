@@ -32,15 +32,13 @@
 #define POOLSTL_STD_SUPPLEMENT
 #include <poolstl/poolstl.hpp>
 
-enum class TImGuizmoOperation
-{
+enum class TImGuizmoOperation {
     Translate,
     Rotate,
     Scale
 };
 
-enum class TImGuizmoMode
-{
+enum class TImGuizmoMode {
     Local,
     World
 };
