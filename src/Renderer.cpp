@@ -93,6 +93,12 @@ struct TComposePass {
     TGraphicsPipeline Pipeline = {};
 } g_composePass;
 
+struct TFxaaPass {
+    TFramebuffer Framebuffer = {};
+    TGraphicsPipeline Pipeline = {};
+    bool IsEnabled = false;
+} g_fxaaPass;
+
 struct TTaaPass {
     std::array<TFramebuffer, 2> Framebuffers = {};
     TGraphicsPipeline Pipeline = {};
@@ -101,10 +107,6 @@ struct TTaaPass {
     bool IsEnabled = true;
     float BlendFactor = 0.1f;
 } g_taaPass;
-
-TFramebuffer g_fxaaFramebuffer = {};
-TGraphicsPipeline g_fxaaGraphicsPipeline = {};
-bool g_isFxaaEnabled = false;
 
 TTexture g_skyBoxTexture = {};
 TTexture g_skyBoxConvolvedTexture = {};
@@ -663,7 +665,7 @@ auto DeleteRendererFramebuffers() -> void {
     DeleteFramebuffer(g_depthPrePass.Framebuffer);
     DeleteFramebuffer(g_geometryPass.Framebuffer);
     DeleteFramebuffer(g_composePass.Framebuffer);
-    DeleteFramebuffer(g_fxaaFramebuffer);
+    DeleteFramebuffer(g_fxaaPass.Framebuffer);
     DeleteFramebuffer(g_taaPass.Framebuffers[0]);
     DeleteFramebuffer(g_taaPass.Framebuffers[1]);
 }
@@ -725,7 +727,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
         },
     });
 
-    g_fxaaFramebuffer = CreateFramebuffer({
+    g_fxaaPass.Framebuffer = CreateFramebuffer({
         .Label = "FXAA FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
@@ -951,7 +953,7 @@ auto Renderer::Initialize(
         return false;
     }
 
-    g_fxaaGraphicsPipeline = *fxaaGraphicsPipelineResult;
+    g_fxaaPass.Pipeline = *fxaaGraphicsPipelineResult;
 
     auto taaGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "TAA",
@@ -1040,7 +1042,7 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_depthPrePass.Pipeline);
     DeletePipeline(g_geometryPass.Pipeline);
     DeletePipeline(g_composePass.Pipeline);
-    DeletePipeline(g_fxaaGraphicsPipeline);
+    DeletePipeline(g_fxaaPass.Pipeline);
     DeletePipeline(g_taaPass.Pipeline);
 
     UiUnload();
@@ -1558,15 +1560,15 @@ auto inline RenderDebugLines() -> void {
 }
 
 auto inline RenderFxaaPass() -> void {
-    if (g_isFxaaEnabled) {
+    if (g_fxaaPass.IsEnabled) {
         PROFILER_ZONESCOPEDN("PostFX FXAA");
         PushDebugGroup("PostFX FXAA");
-        BindFramebuffer(g_fxaaFramebuffer);
+        BindFramebuffer(g_fxaaPass.Framebuffer);
         {
-            g_fxaaGraphicsPipeline.Bind();
-            g_fxaaGraphicsPipeline.BindTexture(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id);
-            g_fxaaGraphicsPipeline.SetUniform(1, 1);
-            g_fxaaGraphicsPipeline.DrawArrays(0, 3);
+            g_fxaaPass.Pipeline.Bind();
+            g_fxaaPass.Pipeline.BindTexture(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id);
+            g_fxaaPass.Pipeline.SetUniform(1, 1);
+            g_fxaaPass.Pipeline.DrawArrays(0, 3);
         }
         PopDebugGroup();
     }
@@ -1604,8 +1606,8 @@ auto inline RenderUi(Renderer::TRenderContext& renderContext, entt::registry& re
     if (g_isEditor) {
         glClear(GL_COLOR_BUFFER_BIT);
     } else {
-        glBlitNamedFramebuffer(g_isFxaaEnabled
-                                   ? g_fxaaFramebuffer.Id
+        glBlitNamedFramebuffer(g_fxaaPass.IsEnabled
+                                   ? g_fxaaPass.Framebuffer.Id
                                    : g_taaPass.IsEnabled
                                        ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].Id
                                        : g_composePass.Framebuffer.Id,
@@ -1797,7 +1799,7 @@ auto UiRender(
                 ImGui::RadioButton("GBuffer-Albedo", &g_sceneViewerTextureIndex, 2);
                 ImGui::RadioButton("GBuffer-Normals", &g_sceneViewerTextureIndex, 3);
                 ImGui::RadioButton("GBuffer-Velocity", &g_sceneViewerTextureIndex, 4);
-                if (g_isFxaaEnabled) {
+                if (g_fxaaPass.IsEnabled) {
                     ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 5);
                 }
                 ImGui::EndMenu();
@@ -1838,7 +1840,7 @@ auto UiRender(
                         case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
                         case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
                         case 4: return g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id;
-                        case 5: return g_fxaaFramebuffer.ColorAttachments[0]->Texture.Id;
+                        case 5: return g_fxaaPass.Framebuffer.ColorAttachments[0]->Texture.Id;
                         default: std::unreachable();
                     }
 
@@ -1915,7 +1917,7 @@ auto UiRender(
                 g_sceneViewerResized = g_isEditor;
                 g_windowFramebufferResized = !g_isEditor;
             }
-            ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
+            ImGui::Checkbox("Enable FXAA", &g_fxaaPass.IsEnabled);
             ImGui::Checkbox("Enable TAA", &g_taaPass.IsEnabled);
             if (g_taaPass.IsEnabled) {
                 ImGui::DragFloat("TAA Blend Factor", &g_taaPass.BlendFactor, 0.01f, 0.01f, 1.0f, "%.2f");
