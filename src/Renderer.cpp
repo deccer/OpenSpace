@@ -1817,7 +1817,8 @@ auto UiRender(
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         if (ImGui::Begin((char*)ICON_MDI_GRID " Scene")) {
             const auto currentSceneWindowSize = ImGui::GetContentRegionAvail();
-            if ((currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y)) {
+            const auto currentSceneWindowPosition = ImGui::GetCursorScreenPos();
+            if (currentSceneWindowSize.x != g_sceneViewerSize.x || currentSceneWindowSize.y != g_sceneViewerSize.y) {
                 g_sceneViewerSize = glm::ivec2(currentSceneWindowSize.x, currentSceneWindowSize.y);
                 g_sceneViewerResized = true;
             }
@@ -1832,85 +1833,76 @@ auto UiRender(
             }();
             UiMagnifier(renderContext, g_sceneViewerScaledSize, g_uiViewportContentOffset, ImGui::IsItemHovered());
 
-            if (ImGui::BeginChild("Render Output", currentSceneWindowSize, ImGuiChildFlags_Border)) {
-                const auto currentWindowPosition = ImGui::GetWindowPos();
+            auto GetCurrentSceneViewerTexture = [&](const int32_t sceneViewerTextureIndex) -> uint32_t {
+                switch (sceneViewerTextureIndex) {
+                    case 0: return g_taaPass.IsEnabled
+                        ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].ColorAttachments[0]->Texture.Id
+                        : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
+                    case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
+                    case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
+                    case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
+                    case 4: return g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id;
+                    case 5: return g_fxaaPass.Framebuffer.ColorAttachments[0]->Texture.Id;
+                    default: std::unreachable();
+                }
 
-                auto GetCurrentSceneViewerTexture = [&](const int32_t sceneViewerTextureIndex) -> uint32_t {
-                    switch (sceneViewerTextureIndex) {
-                        case 0: return g_taaPass.IsEnabled
-                            ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].ColorAttachments[0]->Texture.Id
-                            : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
-                        case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
-                        case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
-                        case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
-                        case 4: return g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id;
-                        case 5: return g_fxaaPass.Framebuffer.ColorAttachments[0]->Texture.Id;
-                        default: std::unreachable();
-                    }
+                std::unreachable();
+            };
 
-                    std::unreachable();
-                };
+            const auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
+            ImGui::Image(texture, currentSceneWindowSize, g_uiUnitY, g_uiUnitX);
 
-                auto texture = GetCurrentSceneViewerTexture(g_sceneViewerTextureIndex);
-                ImGui::Image(texture, currentSceneWindowSize, g_uiUnitY, g_uiUnitX);
+            if (g_selectedEntity != entt::null) {
 
-                if (g_selectedEntity != entt::null) {
+                ImGuizmo::SetDrawlist();
+                ImGuizmo::SetRect(currentSceneWindowPosition.x, currentSceneWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
 
-                    ImGuizmo::SetDrawlist();
-                    ImGuizmo::SetRect(currentWindowPosition.x, currentWindowPosition.y, currentSceneWindowSize.x, currentSceneWindowSize.y);
+                const auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
+                glm::mat4 temp = transformComponent;
 
-                    const auto& transformComponent = registry.get<TComponentTransform>(g_selectedEntity);
-                    glm::mat4 temp = transformComponent;
+                static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
+                static ImGuizmo::MODE currentGizmoMode(ImGuizmo::MODE::WORLD);
+                static bool useSnap(false);
 
-                    static ImGuizmo::OPERATION currentGizmoOperation(ImGuizmo::OPERATION::TRANSLATE);
-                    static ImGuizmo::MODE currentGizmoMode(ImGuizmo::MODE::WORLD);
-                    static bool useSnap(false);
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_1)) {
+                    currentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+                }
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_2)) {
+                    currentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
+                }
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_3)) {
+                    currentGizmoOperation = ImGuizmo::OPERATION::SCALE;
+                }
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_4)) {
+                    currentGizmoMode = ImGuizmo::MODE::LOCAL;
+                }
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_5)) {
+                    currentGizmoMode = ImGuizmo::MODE::WORLD;
+                }
+                if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_0)) {
+                    useSnap = !useSnap;
+                }
+            /*
+                float matrixTranslation[3];
+                float matrixRotation[3];
+                float matrixScale[3];
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), matrixTranslation, matrixRotation, matrixScale);
+                ImGui::InputFloat3("Tr", matrixTranslation);
+                ImGui::InputFloat3("Rt", matrixRotation);
+                ImGui::InputFloat3("Sc", matrixScale);
+                ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(matrix));
+            */
 
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_1)) {
-                        currentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
-                    }
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_2)) {
-                        currentGizmoOperation = ImGuizmo::OPERATION::ROTATE;
-                    }
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_3)) {
-                        currentGizmoOperation = ImGuizmo::OPERATION::SCALE;
-                    }
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_4)) {
-                        currentGizmoMode = ImGuizmo::MODE::LOCAL;
-                    }
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_5)) {
-                        currentGizmoMode = ImGuizmo::MODE::WORLD;
-                    }
-                    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_0)) {
-                        useSnap = !useSnap;
-                    }
-                /*
-                    float matrixTranslation[3];
-                    float matrixRotation[3];
-                    float matrixScale[3];
-                    ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), matrixTranslation, matrixRotation, matrixScale);
-                    ImGui::InputFloat3("Tr", matrixTranslation);
-                    ImGui::InputFloat3("Rt", matrixRotation);
-                    ImGui::InputFloat3("Sc", matrixScale);
-                    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(matrix));
-                */
+                if (ImGuizmo::Manipulate(
+                    glm::value_ptr(g_globalUniforms.ViewMatrix),
+                    glm::value_ptr(g_globalUniforms.ProjectionMatrix),
+                    currentGizmoOperation,
+                    currentGizmoMode,
+                    glm::value_ptr(temp))) {
 
-                    if (ImGuizmo::Manipulate(
-                        glm::value_ptr(g_globalUniforms.ViewMatrix),
-                        glm::value_ptr(g_globalUniforms.ProjectionMatrix),
-                        currentGizmoOperation,
-                        currentGizmoMode,
-                        glm::value_ptr(temp))) {
-
-                        registry.replace<TComponentTransform>(g_selectedEntity, temp);
-                    }
+                    registry.replace<TComponentTransform>(g_selectedEntity, temp);
                 }
             }
-
-            ImGui::EndChild();
-
-            //auto collapsingHeaderHeight = ImGui::GetItemRectSize().y;
-            //ImGuizmo::SetRect(0, collapsingHeaderHeight, g_sceneViewerScaledSize.x, g_sceneViewerScaledSize.y); //TODO(deccer) get cursor position from where i draw the scene view
         }
         ImGui::PopStyleVar();
         ImGui::End();
