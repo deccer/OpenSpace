@@ -78,6 +78,14 @@ TWindowSettings g_windowSettings = {};
 int32_t g_sceneViewerTextureIndex = {};
 ImVec2 g_sceneViewerImagePosition = {};
 
+struct TDebugLinesPass {
+    bool IsEnabled = true;
+    std::vector<TGpuDebugLine> DebugLines;
+    uint32_t InputLayout = 0;
+    uint32_t VertexBuffer = 0;
+    TGraphicsPipeline Pipeline = {};
+} g_debugLinesPass;
+
 struct TDepthPrePass {
     TFramebuffer Framebuffer = {};
     TGraphicsPipeline Pipeline = {};
@@ -122,12 +130,6 @@ glm::mat4 g_currentJitteredProjectionMatrix = {};
 uint32_t g_globalUniformsBuffer = {};
 uint32_t g_objectsBuffer = {};
 glm::vec3 g_sunPosition = glm::vec3{100, 110, 120};
-
-bool g_drawDebugLines = true;
-std::vector<TGpuDebugLine> g_debugLines;
-uint32_t g_debugInputLayout = 0;
-uint32_t g_debugLinesVertexBuffer = 0;
-TGraphicsPipeline g_debugLinesGraphicsPipeline = {};
 
 TGraphicsPipeline g_fstGraphicsPipeline = {};
 TSamplerId g_fstSamplerNearestClampToEdge = {};
@@ -933,7 +935,7 @@ auto Renderer::Initialize(
         spdlog::error(debugLinesGraphicsPipelineResult.error());
         return false;
     }
-    g_debugLinesGraphicsPipeline = *debugLinesGraphicsPipelineResult;
+    g_debugLinesPass.Pipeline = *debugLinesGraphicsPipelineResult;
 
     auto fxaaGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "FXAA",
@@ -983,7 +985,7 @@ auto Renderer::Initialize(
         .MinFilter = TTextureMinFilter::Linear,
     });
 
-    g_debugLinesVertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    g_debugLinesPass.VertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     for (int i = 0; i < g_jitterCount; ++i) {
         g_jitter[i].x = GetHaltonSequence(2, i + 1) - 0.5f;
@@ -1036,7 +1038,7 @@ auto Renderer::Unload() -> void {
 
     DeleteRendererFramebuffers();
 
-    DeletePipeline(g_debugLinesGraphicsPipeline);
+    DeletePipeline(g_debugLinesPass.Pipeline);
     DeletePipeline(g_fstGraphicsPipeline);
 
     DeletePipeline(g_depthPrePass.Pipeline);
@@ -1323,22 +1325,22 @@ glm::vec2 g_uiViewportContentOffset = {};
 
 auto inline ResetDebugLines() -> void {
 
-    if (g_drawDebugLines) {
-        g_debugLines.clear();
+    if (g_debugLinesPass.IsEnabled) {
+        g_debugLinesPass.DebugLines.clear();
 
-        g_debugLines.push_back(TGpuDebugLine{
+        g_debugLinesPass.DebugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
             .StartColor = glm::vec4{0.7f, 0.0f, 0.0f, 1.0f},
             .EndPosition = glm::vec3{128, 0, 0},
             .EndColor = glm::vec4{1.0f, 0.0f, 0.0f, 1.0f}
         });
-        g_debugLines.push_back(TGpuDebugLine{
+        g_debugLinesPass.DebugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
             .StartColor = glm::vec4{0.0f, 0.7f, 0.0f, 1.0f},
             .EndPosition = glm::vec3{0, 128, 0},
             .EndColor = glm::vec4{0.0f, 1.0f, 0.0f, 1.0f}
         });
-        g_debugLines.push_back(TGpuDebugLine{
+        g_debugLinesPass.DebugLines.push_back(TGpuDebugLine{
             .StartPosition = glm::vec3{0, 0, 0},
             .StartColor = glm::vec4{0.0f, 0.0f, 0.7f, 1.0f},
             .EndPosition = glm::vec3{0, 0, 128},
@@ -1540,19 +1542,20 @@ auto inline RenderResolvePass() -> void {
 }
 
 auto inline RenderDebugLines() -> void {
-    if (g_drawDebugLines && !g_debugLines.empty()) {
+
+    if (g_debugLinesPass.IsEnabled && !g_debugLinesPass.DebugLines.empty()) {
 
         PROFILER_ZONESCOPEDN("Draw DebugLines");
 
         PushDebugGroup("Debug Lines");
         glDisable(GL_CULL_FACE);
 
-        UpdateBuffer(g_debugLinesVertexBuffer, 0, sizeof(TGpuDebugLine) * g_debugLines.size(), g_debugLines.data());
+        UpdateBuffer(g_debugLinesPass.VertexBuffer, 0, sizeof(TGpuDebugLine) * g_debugLinesPass.DebugLines.size(), g_debugLinesPass.DebugLines.data());
 
-        g_debugLinesGraphicsPipeline.Bind();
-        g_debugLinesGraphicsPipeline.BindBufferAsVertexBuffer(g_debugLinesVertexBuffer, 0, 0, sizeof(TGpuDebugLine) / 2);
-        g_debugLinesGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-        g_debugLinesGraphicsPipeline.DrawArrays(0, g_debugLines.size() * 2);
+        g_debugLinesPass.Pipeline.Bind();
+        g_debugLinesPass.Pipeline.BindBufferAsVertexBuffer(g_debugLinesPass.VertexBuffer, 0, 0, sizeof(TGpuDebugLine) / 2);
+        g_debugLinesPass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+        g_debugLinesPass.Pipeline.DrawArrays(0, g_debugLinesPass.DebugLines.size() * 2);
 
         glEnable(GL_CULL_FACE);
         PopDebugGroup();
