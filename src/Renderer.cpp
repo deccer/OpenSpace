@@ -1314,121 +1314,8 @@ float g_uiMagnifierZoom = 1.0f;
 glm::vec2 g_uiMagnifierLastCursorPos = {};
 glm::vec2 g_uiViewportContentOffset = {};
 
-auto Renderer::Render(
-    TRenderContext& renderContext,
-    entt::registry& registry) -> void {
+auto inline ResetDebugLines() -> void {
 
-    if (g_playerEntity == entt::null) {
-        g_playerEntity = registry.view<TComponentCamera>().front();
-    }
-
-    {
-        PROFILER_ZONESCOPEDN("Create Gpu Resources if necessary");
-
-        /*
-         * ECS - Create Gpu Resources if necessary
-         */
-        const auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
-        for (auto& entity : createGpuResourcesNecessaryView) {
-
-            PROFILER_ZONESCOPEDN("Create Gpu Resource");
-            auto& meshComponent = registry.get<TComponentMesh>(entity);
-            auto& materialComponent = registry.get<TComponentMaterial>(entity);
-
-            auto& assetPrimitive = Assets::GetAssetPrimitive(meshComponent.Mesh);
-            RendererCreateGpuMesh(assetPrimitive, assetPrimitive.Name);
-            RendererCreateCpuMaterial(materialComponent.Material);
-
-            registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
-            registry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
-
-            registry.remove<TComponentCreateGpuResourcesNecessary>(entity);
-        }
-    }
-
-    /*
-     * ECS - Update Transforms
-     */
-    UpdateAllTransforms(registry);
-
-    /*
-     * Update Global Uniforms
-     */
-    {
-        PROFILER_ZONESCOPEDN("Update Global Uniforms");
-
-        registry.view<TComponentCamera>().each([&](
-            const auto& entity,
-            const auto& cameraComponent) {
-
-            auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
-            auto viewMatrix = glm::inverse(cameraMatrix);
-            const glm::vec3 cameraPosition = cameraMatrix[3];
-            const glm::vec3 cameraDirection = cameraMatrix[1];
-
-            auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
-            g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
-            g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
-
-            float jitterX = 0;
-            float jitterY = 0;
-            if (g_isTaaEnabled)
-            {
-                jitterX = g_jitter[g_jitterIndex].x;
-                jitterY = -g_jitter[g_jitterIndex].y;
-
-                ++g_jitterIndex;
-                if (g_jitterIndex >= g_jitterCount) {
-                    g_jitterIndex -= g_jitterCount;
-                }
-            }
-
-            constexpr float jitterScale = 2.0f;
-            g_currentJitteredProjectionMatrix = g_globalUniforms.ProjectionMatrix;
-            g_currentJitteredProjectionMatrix[2][0] += jitterX * jitterScale / g_scaledFramebufferSize.x;
-            g_currentJitteredProjectionMatrix[2][1] += jitterY * jitterScale / g_scaledFramebufferSize.y;
-
-            g_globalUniforms.CurrentJitteredViewProjectionMatrix = g_currentJitteredProjectionMatrix * g_globalUniforms.ViewMatrix;
-            g_globalUniforms.PreviousJitteredViewProjectionMatrix = g_previousJitteredProjectionMatrix * g_previousViewMatrix;
-
-            g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
-            g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
-            UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
-
-            g_previousViewMatrix = g_globalUniforms.ViewMatrix;
-            g_previousJitteredProjectionMatrix = g_currentJitteredProjectionMatrix;
-
-        });
-    }
-
-    /*
-     * Resize if necessary
-     */
-    if (g_windowFramebufferResized || g_sceneViewerResized) {
-
-        PROFILER_ZONESCOPEDN("Resize If Necessary");
-
-        g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * g_windowSettings.ResolutionScale, g_windowFramebufferSize.y * g_windowSettings.ResolutionScale};
-        g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * g_windowSettings.ResolutionScale, g_sceneViewerSize.y * g_windowSettings.ResolutionScale};
-
-        if (g_isEditor) {
-            g_scaledFramebufferSize = g_sceneViewerScaledSize;
-        } else {
-            g_scaledFramebufferSize = g_windowFramebufferScaledSize;
-        }
-
-        if ((g_scaledFramebufferSize.x * g_scaledFramebufferSize.y) > 0.0f) {
-            DeleteRendererFramebuffers();
-            CreateRendererFramebuffers(g_scaledFramebufferSize);
-
-            g_windowFramebufferResized = false;
-            g_sceneViewerResized = false;
-        }
-    }
-
-    /*
-     * CLEAR DEBUG LINES
-     */
     if (g_drawDebugLines) {
         g_debugLines.clear();
 
@@ -1451,102 +1338,194 @@ auto Renderer::Render(
             .EndColor = glm::vec4{0.0f, 0.0f, 1.0f, 1.0f}
         });
     }
+}
 
-    {
-        PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
-        PushDebugGroup("Depth PrePass");
-        BindFramebuffer(g_depthPrePassFramebuffer);
-        {
-            g_depthPrePassGraphicsPipeline.Bind();
-            g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+auto inline CreateGpuResourcesIfNecessary(entt::registry& registry) -> void {
+    PROFILER_ZONESCOPEDN("Create Gpu Resources if necessary");
 
-            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentTransform>();
-            renderablesView.each([&](
-                const entt::entity& entity,
-                const auto& meshComponent,
-                const auto& transformComponent) {
+    /*
+     * ECS - Create Gpu Resources if necessary
+     */
+    const auto createGpuResourcesNecessaryView = registry.view<TComponentCreateGpuResourcesNecessary>();
+    for (auto& entity : createGpuResourcesNecessaryView) {
 
-                PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
+        PROFILER_ZONESCOPEDN("Create Gpu Resource");
+        auto& meshComponent = registry.get<TComponentMesh>(entity);
+        auto& materialComponent = registry.get<TComponentMaterial>(entity);
 
-                const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-                const auto& t = transformComponent;//EntityGetGlobalTransform(registry, entity);
-                g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_depthPrePassGraphicsPipeline.SetUniform(0, t);
+        auto& assetPrimitive = Assets::GetAssetPrimitive(meshComponent.Mesh);
+        RendererCreateGpuMesh(assetPrimitive, assetPrimitive.Name);
+        RendererCreateCpuMaterial(materialComponent.Material);
 
-                g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
-            });
-        }
-        PopDebugGroup();
+        registry.emplace<TComponentGpuMesh>(entity, meshComponent.Mesh);
+        registry.emplace<TComponentGpuMaterial>(entity, materialComponent.Material);
+
+        registry.remove<TComponentCreateGpuResourcesNecessary>(entity);
     }
+}
 
-    static glm::mat4 selectedObjectMatrix;
-    static int32_t counter = 0;
+auto inline UpdateGlobalTransforms(entt::registry& registry) -> void {
 
-    {
-        PROFILER_ZONESCOPEDN("Draw Geometry All");
-        PushDebugGroup("Geometry Pass");
-        BindFramebuffer(g_geometryFramebuffer);
+    PROFILER_ZONESCOPEDN("Update Global Uniforms");
+
+    registry.view<TComponentCamera>().each([&](
+        const auto& entity,
+        const auto& cameraComponent) {
+
+        auto cameraMatrix = registry.get<TComponentRenderTransform>(entity);
+        auto viewMatrix = glm::inverse(cameraMatrix);
+        const glm::vec3 cameraPosition = cameraMatrix[3];
+        const glm::vec3 cameraDirection = cameraMatrix[1];
+
+        auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
+        g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(glm::radians(cameraComponent.FieldOfView), aspectRatio, 0.1f);
+        g_globalUniforms.ViewMatrix = glm::inverse(cameraMatrix);
+
+        float jitterX = 0;
+        float jitterY = 0;
+        if (g_isTaaEnabled)
         {
-            g_geometryGraphicsPipeline.Bind();
-            g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+            jitterX = g_jitter[g_jitterIndex].x;
+            jitterY = -g_jitter[g_jitterIndex].y;
 
-            const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentRenderTransform>();
-            renderablesView.each([&](
-                const entt::entity& entity,
-                const auto& meshComponent,
-                const auto& materialComponent,
-                const auto& transformComponent) {
-
-                PROFILER_ZONESCOPEDN("Draw Geometry");
-
-                auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
-                auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-
-                auto worldMatrix = transformComponent;
-                if (counter == 1) {
-                    selectedObjectMatrix = worldMatrix;
-                }
-                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-                g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-                g_geometryGraphicsPipeline.SetUniform(0, worldMatrix);
-
-                g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
-                g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
-
-                g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
-            });
+            ++g_jitterIndex;
+            if (g_jitterIndex >= g_jitterCount) {
+                g_jitterIndex -= g_jitterCount;
+            }
         }
-        PopDebugGroup();
+
+        constexpr float jitterScale = 2.0f;
+        g_currentJitteredProjectionMatrix = g_globalUniforms.ProjectionMatrix;
+        g_currentJitteredProjectionMatrix[2][0] += jitterX * jitterScale / g_scaledFramebufferSize.x;
+        g_currentJitteredProjectionMatrix[2][1] += jitterY * jitterScale / g_scaledFramebufferSize.y;
+
+        g_globalUniforms.CurrentJitteredViewProjectionMatrix = g_currentJitteredProjectionMatrix * g_globalUniforms.ViewMatrix;
+        g_globalUniforms.PreviousJitteredViewProjectionMatrix = g_previousJitteredProjectionMatrix * g_previousViewMatrix;
+
+        g_globalUniforms.CameraPosition = glm::vec4(cameraPosition, glm::radians(cameraComponent.FieldOfView));
+        g_globalUniforms.CameraDirection = glm::vec4(cameraDirection, aspectRatio);
+        UpdateBuffer(g_globalUniformsBuffer, 0, sizeof(TGpuGlobalUniforms), &g_globalUniforms);
+
+        g_previousViewMatrix = g_globalUniforms.ViewMatrix;
+        g_previousJitteredProjectionMatrix = g_currentJitteredProjectionMatrix;
+
+    });
+}
+
+auto inline ResizeFramebuffersIfNecessary() -> void {
+    if (g_windowFramebufferResized || g_sceneViewerResized) {
+
+        PROFILER_ZONESCOPEDN("Resize If Necessary");
+
+        g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * g_windowSettings.ResolutionScale, g_windowFramebufferSize.y * g_windowSettings.ResolutionScale};
+        g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * g_windowSettings.ResolutionScale, g_sceneViewerSize.y * g_windowSettings.ResolutionScale};
+
+        if (g_isEditor) {
+            g_scaledFramebufferSize = g_sceneViewerScaledSize;
+        } else {
+            g_scaledFramebufferSize = g_windowFramebufferScaledSize;
+        }
+
+        if ((g_scaledFramebufferSize.x * g_scaledFramebufferSize.y) > 0.0f) {
+            DeleteRendererFramebuffers();
+            CreateRendererFramebuffers(g_scaledFramebufferSize);
+
+            g_windowFramebufferResized = false;
+            g_sceneViewerResized = false;
+        }
     }
+}
+
+auto inline RenderDepthPrePass(entt::registry& registry) -> void {
+
+    PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
+    PushDebugGroup("Depth PrePass");
+    BindFramebuffer(g_depthPrePassFramebuffer);
     {
-        PROFILER_ZONESCOPEDN("Draw ResolveGeometry");
-        PushDebugGroup("ResolveGeometry");
-        BindFramebuffer(g_resolveGeometryFramebuffer);
-        {
-            const auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
+        g_depthPrePassGraphicsPipeline.Bind();
+        g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
-            g_resolveGeometryGraphicsPipeline.Bind();
-            //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-            //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
-            g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
-            g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
-            g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
+        const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentTransform>();
+        renderablesView.each([&](
+            const entt::entity& entity,
+            const auto& meshComponent,
+            const auto& transformComponent) {
 
-            g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
-            g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
+            PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
-            g_resolveGeometryGraphicsPipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
-            g_resolveGeometryGraphicsPipeline.SetUniform(4, g_globalUniforms.CameraPosition);
-            g_resolveGeometryGraphicsPipeline.SetUniform(5, g_sunPosition);
-            g_resolveGeometryGraphicsPipeline.SetUniform(6, g_scaledFramebufferSize);
+            const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+            const auto& t = transformComponent;//EntityGetGlobalTransform(registry, entity);
+            g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_depthPrePassGraphicsPipeline.SetUniform(0, t);
 
-            g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
-        }
-        PopDebugGroup();
+            g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+        });
     }
+    PopDebugGroup();
+}
 
-    /////////////// Debug Lines // move out to some LineRenderer
+auto inline RenderGeometryPass(const entt::registry& registry) -> void {
+    PROFILER_ZONESCOPEDN("Draw Geometry All");
+    PushDebugGroup("Geometry Pass");
+    BindFramebuffer(g_geometryFramebuffer);
+    {
+        g_geometryGraphicsPipeline.Bind();
+        g_geometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
+        const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentGpuMaterial, TComponentRenderTransform>();
+        renderablesView.each([&](
+            const entt::entity& entity,
+            const auto& meshComponent,
+            const auto& materialComponent,
+            const auto& transformComponent) {
+
+            PROFILER_ZONESCOPEDN("Draw Geometry");
+
+            auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
+            auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+
+            auto worldMatrix = transformComponent;
+            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_geometryGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
+            g_geometryGraphicsPipeline.SetUniform(0, worldMatrix);
+
+            g_geometryGraphicsPipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
+            g_geometryGraphicsPipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
+
+            g_geometryGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+        });
+    }
+    PopDebugGroup();
+}
+
+auto inline RenderResolvePass() -> void {
+    PROFILER_ZONESCOPEDN("Draw ResolveGeometry");
+    PushDebugGroup("ResolveGeometry");
+    BindFramebuffer(g_resolveGeometryFramebuffer);
+    {
+        const auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
+
+        g_resolveGeometryGraphicsPipeline.Bind();
+        //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+        //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
+        g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
+        g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
+        g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
+
+        g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
+        g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
+
+        g_resolveGeometryGraphicsPipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
+        g_resolveGeometryGraphicsPipeline.SetUniform(4, g_globalUniforms.CameraPosition);
+        g_resolveGeometryGraphicsPipeline.SetUniform(5, g_sunPosition);
+        g_resolveGeometryGraphicsPipeline.SetUniform(6, g_scaledFramebufferSize);
+
+        g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
+    }
+    PopDebugGroup();
+}
+
+auto inline RenderDebugLines() -> void {
     if (g_drawDebugLines && !g_debugLines.empty()) {
 
         PROFILER_ZONESCOPEDN("Draw DebugLines");
@@ -1564,7 +1543,9 @@ auto Renderer::Render(
         glEnable(GL_CULL_FACE);
         PopDebugGroup();
     }
+}
 
+auto inline RenderFxaaPass() -> void {
     if (g_isFxaaEnabled) {
         PROFILER_ZONESCOPEDN("PostFX FXAA");
         PushDebugGroup("PostFX FXAA");
@@ -1577,7 +1558,9 @@ auto Renderer::Render(
         }
         PopDebugGroup();
     }
+}
 
+auto inline RenderTaaPass() -> void {
     if (g_isTaaEnabled) {
         PROFILER_ZONESCOPEDN("PostFX TAA");
         PushDebugGroup("PostFX TAA");
@@ -1608,9 +1591,9 @@ auto Renderer::Render(
 
         g_taaHistoryIndex ^= 1;
     }
+}
 
-    /////////////// UI
-
+auto inline RenderUi(Renderer::TRenderContext& renderContext, entt::registry& registry) -> void {
     PushDebugGroup("UI");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if (g_isEditor) {
@@ -1630,6 +1613,33 @@ auto Renderer::Render(
 
     UiRender(renderContext, registry);
     PopDebugGroup();
+}
+
+auto Renderer::Render(
+    TRenderContext& renderContext,
+    entt::registry& registry) -> void {
+
+    if (g_playerEntity == entt::null) {
+        g_playerEntity = registry.view<TComponentCamera>().front();
+    }
+
+    ResetDebugLines();
+
+    CreateGpuResourcesIfNecessary(registry);
+
+    UpdateAllTransforms(registry);
+    UpdateGlobalTransforms(registry);
+
+    ResizeFramebuffersIfNecessary();
+
+    RenderDepthPrePass(registry);
+    RenderGeometryPass(registry);
+    RenderResolvePass();
+    RenderDebugLines();
+
+    RenderFxaaPass();
+    RenderTaaPass();
+    RenderUi(renderContext, registry);
 }
 
 auto Renderer::ResizeWindowFramebuffer(
