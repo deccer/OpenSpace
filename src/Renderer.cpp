@@ -80,8 +80,10 @@ TWindowSettings g_windowSettings = {};
 int32_t g_sceneViewerTextureIndex = {};
 ImVec2 g_sceneViewerImagePosition = {};
 
-TFramebuffer g_depthPrePassFramebuffer = {};
-TGraphicsPipeline g_depthPrePassGraphicsPipeline = {};
+struct TDepthPrePass {
+    TFramebuffer Framebuffer = {};
+    TGraphicsPipeline Pipeline = {};
+} g_depthPrePass;
 
 TFramebuffer g_geometryFramebuffer = {};
 TGraphicsPipeline g_geometryGraphicsPipeline = {};
@@ -655,7 +657,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
 auto DeleteRendererFramebuffers() -> void {
 
-    DeleteFramebuffer(g_depthPrePassFramebuffer);
+    DeleteFramebuffer(g_depthPrePass.Framebuffer);
     DeleteFramebuffer(g_geometryFramebuffer);
     DeleteFramebuffer(g_resolveGeometryFramebuffer);
     DeleteFramebuffer(g_fxaaFramebuffer);
@@ -667,7 +669,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
 
-    g_depthPrePassFramebuffer = CreateFramebuffer({
+    g_depthPrePass.Framebuffer = CreateFramebuffer({
         .Label = "Depth PrePass FBO",
         .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
             .Label = "Depth PrePass FBO Depth",
@@ -703,7 +705,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
             }
         },
         .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
-            .ExistingDepthTexture = g_depthPrePassFramebuffer.DepthStencilAttachment.value().Texture,
+            .ExistingDepthTexture = g_depthPrePass.Framebuffer.DepthStencilAttachment.value().Texture,
         }
     });
 
@@ -834,7 +836,7 @@ auto Renderer::Initialize(
             },
         }
     });
-    g_depthPrePassGraphicsPipeline = *depthPrePassGraphicsPipelineResult;
+    g_depthPrePass.Pipeline = *depthPrePassGraphicsPipelineResult;
 
     auto geometryGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "GeometryPipeline",
@@ -1032,7 +1034,7 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_debugLinesGraphicsPipeline);
     DeletePipeline(g_fstGraphicsPipeline);
 
-    DeletePipeline(g_depthPrePassGraphicsPipeline);
+    DeletePipeline(g_depthPrePass.Pipeline);
     DeletePipeline(g_geometryGraphicsPipeline);
     DeletePipeline(g_resolveGeometryGraphicsPipeline);
     DeletePipeline(g_fxaaGraphicsPipeline);
@@ -1417,8 +1419,14 @@ auto inline ResizeFramebuffersIfNecessary() -> void {
 
         PROFILER_ZONESCOPEDN("Resize If Necessary");
 
-        g_windowFramebufferScaledSize = glm::ivec2{g_windowFramebufferSize.x * g_windowSettings.ResolutionScale, g_windowFramebufferSize.y * g_windowSettings.ResolutionScale};
-        g_sceneViewerScaledSize = glm::ivec2{g_sceneViewerSize.x * g_windowSettings.ResolutionScale, g_sceneViewerSize.y * g_windowSettings.ResolutionScale};
+        g_windowFramebufferScaledSize = glm::ivec2{
+            g_windowFramebufferSize.x * g_windowSettings.ResolutionScale,
+            g_windowFramebufferSize.y * g_windowSettings.ResolutionScale
+        };
+        g_sceneViewerScaledSize = glm::ivec2{
+            g_sceneViewerSize.x * g_windowSettings.ResolutionScale,
+            g_sceneViewerSize.y * g_windowSettings.ResolutionScale
+        };
 
         if (g_isEditor) {
             g_scaledFramebufferSize = g_sceneViewerScaledSize;
@@ -1426,7 +1434,8 @@ auto inline ResizeFramebuffersIfNecessary() -> void {
             g_scaledFramebufferSize = g_windowFramebufferScaledSize;
         }
 
-        if ((g_scaledFramebufferSize.x * g_scaledFramebufferSize.y) > 0.0f) {
+        if (g_scaledFramebufferSize.x * g_scaledFramebufferSize.y > 0.0f) {
+
             DeleteRendererFramebuffers();
             CreateRendererFramebuffers(g_scaledFramebufferSize);
 
@@ -1440,10 +1449,10 @@ auto inline RenderDepthPrePass(entt::registry& registry) -> void {
 
     PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
     PushDebugGroup("Depth PrePass");
-    BindFramebuffer(g_depthPrePassFramebuffer);
+    BindFramebuffer(g_depthPrePass.Framebuffer);
     {
-        g_depthPrePassGraphicsPipeline.Bind();
-        g_depthPrePassGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+        g_depthPrePass.Pipeline.Bind();
+        g_depthPrePass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
 
         const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentTransform>();
         renderablesView.each([&](
@@ -1454,11 +1463,11 @@ auto inline RenderDepthPrePass(entt::registry& registry) -> void {
             PROFILER_ZONESCOPEDN("Draw PrePass Geometry");
 
             const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
-            const auto& t = transformComponent;//EntityGetGlobalTransform(registry, entity);
-            g_depthPrePassGraphicsPipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
-            g_depthPrePassGraphicsPipeline.SetUniform(0, t);
 
-            g_depthPrePassGraphicsPipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+            g_depthPrePass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_depthPrePass.Pipeline.SetUniform(0, transformComponent);
+
+            g_depthPrePass.Pipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
         });
     }
     PopDebugGroup();
@@ -1510,7 +1519,7 @@ auto inline RenderResolvePass() -> void {
         //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
         g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryFramebuffer.ColorAttachments[0]->Texture.Id);
         g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryFramebuffer.ColorAttachments[1]->Texture.Id);
-        g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id);
+        g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
 
         g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
         g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
@@ -1829,7 +1838,7 @@ auto UiRender(
                         case 0: return g_isTaaEnabled
                             ? (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id
                             : g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
-                        case 1: return g_depthPrePassFramebuffer.DepthStencilAttachment->Texture.Id;
+                        case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
                         case 2: return g_geometryFramebuffer.ColorAttachments[0]->Texture.Id;
                         case 3: return g_geometryFramebuffer.ColorAttachments[1]->Texture.Id;
                         case 4: return g_geometryFramebuffer.ColorAttachments[2]->Texture.Id;
