@@ -93,13 +93,14 @@ struct TComposePass {
     TGraphicsPipeline Pipeline = {};
 } g_composePass;
 
-TFramebuffer g_taaFramebuffer1 = {};
-TFramebuffer g_taaFramebuffer2 = {};
-TGraphicsPipeline g_taaGraphicsPipeline = {};
-int32_t g_taaHistoryIndex = 0;
-TSamplerId g_taaSampler = {};
-bool g_isTaaEnabled = true;
-float g_taaBlendFactor = 0.1f;
+struct TTaaPass {
+    std::array<TFramebuffer, 2> Framebuffers = {};
+    TGraphicsPipeline Pipeline = {};
+    int32_t HistoryIndex = 0;
+    TSamplerId Sampler = {};
+    bool IsEnabled = true;
+    float BlendFactor = 0.1f;
+} g_taaPass;
 
 TFramebuffer g_fxaaFramebuffer = {};
 TGraphicsPipeline g_fxaaGraphicsPipeline = {};
@@ -663,8 +664,8 @@ auto DeleteRendererFramebuffers() -> void {
     DeleteFramebuffer(g_geometryPass.Framebuffer);
     DeleteFramebuffer(g_composePass.Framebuffer);
     DeleteFramebuffer(g_fxaaFramebuffer);
-    DeleteFramebuffer(g_taaFramebuffer1);
-    DeleteFramebuffer(g_taaFramebuffer2);
+    DeleteFramebuffer(g_taaPass.Framebuffers[0]);
+    DeleteFramebuffer(g_taaPass.Framebuffers[1]);
 }
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
@@ -737,7 +738,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
         }
     });
 
-    g_taaFramebuffer1 = CreateFramebuffer({
+    g_taaPass.Framebuffers[0] = CreateFramebuffer({
         .Label = "TAA1 FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
@@ -750,7 +751,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
         }
     });
 
-    g_taaFramebuffer2 = CreateFramebuffer({
+    g_taaPass.Framebuffers[1] = CreateFramebuffer({
         .Label = "TAA2 FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
@@ -970,9 +971,9 @@ auto Renderer::Initialize(
         return false;
     }
 
-    g_taaGraphicsPipeline = *taaGraphicsPipelineResult;
+    g_taaPass.Pipeline = *taaGraphicsPipelineResult;
 
-    g_taaSampler = GetOrCreateSampler(TSamplerDescriptor{
+    g_taaPass.Sampler = GetOrCreateSampler(TSamplerDescriptor{
         .Label = "TAA Sampler",
         .AddressModeU = TTextureAddressMode::ClampToEdge,
         .AddressModeV = TTextureAddressMode::ClampToEdge,
@@ -1040,7 +1041,7 @@ auto Renderer::Unload() -> void {
     DeletePipeline(g_geometryPass.Pipeline);
     DeletePipeline(g_composePass.Pipeline);
     DeletePipeline(g_fxaaGraphicsPipeline);
-    DeletePipeline(g_taaGraphicsPipeline);
+    DeletePipeline(g_taaPass.Pipeline);
 
     UiUnload();
 
@@ -1387,7 +1388,7 @@ auto inline UpdateGlobalTransforms(entt::registry& registry) -> void {
 
         float jitterX = 0;
         float jitterY = 0;
-        if (g_isTaaEnabled)
+        if (g_taaPass.IsEnabled)
         {
             jitterX = g_jitter[g_jitterIndex].x;
             jitterY = -g_jitter[g_jitterIndex].y;
@@ -1572,35 +1573,28 @@ auto inline RenderFxaaPass() -> void {
 }
 
 auto inline RenderTaaPass() -> void {
-    if (g_isTaaEnabled) {
+    if (g_taaPass.IsEnabled) {
         PROFILER_ZONESCOPEDN("PostFX TAA");
         PushDebugGroup("PostFX TAA");
-        if (g_taaHistoryIndex == 0) {
-            BindFramebuffer(g_taaFramebuffer1);
-        } else {
-            BindFramebuffer(g_taaFramebuffer2);
-        }
+        const auto& taaFramebuffer = g_taaPass.Framebuffers[g_taaPass.HistoryIndex];
+        BindFramebuffer(taaFramebuffer);
 
-        const auto& taaFramebuffer = g_taaHistoryIndex == 0
-            ? g_taaFramebuffer1
-            : g_taaFramebuffer2;
+        const auto& taaSampler = GetSampler(g_taaPass.Sampler);
 
-        const auto& taaSampler = GetSampler(g_taaSampler);
+        g_taaPass.Pipeline.Bind();
+        g_taaPass.Pipeline.BindTextureAndSampler(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
+        g_taaPass.Pipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
+        g_taaPass.Pipeline.BindTextureAndSampler(2, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
+        g_taaPass.Pipeline.BindTexture(3, g_geometryPass.Framebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
+        g_taaPass.Pipeline.SetUniform(0, g_taaPass.BlendFactor);
+        g_taaPass.Pipeline.SetUniform(1, 0.1f);
+        g_taaPass.Pipeline.SetUniform(2, 256.0f);
 
-        g_taaGraphicsPipeline.Bind();
-        g_taaGraphicsPipeline.BindTextureAndSampler(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
-        g_taaGraphicsPipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
-        g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
-        g_taaGraphicsPipeline.BindTexture(3, g_geometryPass.Framebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
-        g_taaGraphicsPipeline.SetUniform(0, g_taaBlendFactor);
-        g_taaGraphicsPipeline.SetUniform(1, 0.1f);
-        g_taaGraphicsPipeline.SetUniform(2, 256.0f);
-
-        g_taaGraphicsPipeline.DrawArrays(0, 3);
+        g_taaPass.Pipeline.DrawArrays(0, 3);
 
         PopDebugGroup();
 
-        g_taaHistoryIndex ^= 1;
+        g_taaPass.HistoryIndex ^= 1;
     }
 }
 
@@ -1612,8 +1606,8 @@ auto inline RenderUi(Renderer::TRenderContext& renderContext, entt::registry& re
     } else {
         glBlitNamedFramebuffer(g_isFxaaEnabled
                                    ? g_fxaaFramebuffer.Id
-                                   : g_isTaaEnabled
-                                       ? g_taaHistoryIndex == 0 ? g_taaFramebuffer1.Id : g_taaFramebuffer2.Id
+                                   : g_taaPass.IsEnabled
+                                       ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].Id
                                        : g_composePass.Framebuffer.Id,
                                0,
                                0, 0, static_cast<int32_t>(g_scaledFramebufferSize.x), static_cast<int32_t>(g_scaledFramebufferSize.y),
@@ -1837,8 +1831,8 @@ auto UiRender(
 
                 auto GetCurrentSceneViewerTexture = [&](const int32_t sceneViewerTextureIndex) -> uint32_t {
                     switch (sceneViewerTextureIndex) {
-                        case 0: return g_isTaaEnabled
-                            ? (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id
+                        case 0: return g_taaPass.IsEnabled
+                            ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].ColorAttachments[0]->Texture.Id
                             : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
                         case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
                         case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
@@ -1922,9 +1916,9 @@ auto UiRender(
                 g_windowFramebufferResized = !g_isEditor;
             }
             ImGui::Checkbox("Enable FXAA", &g_isFxaaEnabled);
-            ImGui::Checkbox("Enable TAA", &g_isTaaEnabled);
-            if (g_isTaaEnabled) {
-                ImGui::DragFloat("TAA Blend Factor", &g_taaBlendFactor, 0.01f, 0.01f, 1.0f, "%.2f");
+            ImGui::Checkbox("Enable TAA", &g_taaPass.IsEnabled);
+            if (g_taaPass.IsEnabled) {
+                ImGui::DragFloat("TAA Blend Factor", &g_taaPass.BlendFactor, 0.01f, 0.01f, 1.0f, "%.2f");
             }
 
         }
@@ -2065,10 +2059,8 @@ auto UiMagnifier(
         const auto uv0{mp - magnifierHalfExtentUv};
         const auto uv1{mp + magnifierHalfExtentUv};
 
-        const auto& magnifierOutput = g_isTaaEnabled
-          ? g_taaHistoryIndex == 0
-            ? g_taaFramebuffer1.ColorAttachments[0]->Texture.Id
-            : g_taaFramebuffer2.ColorAttachments[0]->Texture.Id
+        const auto& magnifierOutput = g_taaPass.IsEnabled
+          ? g_taaPass.Framebuffers[g_taaPass.HistoryIndex].ColorAttachments[0]->Texture.Id
           : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
 
         ImGui::Image(magnifierOutput,
