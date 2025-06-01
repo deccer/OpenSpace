@@ -1771,14 +1771,15 @@ auto UiRender(
             ImGui::TextColored(ImVec4{0.9f, 0.7f, 0.0f, 1.0f}, "F1 to toggle editor");
             ImGui::SeparatorText("Frame Statistics");
 
+            ImGui::Text("rpms: %.0f Hz", renderContext.FramesPerSecond * 60.0f);
             ImGui::Text("afps: %.0f rad/s", glm::two_pi<float>() * renderContext.FramesPerSecond);
             ImGui::Text("dfps: %.0f °/s", glm::degrees(glm::two_pi<float>() * renderContext.FramesPerSecond));
-            ImGui::Text("mfps: %.2f ms", renderContext.AverageFramesPerSecond);
-            ImGui::Text("rfps: %.0f Hz", renderContext.FramesPerSecond);
-            ImGui::Text("      %.0f Hz (1%%)", renderContext.FramesPerSecond1P);
-            ImGui::Text("      %.0f Hz (0.1%%)", renderContext.FramesPerSecond01P);
-            ImGui::Text("rpms: %.0f Hz", renderContext.FramesPerSecond * 60.0f);
+
+            ImGui::TextColored(ImColor::HSV(0.14f, 1.0f, 1.0f), " mft: %.2f ms", renderContext.AverageFramesPerSecond);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
+            ImGui::TextColored(ImColor::HSV(0.14f, 1.0f, 1.0f), "rfps: %.0f Hz", renderContext.FramesPerSecond);
+            ImGui::TextColored(ImColor::HSV(0.16f, 1.0f, 1.0f), "      %.0f Hz (1%%)", renderContext.FramesPerSecond1P);
+            ImGui::TextColored(ImColor::HSV(0.18f, 1.0f, 1.0f), "      %.0f Hz (0.1%%)", renderContext.FramesPerSecond01P);
             ImGui::Text("   f: %lu", renderContext.FrameCounter);
             ImGui::PopFont();
         }
