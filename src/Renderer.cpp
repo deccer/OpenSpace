@@ -88,8 +88,10 @@ struct TGeometryPass {
     TGraphicsPipeline Pipeline = {};
 } g_geometryPass;
 
-TFramebuffer g_resolveGeometryFramebuffer = {};
-TGraphicsPipeline g_resolveGeometryGraphicsPipeline = {};
+struct TComposePass {
+    TFramebuffer Framebuffer = {};
+    TGraphicsPipeline Pipeline = {};
+} g_composePass;
 
 TFramebuffer g_taaFramebuffer1 = {};
 TFramebuffer g_taaFramebuffer2 = {};
@@ -659,7 +661,7 @@ auto DeleteRendererFramebuffers() -> void {
 
     DeleteFramebuffer(g_depthPrePass.Framebuffer);
     DeleteFramebuffer(g_geometryPass.Framebuffer);
-    DeleteFramebuffer(g_resolveGeometryFramebuffer);
+    DeleteFramebuffer(g_composePass.Framebuffer);
     DeleteFramebuffer(g_fxaaFramebuffer);
     DeleteFramebuffer(g_taaFramebuffer1);
     DeleteFramebuffer(g_taaFramebuffer2);
@@ -709,7 +711,7 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
         }
     });
 
-    g_resolveGeometryFramebuffer = CreateFramebuffer({
+    g_composePass.Framebuffer = CreateFramebuffer({
         .Label = "ResolveGeometry FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
@@ -864,10 +866,10 @@ auto Renderer::Initialize(
     }
     g_geometryPass.Pipeline = *geometryGraphicsPipelineResult;
 
-    auto resolveGeometryGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "ResolveGeometryPipeline",
-        .VertexShaderFilePath = "data/shaders/ResolveDeferred.vs.glsl",
-        .FragmentShaderFilePath = "data/shaders/ResolveDeferred.fs.glsl",
+    auto composeDeferredGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "ComposeDeferredPipeline",
+        .VertexShaderFilePath = "data/shaders/ComposeDeferred.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/ComposeDeferred.fs.glsl",
         .InputAssembly = {
             .PrimitiveTopology = TPrimitiveTopology::Triangles,
         },
@@ -877,11 +879,11 @@ auto Renderer::Initialize(
             }
         }
     });
-    if (!resolveGeometryGraphicsPipelineResult) {
-        spdlog::error(resolveGeometryGraphicsPipelineResult.error());
+    if (!composeDeferredGraphicsPipelineResult) {
+        spdlog::error(composeDeferredGraphicsPipelineResult.error());
         return false;
     }
-    g_resolveGeometryGraphicsPipeline = *resolveGeometryGraphicsPipelineResult;
+    g_composePass.Pipeline = *composeDeferredGraphicsPipelineResult;
 
     auto fstGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "FST",
@@ -1036,7 +1038,7 @@ auto Renderer::Unload() -> void {
 
     DeletePipeline(g_depthPrePass.Pipeline);
     DeletePipeline(g_geometryPass.Pipeline);
-    DeletePipeline(g_resolveGeometryGraphicsPipeline);
+    DeletePipeline(g_composePass.Pipeline);
     DeletePipeline(g_fxaaGraphicsPipeline);
     DeletePipeline(g_taaGraphicsPipeline);
 
@@ -1510,26 +1512,26 @@ auto inline RenderGeometryPass(const entt::registry& registry) -> void {
 auto inline RenderResolvePass() -> void {
     PROFILER_ZONESCOPEDN("Draw ResolveGeometry");
     PushDebugGroup("ResolveGeometry");
-    BindFramebuffer(g_resolveGeometryFramebuffer);
+    BindFramebuffer(g_composePass.Framebuffer);
     {
         const auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
 
-        g_resolveGeometryGraphicsPipeline.Bind();
-        //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-        //g_resolveGeometryGraphicsPipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
-        g_resolveGeometryGraphicsPipeline.BindTexture(0, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
-        g_resolveGeometryGraphicsPipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);
-        g_resolveGeometryGraphicsPipeline.BindTexture(2, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
+        g_composePass.Pipeline.Bind();
+        //g_resolvePass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
+        //g_resolvePass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
+        g_composePass.Pipeline.BindTexture(0, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
+        g_composePass.Pipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);
+        g_composePass.Pipeline.BindTexture(2, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
 
-        g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
-        g_resolveGeometryGraphicsPipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
+        g_composePass.Pipeline.BindTextureAndSampler(8, g_skyBoxTexture.Id, sampler.Id);
+        g_composePass.Pipeline.BindTextureAndSampler(9, g_skyBoxConvolvedTexture.Id, sampler.Id);
 
-        g_resolveGeometryGraphicsPipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
-        g_resolveGeometryGraphicsPipeline.SetUniform(4, g_globalUniforms.CameraPosition);
-        g_resolveGeometryGraphicsPipeline.SetUniform(5, g_sunPosition);
-        g_resolveGeometryGraphicsPipeline.SetUniform(6, g_scaledFramebufferSize);
+        g_composePass.Pipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
+        g_composePass.Pipeline.SetUniform(4, g_globalUniforms.CameraPosition);
+        g_composePass.Pipeline.SetUniform(5, g_sunPosition);
+        g_composePass.Pipeline.SetUniform(6, g_scaledFramebufferSize);
 
-        g_resolveGeometryGraphicsPipeline.DrawArrays(0, 3);
+        g_composePass.Pipeline.DrawArrays(0, 3);
     }
     PopDebugGroup();
 }
@@ -1561,7 +1563,7 @@ auto inline RenderFxaaPass() -> void {
         BindFramebuffer(g_fxaaFramebuffer);
         {
             g_fxaaGraphicsPipeline.Bind();
-            g_fxaaGraphicsPipeline.BindTexture(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id);
+            g_fxaaGraphicsPipeline.BindTexture(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id);
             g_fxaaGraphicsPipeline.SetUniform(1, 1);
             g_fxaaGraphicsPipeline.DrawArrays(0, 3);
         }
@@ -1586,7 +1588,7 @@ auto inline RenderTaaPass() -> void {
         const auto& taaSampler = GetSampler(g_taaSampler);
 
         g_taaGraphicsPipeline.Bind();
-        g_taaGraphicsPipeline.BindTextureAndSampler(0, g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
+        g_taaGraphicsPipeline.BindTextureAndSampler(0, g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // last color buffer
         g_taaGraphicsPipeline.BindTextureAndSampler(1, taaFramebuffer.ColorAttachments[0]->Texture.Id, taaSampler.Id); // taa history buffer
         g_taaGraphicsPipeline.BindTextureAndSampler(2, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id, taaSampler.Id); // velocity buffer
         g_taaGraphicsPipeline.BindTexture(3, g_geometryPass.Framebuffer.DepthStencilAttachment->Texture.Id); // depth buffer
@@ -1612,7 +1614,7 @@ auto inline RenderUi(Renderer::TRenderContext& renderContext, entt::registry& re
                                    ? g_fxaaFramebuffer.Id
                                    : g_isTaaEnabled
                                        ? g_taaHistoryIndex == 0 ? g_taaFramebuffer1.Id : g_taaFramebuffer2.Id
-                                       : g_resolveGeometryFramebuffer.Id,
+                                       : g_composePass.Framebuffer.Id,
                                0,
                                0, 0, static_cast<int32_t>(g_scaledFramebufferSize.x), static_cast<int32_t>(g_scaledFramebufferSize.y),
                                0, 0, g_windowFramebufferSize.x, g_windowFramebufferSize.y,
@@ -1837,7 +1839,7 @@ auto UiRender(
                     switch (sceneViewerTextureIndex) {
                         case 0: return g_isTaaEnabled
                             ? (g_taaHistoryIndex == 0 ? g_taaFramebuffer1 : g_taaFramebuffer2).ColorAttachments[0]->Texture.Id
-                            : g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
+                            : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
                         case 1: return g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id;
                         case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
                         case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
@@ -2067,7 +2069,7 @@ auto UiMagnifier(
           ? g_taaHistoryIndex == 0
             ? g_taaFramebuffer1.ColorAttachments[0]->Texture.Id
             : g_taaFramebuffer2.ColorAttachments[0]->Texture.Id
-          : g_resolveGeometryFramebuffer.ColorAttachments[0]->Texture.Id;
+          : g_composePass.Framebuffer.ColorAttachments[0]->Texture.Id;
 
         ImGui::Image(magnifierOutput,
                      magnifierSize,
