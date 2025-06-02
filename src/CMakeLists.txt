@@ -30,6 +30,7 @@ target_compile_definitions(OpenSpace
 
 target_precompile_headers(OpenSpace
     PUBLIC <array>
+    PUBLIC <cassert>
     PUBLIC <chrono>
     PUBLIC "Core.hpp"
     PUBLIC <cstdint>
