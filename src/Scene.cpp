@@ -8,195 +8,21 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
 
-namespace Scene {
+constexpr auto g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
+constexpr auto g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
+constexpr auto g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
 
-entt::registry g_registry = {};
-
-entt::entity g_rootEntity = entt::null;
-entt::entity g_landingPadEntity = entt::null;
-entt::entity g_playerEntity = entt::null;
-entt::entity g_marsEntity = entt::null;
-entt::entity g_shipEntity = entt::null;
-
-entt::entity g_celestialBodySun = entt::null;
-entt::entity g_celestialBodyPlanet = entt::null;
-entt::entity g_celestialBodyMoon = entt::null;
-
-bool g_playerMounted = false;
-
-constexpr glm::vec3 g_unitX = glm::vec3{1.0f, 0.0f, 0.0f};
-constexpr glm::vec3 g_unitY = glm::vec3{0.0f, 1.0f, 0.0f};
-constexpr glm::vec3 g_unitZ = glm::vec3{0.0f, 0.0f, 1.0f};
-
-auto CreateEntity(
-    const entt::entity parent,
-    const std::string& name,
-    const glm::vec3 position,
-    const glm::vec3 orientation,
-    const glm::vec3 scale) -> entt::entity {
-
-    const auto entity = g_registry.create();
-    g_registry.emplace<TComponentHierarchy>(entity);
-
-    g_registry.emplace<TComponentName>(entity, name);
-    g_registry.emplace<TComponentPosition>(entity, position);
-    g_registry.emplace<TComponentOrientationEuler>(entity, TComponentOrientationEuler {
-        .Pitch = orientation.x,
-        .Yaw = orientation.y,
-        .Roll = orientation.z
-    });
-    g_registry.emplace<TComponentScale>(entity, scale);
-    g_registry.emplace<TComponentTransform>(entity, glm::mat4(1.0f));
-    g_registry.emplace<TComponentRenderTransform>(entity, glm::mat4(1.0f));
-
-    EntityChangeParent(g_registry, entity, parent);
-
-    return entity;
-}
-
-auto CreateEntityWithGraphics(
-    const entt::entity parent,
-    const std::string& name,
-    const glm::vec3 position,
-    const glm::vec3 orientation,
-    const glm::vec3 scale,
-    const std::string& assetPrimitiveName,
-    std::optional<std::string_view> overrideAssetMaterialName) -> entt::entity {
-
-    const auto entity = CreateEntity(parent, name, position, orientation, scale);
-
-    const auto& assetPrimitive = Assets::GetAssetPrimitive(assetPrimitiveName);
-    const auto& assetMaterialName = overrideAssetMaterialName.has_value()
-        ? overrideAssetMaterialName.value().data()
-        : assetPrimitive.MaterialName.has_value()
-            ? assetPrimitive.MaterialName.value()
-            : "T-Default";
-
-    g_registry.emplace<TComponentMesh>(entity, assetPrimitiveName);
-    g_registry.emplace<TComponentMaterial>(entity, assetMaterialName);
-    g_registry.emplace<TComponentCreateGpuResourcesNecessary>(entity);
-
-    return entity;
-}
-
-auto CreateAssetEntity(
-    const entt::entity parent,
-    const std::string& name,
-    const glm::vec3 position,
-    const glm::vec3 orientation,
-    const glm::vec3 scale,
-    const std::string& assetModelName,
-    const std::string& assetMaterialNameOverride) -> entt::entity {
-
-    using TVisitNodesDelegate = std::function<void(entt::entity, const Assets::TAssetModelNode&)>;
-    TVisitNodesDelegate visitNodes = [&](const entt::entity parentEntity, const Assets::TAssetModelNode& assetModelNode) -> void {
-
-        const auto& nodeName = assetModelNode.Name;
-        const auto& localPosition = assetModelNode.LocalPosition;
-        const auto localRotationEuler = glm::eulerAngles(assetModelNode.LocalRotation);
-        const auto& localScale = assetModelNode.LocalScale;
-
-        entt::entity childEntity = entt::null;
-        if (assetModelNode.MeshName.has_value()) {
-            childEntity = CreateEntity(parentEntity, nodeName, localPosition, localRotationEuler, localScale);
-            const auto& assetMesh = Assets::GetAssetMesh(assetModelNode.MeshName.value());
-            for (const auto& assetPrimitive : assetMesh.Primitives) {
-                CreateEntityWithGraphics(
-                    childEntity,
-                    assetPrimitive.Name,
-                    glm::vec3{0.0f},//localPosition,
-                    glm::vec3{0.0f},//localRotationEuler,
-                    glm::vec3{1.0f},//localScale,
-                    assetPrimitive.Name, assetPrimitive.MaterialName.value_or("M_Default"));
-            }
-
-        } else {
-            childEntity = CreateEntity(
-                parentEntity,
-                nodeName,
-                localPosition,
-                localRotationEuler,
-                localScale);
-        }
-
-        for (const auto& childAssetModelNode : assetModelNode.Children) {
-            visitNodes(childEntity, childAssetModelNode);
-        }
-    };
-
-    const auto& assetModel = Assets::GetAssetModel(assetModelName);
-    const auto entity = CreateEntity(parent, name, position, orientation, scale);
-    for (const auto& assetModelNode : assetModel.Hierarchy) {
-        visitNodes(entity, assetModelNode);
-    }
-
-    return entity;
-}
-
-auto Load() -> bool {
-
-    /*
-     * Load Assets
-     */
-
-    /*
-    Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
-    Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
-    Assets::AddAssetModelFromFile("fform3", "data/basic/fform_3.glb");
-    Assets::AddAssetModelFromFile("fform4", "data/basic/fform_4.glb");
-    Assets::AddAssetModelFromFile("fform5", "data/basic/fform_5.glb");
-    Assets::AddAssetModelFromFile("fform6", "data/basic/fform_6.glb");
-    Assets::AddAssetModelFromFile("fform7", "data/basic/fform_7.glb");
-    Assets::AddAssetModelFromFile("fform8", "data/basic/fform_9.glb");
-    Assets::AddAssetModelFromFile("fform9", "data/basic/fform_10.glb");
-    */
-
-    //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
-    Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
-    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
-
-
-    /// Setup Scene ////////////
-    g_rootEntity = CreateEntity(entt::null, "Root", glm::vec3{0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f});
-
-    CreateAssetEntity(
-        g_rootEntity,
-        "Axes",
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(1.0f), "axes", "");
-
-    g_playerEntity = CreateEntity(g_rootEntity, "Player", glm::vec3{-60.0f, -3.0f, 5.0f}, glm::vec3{0.0f, glm::radians(-90.0f), 0.0f}, glm::vec3{1.0f});
-    g_registry.emplace<TComponentPositionBackup>(g_playerEntity, glm::vec3{0.0f});
-    g_registry.emplace<TComponentCamera>(g_playerEntity, TComponentCamera {
-        .FieldOfView = 90.0f,
-        .CameraSpeed = 2.0f,
-        .Sensitivity = 0.0025f,
-    });
-
-    g_landingPadEntity = CreateAssetEntity(g_rootEntity, "Landing Pad", glm::vec3{-50.0f, -5.0f, 0.0f}, glm::vec3{0.0f}, glm::vec3{1.0f, 1.0f, 1.0f}, "SM_Cube_x1_y1_z1", "");
-    g_shipEntity = CreateAssetEntity(g_rootEntity, "SillyShip", glm::vec3{-70.0f, 0.0f, -10.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "LessSillyShip", "");
-    CreateAssetEntity(g_rootEntity, "Capital 001", glm::vec3{0.0f, 30.0f, -200.0f}, glm::vec3{0.0f}, glm::vec3{1.0f}, "SM_Capital_001", "M_Orange");
-
-    return true;
-}
-
-auto Unload() -> void {
-
-}
-
-auto PlayerControlShip(
+auto TScene::PlayerControlShip(
     Renderer::TRenderContext& renderContext,
     entt::registry& registry,
-    const TControlState& controlState) -> void {
+    const TControlState& controlState) const -> void {
 
-    auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
-    auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(g_playerEntity);
+    const auto& playerCamera = registry.get<TComponentCamera>(_playerEntity);
+    auto& playerCameraOrientationEuler = registry.get<TComponentOrientationEuler>(_playerEntity);
 
-    auto& shipPosition = registry.get<TComponentPosition>(g_shipEntity);
-    auto& shipOrientationEuler = registry.get<TComponentOrientationEuler>(g_shipEntity);
-    const glm::quat shipOrientation = glm::eulerAngleYXZ(shipOrientationEuler.Yaw, shipOrientationEuler.Pitch, shipOrientationEuler.Roll);
+    auto& shipPosition = registry.get<TComponentPosition>(_shipEntity);
+    auto& [Pitch, Yaw, Roll] = registry.get<TComponentOrientationEuler>(_shipEntity);
+    const glm::quat shipOrientation = glm::eulerAngleYXZ(Yaw, Pitch, Roll);
 
     glm::vec3 forward = glm::normalize(shipOrientation * -g_unitZ);
     glm::vec3 right = glm::normalize(shipOrientation * g_unitX);
@@ -247,19 +73,19 @@ auto PlayerControlShip(
         playerCameraOrientationEuler.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
         playerCameraOrientationEuler.Pitch = glm::clamp(playerCameraOrientationEuler.Pitch, -3.1f/2.0f, 3.1f/2.0f);
     } else {
-        shipOrientationEuler.Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
-        shipOrientationEuler.Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
+        Pitch -= controlState.CursorDelta.y * playerCamera.Sensitivity;
+        Yaw -= controlState.CursorDelta.x * playerCamera.Sensitivity;
     }
 }
 
-auto PlayerControlPlayer(
+auto TScene::PlayerControlPlayer(
     Renderer::TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
 
-    auto& playerCamera = registry.get<TComponentCamera>(g_playerEntity);
-    auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
-    auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
+    auto& playerCamera = registry.get<TComponentCamera>(_playerEntity);
+    auto& playerOrientation = registry.get<TComponentOrientationEuler>(_playerEntity);
+    auto& playerPosition = registry.get<TComponentPosition>(_playerEntity);
 
     const glm::quat playerCameraOrientation = glm::eulerAngleYXZ(playerOrientation.Yaw, playerOrientation.Pitch, playerOrientation.Roll);
 
@@ -307,47 +133,236 @@ auto PlayerControlPlayer(
     }
 }
 
-auto Update(
+auto TScene::Load() -> bool {
+
+    /*
+     * Load Assets
+     */
+
+    /*
+    Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
+    Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
+    Assets::AddAssetModelFromFile("fform3", "data/basic/fform_3.glb");
+    Assets::AddAssetModelFromFile("fform4", "data/basic/fform_4.glb");
+    Assets::AddAssetModelFromFile("fform5", "data/basic/fform_5.glb");
+    Assets::AddAssetModelFromFile("fform6", "data/basic/fform_6.glb");
+    Assets::AddAssetModelFromFile("fform7", "data/basic/fform_7.glb");
+    Assets::AddAssetModelFromFile("fform8", "data/basic/fform_9.glb");
+    Assets::AddAssetModelFromFile("fform9", "data/basic/fform_10.glb");
+    */
+
+    //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
+    Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
+    Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
+
+    /// Setup Scene ////////////
+    _rootEntity = CreateEmpty("Root");
+
+    CreateModel("Axes", "axes");
+
+    _playerEntity = CreateEmpty("Player");
+    SetParent(_playerEntity, _rootEntity);
+    SetPosition(_playerEntity, glm::vec3{0.0f, 0.0f, 0.0f});
+    SetOrientation(_playerEntity, 0.0f, glm::radians(-90.0f), 0.0f);
+    AddComponent<TComponentPositionBackup>(_playerEntity, glm::vec3{0.0f});
+    AddComponent<TComponentCamera>(_playerEntity, TComponentCamera {
+        .FieldOfView = 90.0f,
+        .CameraSpeed = 2.0f,
+        .Sensitivity = 0.0025f,
+    });
+
+    _landingPadEntity = CreateModel("Landing Pad", "SM_Cube_x1_y1_z1");
+    SetParent(_landingPadEntity, _rootEntity);
+    SetPosition(_landingPadEntity, glm::vec3{-50.0f, -5.0f, 0.0f});
+
+    _shipEntity = CreateModel("SillyShip", "LessSillyShip");
+    SetParent(_shipEntity, _rootEntity);
+    SetPosition(_shipEntity, glm::vec3{-70.0f, 0.0f, -10.0f});
+
+    const auto capitalEntity = CreateModel("Capital 001", "SM_Capital_001");
+    SetParent(capitalEntity, _rootEntity);
+    SetPosition(capitalEntity, glm::vec3{0.0f, 30.0f, -200.0f});
+
+    return true;
+}
+
+auto TScene::Unload() -> void {
+
+}
+
+auto TScene::Update(
     Renderer::TRenderContext& renderContext,
     entt::registry& registry,
     const TControlState& controlState) -> void {
 
     if (controlState.ToggleMount.JustPressed) {
-        g_playerMounted = !g_playerMounted;
+        _isPlayerMounted = !_isPlayerMounted;
 
-        if (g_playerMounted) {
+        if (_isPlayerMounted) {
 
-            EntityChangeParent(registry, g_playerEntity, g_shipEntity);
+            SetParent(_playerEntity, _shipEntity);
 
-            auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
-            registry.replace<TComponentPositionBackup>(g_playerEntity, playerPosition);
+            auto& playerPosition = registry.get<TComponentPosition>(_playerEntity);
+            registry.replace<TComponentPositionBackup>(_playerEntity, playerPosition);
 
             playerPosition = glm::vec3{0.0f};
-            auto& playerOrientation = registry.get<TComponentOrientationEuler>(g_playerEntity);
+            auto& playerOrientation = registry.get<TComponentOrientationEuler>(_playerEntity);
             playerOrientation.Pitch = 0.0f;
             playerOrientation.Yaw = glm::radians(0.0f);
             playerOrientation.Roll = 0.0f;
 
         } else {
 
-            EntityChangeParent(registry, g_playerEntity, g_rootEntity);
+            SetParent(_playerEntity, _rootEntity);
 
-            auto& playerPositionBackup = registry.get<TComponentPositionBackup>(g_playerEntity);
-            auto& playerPosition = registry.get<TComponentPosition>(g_playerEntity);
+            const auto& playerPositionBackup = registry.get<TComponentPositionBackup>(_playerEntity);
+            auto& playerPosition = registry.get<TComponentPosition>(_playerEntity);
 
             playerPosition = playerPositionBackup;
         }
     }
 
-    if (g_playerMounted) {
+    if (_isPlayerMounted) {
         PlayerControlShip(renderContext, registry, controlState);
     } else {
         PlayerControlPlayer(renderContext, registry, controlState);
     }
 }
 
-auto GetRegistry() -> entt::registry& {
-    return g_registry;
+auto TScene::GetRegistry() -> entt::registry& {
+    return _registry;
 }
 
+auto TScene::CreateEmpty(const std::string& name) -> entt::entity {
+    const auto entity = _registry.create();
+    _registry.emplace<TComponentName>(entity, name);
+    _registry.emplace<TComponentHierarchy>(entity);
+    _registry.emplace<TComponentPosition>(entity);
+    _registry.emplace<TComponentOrientationEuler>(entity);
+    _registry.emplace<TComponentScale>(entity, glm::vec3(1.0f));
+    _registry.emplace<TComponentTransform>(entity);
+    _registry.emplace<TComponentRenderTransform>(entity);
+
+    return entity;
+}
+
+auto TScene::CreateCamera(const std::string& name) -> entt::entity {
+    const auto entity = CreateEmpty(name);
+    _registry.emplace<TComponentCamera>(entity);
+    return entity;
+}
+
+auto TScene::CreateMesh(
+        const std::string& name,
+        const std::string& assetMeshName,
+        const std::string& assetMaterialName) -> entt::entity {
+
+    const auto entity = CreateEmpty(name);
+    _registry.emplace<TComponentMesh>(entity, assetMeshName);
+    _registry.emplace<TComponentMaterial>(entity, assetMaterialName);
+    _registry.emplace<TComponentCreateGpuResourcesNecessary>(entity);
+    return entity;
+}
+
+auto TScene::CreateModel(
+    const std::string& name,
+    const std::string_view assetModelName) -> entt::entity {
+
+    using TVisitNodesDelegate = std::function<void(entt::entity, const Assets::TAssetModelNode&)>;
+    TVisitNodesDelegate visitNodes = [&](
+        const entt::entity parentEntity,
+        const Assets::TAssetModelNode& assetModelNode) -> void {
+
+        const auto& nodeName = assetModelNode.Name;
+        const auto& localPosition = assetModelNode.LocalPosition;
+        const auto localRotationEuler = glm::eulerAngles(assetModelNode.LocalRotation);
+        const auto& localScale = assetModelNode.LocalScale;
+
+        entt::entity childEntity = entt::null;
+        if (assetModelNode.MeshName.has_value()) {
+            childEntity = CreateEmpty(nodeName);
+            SetParent(childEntity, parentEntity);
+            SetPosition(childEntity, localPosition);
+            SetOrientation(childEntity, localRotationEuler.x, localRotationEuler.y, localRotationEuler.z);
+            SetScale(childEntity, localScale);
+
+            const auto& assetMesh = Assets::GetAssetMesh(assetModelNode.MeshName.value());
+            for (const auto& assetPrimitive : assetMesh.Primitives) {
+                const auto meshEntity = CreateMesh(
+                    assetPrimitive.Name,
+                    assetPrimitive.Name,
+                    assetPrimitive.MaterialName.value_or("M_Default"));
+                SetParent(meshEntity, childEntity);
+            }
+
+        } else {
+            childEntity = CreateEmpty(nodeName);
+            SetParent(childEntity, parentEntity);
+            SetPosition(childEntity, localPosition);
+            SetOrientation(childEntity, localRotationEuler.x, localRotationEuler.y, localRotationEuler.z);
+            SetScale(childEntity, localScale);
+        }
+
+        for (const auto& childAssetModelNode : assetModelNode.Children) {
+            visitNodes(childEntity, childAssetModelNode);
+        }
+    };
+
+    const auto& assetModel = Assets::GetAssetModel(assetModelName);
+    const auto entity = CreateEmpty(name);
+
+    for (const auto& assetModelNode : assetModel.Hierarchy) {
+        visitNodes(entity, assetModelNode);
+    }
+
+    return entity;
+}
+
+auto TScene::SetParent(
+    const entt::entity entity,
+    const entt::entity parent) -> void {
+
+    auto& [Parent, Children] = _registry.get_or_emplace<TComponentHierarchy>(entity);
+    if (Parent != entt::null) {
+        if (auto* oldParentHierarchy = _registry.try_get<TComponentHierarchy>(Parent)) {
+            oldParentHierarchy->RemoveChild(entity);
+        }
+    }
+
+    Parent = parent;
+
+    if (parent != entt::null) {
+        auto& parentHierarchy = _registry.get_or_emplace<TComponentHierarchy>(parent);
+        parentHierarchy.AddChild(entity);
+    }
+}
+
+auto TScene::SetPosition(
+    const entt::entity entity,
+    const glm::vec3& position) -> void {
+
+    if (auto* positionComponent = _registry.try_get<TComponentPosition>(entity)) {
+        *positionComponent = position;
+    }
+}
+
+auto TScene::SetOrientation(
+    const entt::entity entity,
+    const float pitch,
+    const float yaw,
+    const float roll) -> void {
+
+    if (auto* orientationComponent = _registry.try_get<TComponentOrientationEuler>(entity)) {
+        *orientationComponent = { pitch, yaw, roll };
+    }
+}
+
+auto TScene::SetScale(
+    const entt::entity entity,
+    const glm::vec3& scale) -> void {
+
+    if (auto* scaleComponent = _registry.try_get<TComponentScale>(entity)) {
+        *scaleComponent = scale;
+    }
 }

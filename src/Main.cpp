@@ -21,7 +21,7 @@
 
 // - Game ---------------------------------------------------------------------
 
-entt::registry g_gameRegistry = {};
+TScene g_scene = {};
 
 // - Application --------------------------------------------------------------
 
@@ -254,7 +254,7 @@ auto main(
         return 0;
     }
 
-    if (!Scene::Load()) {
+    if (!g_scene.Load()) {
         spdlog::error("Scene: Unable to load");
         return 0;
     }
@@ -307,10 +307,9 @@ auto main(
         renderContext.FramesPerSecond01P = FrameTimer::Get01PercentLow();
         renderContext.AverageFramesPerSecond = FrameTimer::GetAverageFrameTime();
 
-        auto& registry = Scene::GetRegistry();
-        Scene::Update(renderContext, registry, controlState);
+        auto& registry = g_scene.GetRegistry();
+        g_scene.Update(renderContext, registry, controlState);
         Renderer::Render(renderContext, registry);
-
         {
             PROFILER_ZONESCOPEDN("SwapBuffers");
             glfwSwapBuffers(g_window);
@@ -331,7 +330,7 @@ auto main(
      * Cleanup Resources
      */
 
-    Scene::Unload();
+    g_scene.Unload();
     Renderer::Unload();
 
     glfwSetKeyCallback(g_window, nullptr);
