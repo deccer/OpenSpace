@@ -13,7 +13,7 @@ public:
     auto Update(
         Renderer::TRenderContext& renderContext,
         entt::registry& registry,
-        const TControlState& inputState) -> void;
+        const TControlState& controlState) -> void;
     auto GetRegistry() -> entt::registry&;
 
     auto CreateEmpty(const std::string& name = "Empty") -> entt::entity;
