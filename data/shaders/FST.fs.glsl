@@ -6,7 +6,7 @@ layout(location = 0) uniform sampler2D s_texture;
 
 layout(location = 1) uniform int u_enable_fxaa;
 
-#include "FXAA.include.glsl"
+#include "Include.FXAA.glsl"
 
 void main()
 {

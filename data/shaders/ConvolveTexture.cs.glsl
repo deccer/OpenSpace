@@ -10,7 +10,7 @@ const float InvNumSamples = 1.0 / float(NumSamples);
 layout(binding = 0) uniform samplerCube s_environment;
 layout(binding = 0, rgba16f) uniform restrict writeonly imageCube s_irradiance;
 
-#include "Hammersley.include.glsl"
+#include "Include.Hammersley.glsl"
 
 // Uniformly sample point on a hemisphere.
 // Cosine-weighted sampling would be a better fit for Lambertian BRDF but since this

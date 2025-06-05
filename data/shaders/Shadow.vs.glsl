@@ -1,6 +1,6 @@
 #version 460 core
 
-#include "VertexTypes.include.glsl"
+#include "Include.VertexTypes.glsl"
 
 layout (location = 0) uniform int u_global_light_index;
 
@@ -28,7 +28,7 @@ layout (binding = 2, std140) uniform TGlobalLights {
     vec4 Strength;
 } u_global_lights[8];
 
-#include "ObjectBuffer.include.glsl"
+#include "Include.ObjectBuffer.glsl"
 
 void main()
 {
