@@ -425,23 +425,23 @@ auto GetGpuMaterial(const std::string_view assetMaterialName) -> TGpuMaterial& {
     return g_gpuMaterials[assetMaterialName.data()];
 }
 
-auto ConvolveEnvironmentMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
+auto ComputeIrradianceMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
 
-    auto convolveComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
+    auto computeIrradianceMapComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
         .Label = "Convolve Environment Map",
-        .ComputeShaderFilePath = "data/shaders/Convolve.EnvironmentMap.cs.glsl",
+        .ComputeShaderFilePath = "data/shaders/ComputeIrradianceMap.cs.glsl",
     });
 
-    if (!convolveComputePipelineResult) {
-        return std::unexpected(convolveComputePipelineResult.error());
+    if (!computeIrradianceMapComputePipelineResult) {
+        return std::unexpected(computeIrradianceMapComputePipelineResult.error());
     }
 
     const auto& environmentTexture = GetTexture(textureId);
 
-    auto convolveComputePipeline = *convolveComputePipelineResult;
+    auto computeIrradianceMapComputePipeline = *computeIrradianceMapComputePipelineResult;
 
-    constexpr auto width = 128;
-    constexpr auto height = 128;
+    constexpr auto width = 64;
+    constexpr auto height = 64;
     constexpr auto format = TFormat::R16G16B16A16_FLOAT;
     
     auto convolvedTextureId = CreateTexture(TCreateTextureDescriptor{
@@ -460,12 +460,12 @@ auto ConvolveEnvironmentMap(const TTextureId textureId) -> std::expected<TTextur
     constexpr auto groupY = static_cast<uint32_t>(height / 32);
     constexpr auto groupZ = 6u;
 
-    convolveComputePipeline.Bind();
-    convolveComputePipeline.BindTexture(0, environmentTexture.Id);
-    convolveComputePipeline.BindImage(0, convolvedTexture.Id, 0, 0, TMemoryAccess::WriteOnly, format);
-    convolveComputePipeline.Dispatch(groupX, groupY, groupZ);
+    computeIrradianceMapComputePipeline.Bind();
+    computeIrradianceMapComputePipeline.BindTexture(0, environmentTexture.Id);
+    computeIrradianceMapComputePipeline.BindImage(0, convolvedTexture.Id, 0, 0, TMemoryAccess::WriteOnly, format);
+    computeIrradianceMapComputePipeline.Dispatch(groupX, groupY, groupZ);
 
-    convolveComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
+    computeIrradianceMapComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
     GenerateMipmaps(convolvedTextureId);
 
     return convolvedTextureId;
