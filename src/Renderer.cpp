@@ -425,11 +425,11 @@ auto GetGpuMaterial(const std::string_view assetMaterialName) -> TGpuMaterial& {
     return g_gpuMaterials[assetMaterialName.data()];
 }
 
-auto ConvolveTextureCube(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
+auto ConvolveEnvironmentMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
 
     auto convolveComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
-        .Label = "ConvolveTexture",
-        .ComputeShaderFilePath = "data/shaders/ConvolveTexture.cs.glsl",
+        .Label = "Convolve Environment Map",
+        .ComputeShaderFilePath = "data/shaders/Convolve.EnvironmentMap.cs.glsl",
     });
 
     if (!convolveComputePipelineResult) {
