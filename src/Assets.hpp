@@ -72,6 +72,7 @@ struct TAssetMaterial {
     std::optional<TAssetMaterialChannelData> BaseColorTextureChannel = {};
     std::optional<TAssetMaterialChannelData> NormalTextureChannel = {};
     std::optional<TAssetMaterialChannelData> ArmTextureChannel = {};
+    std::optional<TAssetMaterialChannelData> MetallicRoughnessTextureChannel = {};
     std::optional<TAssetMaterialChannelData> EmissiveTextureChannel = {};
 };
 

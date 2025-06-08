@@ -328,31 +328,41 @@ auto LoadMaterials(
 
         material.Name = GetSafeResourceName(assetModelName.data(), fgMaterial.name.data(), "material", materialIndex);
 
-        const auto baseColorTextureIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
+        const auto baseColorImageIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
         const auto baseColorSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.baseColorTexture);
 
         material.BaseColorTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Color,
             .SamplerName = baseColorSamplerIndex.has_value() ? asset.Samplers[baseColorSamplerIndex.value()] : "S_L_L_C2E_C2E",
-            .TextureName = baseColorTextureIndex.has_value() ? asset.Images[baseColorTextureIndex.value()] : "T_Default_B",
+            .TextureName = baseColorImageIndex.has_value() ? asset.Images[baseColorImageIndex.value()] : "T_Default_B",
         };
 
-        const auto normalTextureIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
+        const auto normalImageIndex = GetImageIndex(fgAsset, fgMaterial.normalTexture);
         const auto normalSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.normalTexture);
 
         material.NormalTextureChannel = TAssetMaterialChannelData{
             .Channel = TAssetMaterialChannel::Normals,
             .SamplerName = normalSamplerIndex.has_value() ? asset.Samplers[normalSamplerIndex.value()] : "S_L_L_C2E_C2E",
-            .TextureName = normalTextureIndex.has_value() ? asset.Images[normalTextureIndex.value()] : "T_Default_N",
+            .TextureName = normalImageIndex.has_value() ? asset.Images[normalImageIndex.value()] : "T_Default_N",
         };
 
         if (fgMaterial.packedOcclusionRoughnessMetallicTextures != nullptr) {
-            const auto armTextureIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
+            const auto armImageIndex = GetImageIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
             const auto armSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.packedOcclusionRoughnessMetallicTextures->occlusionRoughnessMetallicTexture);
             material.ArmTextureChannel = TAssetMaterialChannelData{
                 .Channel = TAssetMaterialChannel::Scalar,
                 .SamplerName = armSamplerIndex.has_value() ? asset.Samplers[armSamplerIndex.value()] : "S_L_L_C2E_C2E",
-                .TextureName = armTextureIndex.has_value() ? asset.Images[armTextureIndex.value()] : "T_Default_MR",
+                .TextureName = armImageIndex.has_value() ? asset.Images[armImageIndex.value()] : "T_Default_MR",
+            };
+        }
+
+        if (fgMaterial.pbrData.metallicRoughnessTexture.has_value()) {
+            const auto metallicRoughnessImageIndex = GetImageIndex(fgAsset, fgMaterial.pbrData.metallicRoughnessTexture);
+            const auto metallicRoughnessSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.pbrData.metallicRoughnessTexture);
+            material.MetallicRoughnessTextureChannel = TAssetMaterialChannelData{
+                .Channel = TAssetMaterialChannel::Scalar,
+                .SamplerName = metallicRoughnessImageIndex.has_value() ? asset.Samplers[metallicRoughnessSamplerIndex.value()] : "S_L_L_C2E_C2E",
+                .TextureName = metallicRoughnessImageIndex.has_value() ? asset.Images[metallicRoughnessImageIndex.value()] : "T_Default_MR",
             };
         }
 

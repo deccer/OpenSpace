@@ -613,8 +613,13 @@ auto DeletePipeline(const TPipeline& pipeline) -> void;
 
 auto GetTexture(TTextureId id) -> TTexture&;
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId;
-auto CreateTexture2DFromFile(const std::filesystem::path& filePath, TFormat format) -> TTextureId;
-auto UploadTexture(const TTextureId& textureId, const TUploadTextureDescriptor& updateTextureDescriptor) -> void;
+auto CreateTexture2DFromFile(
+    const std::filesystem::path& filePath,
+    TFormat format,
+    bool withMipMaps = true) -> TTextureId;
+auto UploadTexture(
+    const TTextureId& textureId,
+    const TUploadTextureDescriptor& updateTextureDescriptor) -> void;
 auto MakeTextureResident(const TTextureId& textureId) -> uint64_t;
 auto GenerateMipmaps(const TTextureId& textureId) -> void;
 

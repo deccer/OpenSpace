@@ -947,7 +947,8 @@ auto GetTexture(TTextureId id) -> TTexture& {
 
 auto CreateTexture2DFromFile(
     const std::filesystem::path& filePath,
-    const TFormat format) -> TTextureId {
+    const TFormat format,
+    const bool withMipMaps) -> TTextureId {
 
     int32_t imageWidth = 0;
     int32_t imageHeight = 0;
@@ -958,7 +959,9 @@ auto CreateTexture2DFromFile(
         .TextureType = TTextureType::Texture2D,
         .Format = format,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageWidth), static_cast<uint32_t>(imageHeight), 1u},
-        .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight))))),
+        .MipMapLevels = withMipMaps
+            ? 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight)))))
+            : 1,
         .Layers = 0,
         .SampleCount = TSampleCount::One,
         .Label = filePath.filename().string(),
