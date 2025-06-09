@@ -960,6 +960,10 @@ auto Renderer::Initialize(
             },
         }
     });
+    if (!depthPrePassGraphicsPipelineResult) {
+        spdlog::error(depthPrePassGraphicsPipelineResult.error());
+        return false;
+    }
     g_depthPrePass.Pipeline = *depthPrePassGraphicsPipelineResult;
 
     auto geometryGraphicsPipelineResult = CreateGraphicsPipeline({
