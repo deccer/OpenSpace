@@ -1446,47 +1446,37 @@ auto RenderEntityProperties(
     }    
 }
 
-auto spherePoint(float azimuthDeg, float altitudeDeg) -> glm::vec3 {
-    float az = glm::radians(azimuthDeg);
-    float alt = glm::radians(altitudeDeg);
-    float x = cos(alt) * sin(az);
-    float y = sin(alt);
-    float z = cos(alt) * cos(az);
-    return glm::vec3(x, y, z);
-}
+auto DirectionFromAzimuthAltitude(
+    const float azimuth,
+    const float altitude) -> glm::vec3 {
 
-auto DirectionFromAzimuthAltitude(float azimuthDeg, float altitudeDeg) -> glm::vec3
-{
-    float azimuthRad = glm::radians(azimuthDeg);
-    float altitudeRad = glm::radians(altitudeDeg);
-
-    float x = cos(altitudeRad) * sin(azimuthRad);
-    float y = sin(altitudeRad);
-    float z = cos(altitudeRad) * cos(azimuthRad);
+    const float x = cos(altitude) * sin(azimuth);
+    const float y = sin(altitude);
+    const float z = cos(altitude) * cos(azimuth);
 
     return glm::normalize(glm::vec3(x, y, z));
 }
 
 auto DrawDirectionalArrow(
-    glm::vec3 origin,
-    glm::vec3 direction,
-    float length,
-    float headSize,
-    glm::vec4 color) -> void {
+    const glm::vec3 origin,
+    const glm::vec3 direction,
+    const float length,
+    const float headSize,
+    const glm::vec4 color) -> void {
 
-    glm::vec3 dir = glm::normalize(direction);
-    glm::vec3 tip = origin + dir * length;
+    const auto dir = glm::normalize(direction);
+    const auto tip = origin + dir * length;
 
     AddDebugLine(origin, tip, color, color);
 
-    glm::vec3 up = glm::vec3(0, 1, 0);
+    constexpr auto up = glm::vec3(0, 1, 0);
     glm::vec3 right = glm::normalize(glm::cross(dir, up));
     if (glm::length(right) < 0.001f) {
         right = glm::vec3(1, 0, 0); // fallback if dir is nearly Y
     }
 
-    glm::vec3 headOffset1 = -dir * headSize + right * headSize * 0.5f;
-    glm::vec3 headOffset2 = -dir * headSize - right * headSize * 0.5f;
+    const auto headOffset1 = -dir * headSize + right * headSize * 0.5f;
+    const auto headOffset2 = -dir * headSize - right * headSize * 0.5f;
 
     AddDebugLine(tip, tip + headOffset1, color, color); // left wing
     AddDebugLine(tip, tip + headOffset2, color, color); // right wing
@@ -1505,29 +1495,7 @@ auto UpdateGlobalLights(entt::registry& registry) -> void {
             .LightProperties = glm::ivec4{globalLight.IsEnabled, globalLight.CanCastShadows, 0, 0}
         };
         if (globalLight.IsDebugEnabled) {
-            /*
-            for (float alt = 15; alt <= 90; alt += 15) {
-                for (float azi = 0; azi < 360; azi += 15) {
-                    // create points along a circle at constant altitude
-                    glm::vec3 p1 = spherePoint(azi, alt);
-                    glm::vec3 p2 = spherePoint(azi + 15, alt);
-                    AddDebugLine(p1, p2, g_gpuGlobalLights[globalLightIndex].ColorAndIntensity); // latitude ring
-                }
-            }
-
-            for (float azi = 0; azi < 360; azi += 15) {
-                for (float alt = 0; alt <= 75; alt += 15) {
-                    glm::vec3 p1 = spherePoint(azi, alt);
-                    glm::vec3 p2 = spherePoint(azi, alt + 15);
-                    AddDebugLine(p1, p2, g_gpuGlobalLights[globalLightIndex].ColorAndIntensity); // longitude lines
-                }
-            }
-
-            // light direction vector
-            glm::vec3 dir = spherePoint(globalLight.Azimuth, globalLight.Elevation) * 10.0f;
-            AddDebugLine(glm::vec3(0), dir, glm::vec4(1, 1, 0, 1), glm::vec4(1, 1, 0, 1)); // yellow
-            */
-            DrawDirectionalArrow(glm::vec3(0), direction, 100.0f, 10.0f, glm::vec4(1, 1, 0, 1));
+            DrawDirectionalArrow(glm::vec3(0), direction, 100.0f, 10.0f, glm::vec4(globalLight.Color, 1));
         }
         if (globalLightIndex >= MAX_GLOBAL_LIGHTS) {
             break;
