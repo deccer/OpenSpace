@@ -502,7 +502,7 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> std::expected<TEnvironment
 
     const auto brdfLutMapId = CreateTexture2DFromFile(
         "data/default/T_Lut_Brdf.png",
-        TFormat::R16G16B16A16_FLOAT,
+        TFormat::R8G8B8A8_SRGB,
         false);
 
     environmentMaps.BrdfIntegrationMap = GetTexture(brdfLutMapId).Id;
@@ -515,7 +515,6 @@ auto EncodeNormal(const glm::vec3& normal) -> glm::vec2 {
     auto OctWrap = [](const glm::vec2& v) -> glm::vec2 {
         return (glm::vec2(1.0f) - glm::abs(glm::vec2(v.y, v.x))) * glm::sign(v);
     };
-
 
     const glm::vec3 normalized = normal / (glm::abs(normal.x) + glm::abs(normal.y) + glm::abs(normal.z));
     const glm::vec2 encodedNormal = normalized.z >= 0.0f
