@@ -527,7 +527,7 @@ auto DecodeNormal(const glm::vec2& encodedNormal) -> glm::vec3 {
     const glm::vec2 p = encodedNormal * 2.0f - 1.0f;
     glm::vec3 n(p.x, p.y, 1.0f - glm::abs(p.x) - glm::abs(p.y));
 
-    float t = glm::clamp(-n.z, 0.0f, 1.0f);
+    const float t = glm::clamp(-n.z, 0.0f, 1.0f);
     n.x += p.x >= 0.0f ? -t : t;
     n.y += p.y >= 0.0f ? -t : t;
 
