@@ -1,7 +1,7 @@
 #ifndef VERTEX_TYPES_INCLUDE_GLSL
 #define VERTEX_TYPES_INCLUDE_GLSL
 
-#include "BasicTypes.include.glsl"
+#include "Include.BasicTypes.glsl"
 
 struct TVertexPosition
 {

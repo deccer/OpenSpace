@@ -1,6 +1,6 @@
 #version 460 core
 
-#include "VertexTypes.include.glsl"
+#include "Include.VertexTypes.glsl"
 
 layout (location = 0) out gl_PerVertex
 {
