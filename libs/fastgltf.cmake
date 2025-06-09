@@ -1,7 +1,7 @@
 FetchContent_Declare(
     fastgltf
     GIT_REPOSITORY https://github.com/spnda/fastgltf.git
-    GIT_TAG        main
+    GIT_TAG        2483b87d19a67c91f2bffc386082001d3ea8bc07
     EXCLUDE_FROM_ALL
     SYSTEM
 )
