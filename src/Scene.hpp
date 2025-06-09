@@ -17,6 +17,13 @@ public:
     auto GetRegistry() -> entt::registry&;
 
     auto CreateEmpty(const std::string& name = "Empty") -> entt::entity;
+    auto CreateGlobalLight(
+        const std::string& name = "Global Light",
+        const float& azimuth = 0.0f,
+        const float& elevation = 0.0f,
+        const glm::vec3& color = {1.0f, 1.0f, 1.0f},
+        float intensity = 1.0f,
+        float canCastShadows = false) -> entt::entity;
     auto CreateCamera(const std::string& name = "Camera") -> entt::entity;
     auto CreateModel(
         const std::string& name,

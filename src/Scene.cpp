@@ -158,6 +158,13 @@ auto TScene::Load() -> bool {
 
     /// Setup Scene ////////////
     _rootEntity = CreateEmpty("Root");
+    auto sunLight = CreateGlobalLight(
+        "Sun Light",
+        0.0f,
+        45.0f,
+        glm::vec3{1.0f, 0.95f, 0.8f},
+        5.0f);
+    SetParent(sunLight, _rootEntity);
 
     CreateModel("Axes", "axes");
 
@@ -244,6 +251,19 @@ auto TScene::CreateEmpty(const std::string& name) -> entt::entity {
     _registry.emplace<TComponentTransform>(entity);
     _registry.emplace<TComponentRenderTransform>(entity);
 
+    return entity;
+}
+
+auto TScene::CreateGlobalLight(
+    const std::string& name,
+    const float& azimuth,
+    const float& elevation,
+    const glm::vec3& color,
+    float intensity,
+    float canCastShadows) -> entt::entity {
+
+    const auto entity = CreateEmpty(name);
+    _registry.emplace<TComponentGlobalLight>(entity, azimuth, elevation, color, intensity, true, canCastShadows, true);
     return entity;
 }
 

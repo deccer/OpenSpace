@@ -65,11 +65,12 @@ struct TGpuObject {
 };
 
 struct TGpuGlobalLight {
-    glm::mat4 ProjectionMatrix;
-    glm::mat4 ViewMatrix;
     glm::vec4 Direction;
-    glm::vec4 Strength;
+    glm::vec4 ColorAndIntensity;
+    glm::ivec4 LightProperties; // IsEnabled, CanCastShadows, padding, padding
 };
+
+constexpr auto MAX_GLOBAL_LIGHTS = 8;
 
 entt::entity g_playerEntity = entt::null;
 
@@ -123,7 +124,7 @@ struct TTaaPass {
     float BlendFactor = 0.1f;
 } g_taaPass;
 
-std::vector<TGpuGlobalLight> g_gpuGlobalLights;
+std::array<TGpuGlobalLight, MAX_GLOBAL_LIGHTS> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
 
 TGpuGlobalUniforms g_globalUniforms = {};
@@ -175,6 +176,13 @@ auto UiMagnifier(
 auto UiSetDarkStyle() -> void;
 auto UiSetValveStyle() -> void;
 auto UiSetDarkWithFuchsiaStyle() -> void;
+
+auto inline AddDebugLine(
+    const glm::vec3& start,
+    const glm::vec3& end,
+    const glm::vec4& startColor = glm::vec4(1.0f),
+    const glm::vec4& endColor = glm::vec4(1.0f)
+    ) -> void;
 
 /*
  * Jitter
@@ -1121,13 +1129,11 @@ auto Renderer::Initialize(
     g_globalUniformsBuffer = CreateBuffer("TGpuGlobalUniforms", sizeof(TGpuGlobalUniforms), &g_globalUniforms, GL_DYNAMIC_STORAGE_BIT);
     g_objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    g_gpuGlobalLights.push_back(TGpuGlobalLight{
-        .ProjectionMatrix = glm::mat4(1.0f),
-        .ViewMatrix = glm::mat4(1.0f),
-        .Direction = glm::vec4(10.0f, 20.0f, 10.0f, 0.0f),
-        .Strength = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)
+    g_gpuGlobalLights.fill(TGpuGlobalLight{
+        .Direction = glm::vec4{0.0f, -1.0f, 0.0f, 1.0f},
+        .ColorAndIntensity = glm::vec4{1.0f, 1.0f, 1.0f, 1.0f},
+        .LightProperties = glm::ivec4{0, 0, 0, 0}
     });
-
     g_globalLightsBuffer = CreateBuffer("TGpuGlobalLights", g_gpuGlobalLights.size() * sizeof(TGpuGlobalLight), g_gpuGlobalLights.data(), GL_DYNAMIC_STORAGE_BIT);
 
     g_fstSamplerNearestClampToEdge = GetOrCreateSampler({
@@ -1348,7 +1354,57 @@ auto RenderEntityProperties(
             }
             ImGui::Unindent();
         }
-    }    
+    }
+
+    if (registry.all_of<TComponentGlobalLight>(entity)) {
+
+        if (ImGui::CollapsingHeader((char*)ICON_MDI_WEATHER_SUNNY " Global Light", ImGuiTreeNodeFlags_Leaf)) {
+
+            ImGui::AlignTextToFramePadding();
+            float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;
+
+            ImGui::Indent();
+
+            auto& globalLight = registry.get<TComponentGlobalLight>(entity);
+
+            auto& tempAzimuth = globalLight.Azimuth;
+            if (ImGui::DragFloat("Azimuth", &tempAzimuth, 0.01f, 0.0f, 2.0f * glm::pi<float>(), "%.2f")) {
+                globalLight.Azimuth = tempAzimuth;
+            }
+
+            auto& tempElevation = globalLight.Elevation;
+            if (ImGui::DragFloat("Elevation", &tempElevation, 0.01f, -(glm::pi<float>() - 0.2f), glm::pi<float>() - 0.2f, "%.2f")) {
+                globalLight.Elevation = tempElevation;
+            }
+
+            auto& tempColor = globalLight.Color;
+            if (ImGui::DragFloat3("Color", &tempColor.x, 0.01f, 0.0f, 1.0f, "%.2f")) {
+                globalLight.Color = tempColor;
+            }
+
+            auto& tempIntensity = globalLight.Intensity;
+            if (ImGui::DragFloat("Intensity", &tempIntensity, 0.01, 0.01f, 10.0f, "%.2f")) {
+                globalLight.Intensity = tempIntensity;
+            }
+
+            auto& tempIsEnabled = globalLight.IsEnabled;
+            if (ImGui::Checkbox("Is Enabled", &tempIsEnabled)) {
+                globalLight.IsEnabled = tempIsEnabled;
+            }
+
+            auto& tempCanCastShadow = globalLight.CanCastShadows;
+            if (ImGui::Checkbox("Can Cast Shadows", &tempCanCastShadow)) {
+                globalLight.CanCastShadows = tempCanCastShadow;
+            }
+
+            auto& tempIsDebugEnabled = globalLight.IsDebugEnabled;
+            if (ImGui::Checkbox("Draw Debug Lines", &tempIsDebugEnabled)) {
+                globalLight.IsDebugEnabled = tempIsDebugEnabled;
+            }
+
+            ImGui::Unindent();
+        }
+    }
 
     if (registry.all_of<TComponentCamera>(entity)) {
 
@@ -1385,6 +1441,97 @@ auto RenderEntityProperties(
             ImGui::Unindent();
         }
     }    
+}
+
+auto spherePoint(float azimuthDeg, float altitudeDeg) -> glm::vec3 {
+    float az = glm::radians(azimuthDeg);
+    float alt = glm::radians(altitudeDeg);
+    float x = cos(alt) * sin(az);
+    float y = sin(alt);
+    float z = cos(alt) * cos(az);
+    return glm::vec3(x, y, z);
+}
+
+auto DirectionFromAzimuthAltitude(float azimuthDeg, float altitudeDeg) -> glm::vec3
+{
+    float azimuthRad = glm::radians(azimuthDeg);
+    float altitudeRad = glm::radians(altitudeDeg);
+
+    float x = cos(altitudeRad) * sin(azimuthRad);
+    float y = sin(altitudeRad);
+    float z = cos(altitudeRad) * cos(azimuthRad);
+
+    return glm::normalize(glm::vec3(x, y, z));
+}
+
+auto DrawDirectionalArrow(
+    glm::vec3 origin,
+    glm::vec3 direction,
+    float length,
+    float headSize,
+    glm::vec4 color) -> void {
+
+    glm::vec3 dir = glm::normalize(direction);
+    glm::vec3 tip = origin + dir * length;
+
+    AddDebugLine(origin, tip, color, color);
+
+    glm::vec3 up = glm::vec3(0, 1, 0);
+    glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    if (glm::length(right) < 0.001f) {
+        right = glm::vec3(1, 0, 0); // fallback if dir is nearly Y
+    }
+
+    glm::vec3 headOffset1 = -dir * headSize + right * headSize * 0.5f;
+    glm::vec3 headOffset2 = -dir * headSize - right * headSize * 0.5f;
+
+    AddDebugLine(tip, tip + headOffset1, color, color); // left wing
+    AddDebugLine(tip, tip + headOffset2, color, color); // right wing
+}
+
+auto UpdateGlobalLights(entt::registry& registry) -> void {
+    const auto globalLightsEntities = registry.view<TComponentGlobalLight>();
+
+    auto globalLightIndex = 0;
+    for (const auto globalLightEntity : globalLightsEntities) {
+        const auto& globalLight = registry.get<TComponentGlobalLight>(globalLightEntity);
+        const auto direction = DirectionFromAzimuthAltitude(globalLight.Azimuth, globalLight.Elevation);
+        g_gpuGlobalLights[globalLightIndex++] = {
+            .Direction = glm::vec4{-direction, 0.0f},
+            .ColorAndIntensity = glm::vec4{globalLight.Color, globalLight.Intensity},
+            .LightProperties = glm::ivec4{globalLight.IsEnabled, globalLight.CanCastShadows, 0, 0}
+        };
+        if (globalLight.IsDebugEnabled) {
+            /*
+            for (float alt = 15; alt <= 90; alt += 15) {
+                for (float azi = 0; azi < 360; azi += 15) {
+                    // create points along a circle at constant altitude
+                    glm::vec3 p1 = spherePoint(azi, alt);
+                    glm::vec3 p2 = spherePoint(azi + 15, alt);
+                    AddDebugLine(p1, p2, g_gpuGlobalLights[globalLightIndex].ColorAndIntensity); // latitude ring
+                }
+            }
+
+            for (float azi = 0; azi < 360; azi += 15) {
+                for (float alt = 0; alt <= 75; alt += 15) {
+                    glm::vec3 p1 = spherePoint(azi, alt);
+                    glm::vec3 p2 = spherePoint(azi, alt + 15);
+                    AddDebugLine(p1, p2, g_gpuGlobalLights[globalLightIndex].ColorAndIntensity); // longitude lines
+                }
+            }
+
+            // light direction vector
+            glm::vec3 dir = spherePoint(globalLight.Azimuth, globalLight.Elevation) * 10.0f;
+            AddDebugLine(glm::vec3(0), dir, glm::vec4(1, 1, 0, 1), glm::vec4(1, 1, 0, 1)); // yellow
+            */
+            DrawDirectionalArrow(glm::vec3(0), direction, 100.0f, 10.0f, glm::vec4(1, 1, 0, 1));
+        }
+        if (globalLightIndex >= MAX_GLOBAL_LIGHTS) {
+            break;
+        }
+    }
+
+    UpdateBuffer(g_globalLightsBuffer, 0, sizeof(TGpuGlobalLight) * 8, g_gpuGlobalLights.data());
 }
 
 auto UpdateAllTransforms(entt::registry& registry) -> void{
@@ -1432,6 +1579,20 @@ bool g_uiIsMagnifierEnabled = true;
 float g_uiMagnifierZoom = 1.0f;
 glm::vec2 g_uiMagnifierLastCursorPos = {};
 glm::vec2 g_uiViewportContentOffset = {};
+
+auto inline AddDebugLine(
+    const glm::vec3& start,
+    const glm::vec3& end,
+    const glm::vec4& startColor,
+    const glm::vec4& endColor) -> void {
+
+    g_debugLinesPass.DebugLines.push_back(TGpuDebugLine{
+        .StartPosition = start,
+        .StartColor = startColor,
+        .EndPosition = end,
+        .EndColor = endColor
+    });
+}
 
 auto inline ResetDebugLines() -> void {
 
@@ -1638,7 +1799,7 @@ auto inline RenderComposePass() -> void {
 
         g_composePass.Pipeline.Bind();
         //g_resolvePass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-        //g_resolvePass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
+        g_composePass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 0);
         g_composePass.Pipeline.BindTexture(0, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
         g_composePass.Pipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
         g_composePass.Pipeline.BindTexture(2, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);
@@ -1754,6 +1915,8 @@ auto Renderer::Render(
     ResetDebugLines();
 
     CreateGpuResourcesIfNecessary(registry);
+
+    UpdateGlobalLights(registry);
 
     UpdateAllTransforms(registry);
     UpdateGlobalTransforms(registry);

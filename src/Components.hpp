@@ -85,4 +85,14 @@ struct TComponentCamera {
     bool IsPrimary = false;
 };
 
+struct TComponentGlobalLight {
+    float Azimuth;
+    float Elevation;
+    glm::vec3 Color = {1.0f, 1.0f, 1.0f};
+    float Intensity = 1.0f;
+    bool IsEnabled = false;
+    bool CanCastShadows = false;
+    bool IsDebugEnabled = true;
+};
+
 auto EntityChangeParent(entt::registry& registry, entt::entity entity, entt::entity parent) -> void;
