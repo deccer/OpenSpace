@@ -3,6 +3,8 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/scottt/debugbreak
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 FetchContent_GetProperties(debugbreak)
 if(NOT debugbreak_POPULATED)

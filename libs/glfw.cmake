@@ -11,6 +11,8 @@ FetchContent_Declare(
     GIT_TAG        3.4
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 message("Fetching glfw")
 FetchContent_MakeAvailable(glfw)

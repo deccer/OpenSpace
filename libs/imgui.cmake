@@ -7,6 +7,8 @@ else()
         GIT_TAG        docking
         GIT_SHALLOW    TRUE
         GIT_PROGRESS   TRUE
+        EXCLUDE_FROM_ALL
+        SYSTEM
     )
     FetchContent_GetProperties(imgui)
     if(NOT imgui_POPULATED)

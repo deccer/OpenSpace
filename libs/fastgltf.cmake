@@ -2,6 +2,8 @@ FetchContent_Declare(
     fastgltf
     GIT_REPOSITORY https://github.com/spnda/fastgltf.git
     GIT_TAG        main
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 message("Fetching fastgltf")
 set(FASTGLTF_USE_CUSTOM_SMALLVECTOR OFF CACHE BOOL "Uses a custom SmallVector type optimised for small arrays" FORCE)

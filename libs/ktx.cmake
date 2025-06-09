@@ -8,6 +8,8 @@ FetchContent_Declare(
     ktx
     GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
     GIT_TAG        v4.3.2
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
 set(KTX_FEATURE_KTX1 ON CACHE BOOL "" FORCE)

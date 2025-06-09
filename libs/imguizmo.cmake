@@ -7,6 +7,8 @@ else()
         GIT_TAG        master
         GIT_SHALLOW    TRUE
         GIT_PROGRESS   TRUE
+        EXCLUDE_FROM_ALL
+        SYSTEM
     )
     FetchContent_GetProperties(imguizmo)
     if(NOT imguizmo_POPULATED)

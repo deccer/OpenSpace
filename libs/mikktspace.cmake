@@ -4,6 +4,8 @@ FetchContent_Declare(
     GIT_TAG         master
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 FetchContent_GetProperties(mikktspace)
 if(NOT mikktspace_POPULATED)

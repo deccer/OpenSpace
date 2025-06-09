@@ -4,6 +4,8 @@ FetchContent_Declare(
     GIT_TAG        v0.3.5
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 message("Fetching poolSTL")
 FetchContent_MakeAvailable(poolSTL)

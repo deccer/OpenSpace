@@ -4,6 +4,8 @@ FetchContent_Declare(
     GIT_TAG         v0.11.1
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
 set(TRACY_ENABLE ON CACHE BOOL "Enable profiling")
 set(TRACY_ONLY_IPV4 ON CACHE BOOL "IPv4 only")

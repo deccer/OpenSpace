@@ -7,6 +7,8 @@ else()
         GIT_TAG        v2.0.6
         GIT_SHALLOW    TRUE
         GIT_PROGRESS   TRUE
+        EXCLUDE_FROM_ALL
+        SYSTEM
     )
 
     FetchContent_GetProperties(glad)
