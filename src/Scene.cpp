@@ -158,13 +158,20 @@ auto TScene::Load() -> bool {
 
     /// Setup Scene ////////////
     _rootEntity = CreateEmpty("Root");
-    auto sunLight = CreateGlobalLight(
-        "Sun Light",
+    auto sun1Light = CreateGlobalLight(
+        "Sun1 Light",
         0.0f,
         45.0f,
         glm::vec3{1.0f, 0.95f, 0.8f},
         5.0f);
-    SetParent(sunLight, _rootEntity);
+    SetParent(sun1Light, _rootEntity);
+    auto sun2Light = CreateGlobalLight(
+        "Sun2 Light",
+        180.0f,
+        45.0f,
+        glm::vec3{0.1f, 0.0f, 1.0f},
+        5.0f);
+    SetParent(sun2Light, _rootEntity);
 
     CreateModel("Axes", "axes");
 
