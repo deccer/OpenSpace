@@ -10,8 +10,10 @@
 
 #include <entt/entity/fwd.hpp>
 
-#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/matrix_interpolation.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -1446,40 +1448,56 @@ auto RenderEntityProperties(
     }    
 }
 
-auto DirectionFromAzimuthAltitude(
+auto PolarToCartesian(
     const float azimuth,
-    const float altitude) -> glm::vec3 {
+    const float elevation) -> glm::vec3 {
 
-    const float x = cos(altitude) * sin(azimuth);
-    const float y = sin(altitude);
-    const float z = cos(altitude) * cos(azimuth);
+    const float x = sin(elevation) * cos(azimuth);
+    const float y = sin(elevation) * sin(azimuth);
+    const float z = cos(elevation);
 
-    return glm::normalize(glm::vec3(x, y, z));
+    auto axis = glm::normalize(glm::vec3(x, y, z));
+    axis = glm::rotateX(axis, -glm::radians(90.0f));
+    return glm::rotateY(axis, glm::radians(90.0f));
 }
 
-auto DrawDirectionalArrow(
+auto DrawDirectionalLightMarker(
     const glm::vec3 origin,
-    const glm::vec3 direction,
-    const float length,
-    const float headSize,
+    const glm::vec3 lightDir,
+    const float arrowLength,
+    const float discRadius,
     const glm::vec4 color) -> void {
 
-    const auto dir = glm::normalize(direction);
-    const auto tip = origin + dir * length;
+    const auto dir = glm::normalize(lightDir);
+    const auto tip = origin + dir * arrowLength;
 
-    AddDebugLine(origin, tip, color, color);
+    AddDebugLine(tip, origin, color, color);
 
+    // Orthonormal basis for disc/arrowhead
     constexpr auto up = glm::vec3(0, 1, 0);
-    glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    auto right = glm::normalize(glm::cross(dir, up));
     if (glm::length(right) < 0.001f) {
-        right = glm::vec3(1, 0, 0); // fallback if dir is nearly Y
+        right = glm::vec3(1, 0, 0);
     }
+    const auto forward = glm::normalize(glm::cross(right, dir));
 
-    const auto headOffset1 = -dir * headSize + right * headSize * 0.5f;
-    const auto headOffset2 = -dir * headSize - right * headSize * 0.5f;
+    // Arrowhead lines
+    const auto headOffset1 = -dir * 0.5f + right * 0.25f;
+    const auto headOffset2 = -dir * 0.5f - right * 0.25f;
+    AddDebugLine(tip + headOffset1, tip, color, color);
+    AddDebugLine(tip + headOffset2, tip, color, glm::vec4(color.xyz() * 0.8f, 0.4f));
 
-    AddDebugLine(tip, tip + headOffset1, color, color); // left wing
-    AddDebugLine(tip, tip + headOffset2, color, color); // right wing
+    // Disc at tip
+    constexpr auto segments = 32;
+    for (int i = 0; i < segments; ++i) {
+        const auto lineSegmentStart = glm::two_pi<float>() * i / segments;
+        const auto lineSegmentEnd = glm::two_pi<float>() * (i + 1) / segments;
+
+        const auto start = tip + (cos(lineSegmentStart) * right + sin(lineSegmentStart) * forward) * discRadius;
+        const auto end = tip + (cos(lineSegmentEnd) * right + sin(lineSegmentEnd) * forward) * discRadius;
+
+        AddDebugLine(start, end, color * 0.8f, color * 0.8f);
+    }
 }
 
 auto UpdateGlobalLights(entt::registry& registry) -> void {
@@ -1488,14 +1506,14 @@ auto UpdateGlobalLights(entt::registry& registry) -> void {
     auto globalLightIndex = 0;
     for (const auto globalLightEntity : globalLightsEntities) {
         const auto& globalLight = registry.get<TComponentGlobalLight>(globalLightEntity);
-        const auto direction = DirectionFromAzimuthAltitude(globalLight.Azimuth, globalLight.Elevation);
+        const auto direction = PolarToCartesian(globalLight.Azimuth, globalLight.Elevation);
         g_gpuGlobalLights[globalLightIndex++] = {
             .Direction = glm::vec4{-direction, 0.0f},
             .ColorAndIntensity = glm::vec4{globalLight.Color, globalLight.Intensity},
             .LightProperties = glm::ivec4{globalLight.IsEnabled, globalLight.CanCastShadows, 0, 0}
         };
         if (globalLight.IsDebugEnabled) {
-            DrawDirectionalArrow(glm::vec3(0), direction, 100.0f, 10.0f, glm::vec4(globalLight.Color, 1));
+            DrawDirectionalLightMarker(glm::vec3(0), direction, 32.0f, 32.0f, glm::vec4(globalLight.Color, 1));
         }
         if (globalLightIndex >= MAX_GLOBAL_LIGHTS) {
             break;
