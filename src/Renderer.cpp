@@ -650,7 +650,7 @@ auto CreateTextureForMaterialChannel(
         .TextureType = TTextureType::Texture2D,
         .Format = channel == Assets::TAssetMaterialChannel::Color
             ? TFormat::R8G8B8A8_SRGB
-            : TFormat::R8G8B8A8_UNORM,
+            : TFormat::R8G8B8A8_SNORM,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
