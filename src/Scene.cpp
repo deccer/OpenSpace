@@ -159,25 +159,41 @@ auto TScene::Load() -> bool {
     /// Setup Scene ////////////
     _rootEntity = CreateEmpty("Root");
     auto sun1Light = CreateGlobalLight(
-        "Sun1 Light",
+        "Sun Purple Light (N)",
         0.0f,
-        45.0f,
-        glm::vec3{1.0f, 0.95f, 0.8f},
+        glm::radians(45.0f),
+        glm::vec3{1.0f, 0.0f, 0.2f},
         5.0f);
     SetParent(sun1Light, _rootEntity);
     auto sun2Light = CreateGlobalLight(
-        "Sun2 Light",
-        180.0f,
-        45.0f,
-        glm::vec3{0.1f, 0.0f, 1.0f},
+        "Sun Blue Light (S)",
+        glm::radians(180.0f),
+        glm::radians(45.0f),
+        glm::vec3{0.0f, 0.0f, 1.0f},
         5.0f);
     SetParent(sun2Light, _rootEntity);
+
+    auto sun3Light = CreateGlobalLight(
+        "Sun Blue Light (E)",
+        glm::radians(90.0f),
+        glm::radians(45.0f),
+        glm::vec3{0.0f, 1.0f, 0.0f},
+        5.0f);
+    SetParent(sun3Light, _rootEntity);
+
+    auto sun4Light = CreateGlobalLight(
+        "Sun Blue Light (W)",
+        glm::radians(270.0f),
+        glm::radians(45.0f),
+        glm::vec3{1.0f, 1.0f, 0.0f},
+        5.0f);
+    SetParent(sun4Light, _rootEntity);
 
     CreateModel("Axes", "axes");
 
     _playerEntity = CreateEmpty("Player");
     SetParent(_playerEntity, _rootEntity);
-    SetPosition(_playerEntity, glm::vec3{0.0f, 0.0f, 0.0f});
+    SetPosition(_playerEntity, glm::vec3{-30.0f, 0.0f, -10.0f});
     SetOrientation(_playerEntity, 0.0f, glm::radians(-90.0f), 0.0f);
     AddComponent<TComponentPositionBackup>(_playerEntity, glm::vec3{0.0f});
     AddComponent<TComponentCamera>(_playerEntity, TComponentCamera {
