@@ -1,16 +1,13 @@
-FetchContent_Declare(
-    debugbreak
-    GIT_REPOSITORY https://github.com/scottt/debugbreak
-    GIT_SHALLOW    TRUE
-    GIT_PROGRESS   TRUE
-    EXCLUDE_FROM_ALL
-    SYSTEM
-)
-FetchContent_GetProperties(debugbreak)
-if(NOT debugbreak_POPULATED)
-    message("Fetching debugbreak")
-    FetchContent_MakeAvailable(debugbreak)
+include(../cmake/CPM.cmake)
 
+CPMAddPackage(
+    NAME            debugbreak
+    GIT_REPOSITORY  https://github.com/scottt/debugbreak
+    GIT_TAG         v1.0
+    GIT_SHALLOW     TRUE
+    GIT_PROGRESS    TRUE
+)
+if(debugbreak_ADDED)
     add_library(debugbreak INTERFACE ${debugbreak_SOURCE_DIR}/debugbreak.h)
     target_include_directories(debugbreak INTERFACE ${debugbreak_SOURCE_DIR})
 endif()

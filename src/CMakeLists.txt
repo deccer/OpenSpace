@@ -59,21 +59,24 @@ target_precompile_headers(OpenSpace
 )
 
 target_link_libraries(OpenSpace
+    PRIVATE mimalloc-static
+    PRIVATE debugbreak
+    PRIVATE poolSTL::poolSTL
+    PRIVATE phmap
+
+    PRIVATE spdlog
+
     PRIVATE glfw
     PRIVATE glad
     PRIVATE glm
+    PRIVATE stb
     PRIVATE imgui
     PRIVATE imguizmo
-    PRIVATE stb
-    PRIVATE debugbreak
-    PRIVATE spdlog
-    PRIVATE poolSTL::poolSTL
+    PRIVATE mikktspace
     PRIVATE fastgltf
     PRIVATE EnTT
-    PRIVATE mimalloc-static
-    #PRIVATE Jolt
-    PRIVATE mikktspace
-    PRIVATE phmap
+    #PRIVATE Jolt::Jolt
+    #PRIVATE ktx
 )
 
 # tbb is not required on windows for some reason

@@ -1,14 +1,12 @@
-FetchContent_Declare(
-    tracy
+include(../cmake/CPM.cmake)
+
+CPMAddPackage(
+    NAME            tracu
     GIT_REPOSITORY  https://github.com/wolfpld/tracy.git
     GIT_TAG         v0.11.1
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
-    EXCLUDE_FROM_ALL
-    SYSTEM
+    OPTIONS         "TRACY_ENABLE ON"
+    OPTIONS         "TRACY_ONLY_IPV4 ON"
+    #OPTIONS         "TRACY_NO_SYSTEM_TRACING ON"
 )
-set(TRACY_ENABLE ON CACHE BOOL "Enable profiling")
-set(TRACY_ONLY_IPV4 ON CACHE BOOL "IPv4 only")
-#set(TRACY_NO_SYSTEM_TRACING ON CACHE BOOL "Disable System Tracing")
-message("Fetching tracy")
-FetchContent_MakeAvailable(tracy)
