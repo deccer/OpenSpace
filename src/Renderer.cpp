@@ -360,8 +360,8 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
 
     auto computePrefilteredRadianceMapComputePipeline = *computePrefilteredRadianceMapComputePipelineResult;
 
-    constexpr auto baseSize = 128;
-    constexpr auto maxMipLevels = 5;
+    constexpr auto baseSize = 512;
+    constexpr auto maxMipLevels = 9;
 
     constexpr auto format = TFormat::R16G16B16A16_FLOAT;
 
@@ -384,12 +384,8 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
         const auto mipSize = baseSize >> mipLevel;
         const auto roughness = static_cast<float>(mipLevel) / static_cast<float>(maxMipLevels - 1);
 
-
         computePrefilteredRadianceMapComputePipeline.BindImage(0, prefilteredEnvironmentMap.Id, mipLevel, 0, TMemoryAccess::WriteOnly, format);
-
         computePrefilteredRadianceMapComputePipeline.SetUniform(0, roughness);
-        computePrefilteredRadianceMapComputePipeline.SetUniform(1, mipLevel);
-        computePrefilteredRadianceMapComputePipeline.SetUniform(2, mipSize);
 
         const auto numGroups = (mipSize + 31) / 32;
         computePrefilteredRadianceMapComputePipeline.Dispatch(numGroups, numGroups, 6u);
@@ -648,9 +644,9 @@ auto CreateTextureForMaterialChannel(
 
     const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
-        .Format = channel == Assets::TAssetMaterialChannel::Color
-            ? TFormat::R8G8B8A8_SRGB
-            : TFormat::R8G8B8A8_SNORM,
+        .Format = channel == Assets::TAssetMaterialChannel::Normals
+            ? TFormat::R8G8B8A8_UNORM
+            : TFormat::R8G8B8A8_SRGB,
         .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
@@ -1760,10 +1756,9 @@ auto inline RenderGeometryPass(const entt::registry& registry) -> void {
             auto& cpuMaterial = GetCpuMaterial(materialComponent.GpuMaterial);
             auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
 
-            auto worldMatrix = transformComponent;
             g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
             g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
-            g_geometryPass.Pipeline.SetUniform(0, worldMatrix);
+            g_geometryPass.Pipeline.SetUniform(0, transformComponent);
 
             g_geometryPass.Pipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
             g_geometryPass.Pipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
@@ -1787,8 +1782,7 @@ auto inline RenderComposePass() -> void {
         const auto& sampler = GetSampler(g_fstSamplerNearestClampToEdge);
 
         g_composePass.Pipeline.Bind();
-        //g_resolvePass.Pipeline.BindBufferAsUniformBuffer(g_globalUniformsBuffer, 0);
-        g_composePass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 0);
+        g_composePass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 1);
         g_composePass.Pipeline.BindTexture(0, g_depthPrePass.Framebuffer.DepthStencilAttachment->Texture.Id);
         g_composePass.Pipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
         g_composePass.Pipeline.BindTexture(2, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);

@@ -162,7 +162,7 @@ auto TScene::Load() -> bool {
         "Sun Purple Light (N)",
         0.0f,
         glm::radians(45.0f),
-        glm::vec3{1.0f, 0.0f, 0.2f},
+        glm::vec3{1.0f, 0.0f, 0.5f},
         5.0f);
     SetParent(sun1Light, _rootEntity);
     auto sun2Light = CreateGlobalLight(
@@ -174,7 +174,7 @@ auto TScene::Load() -> bool {
     SetParent(sun2Light, _rootEntity);
 
     auto sun3Light = CreateGlobalLight(
-        "Sun Blue Light (E)",
+        "Sun Green Light (E)",
         glm::radians(90.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 1.0f, 0.0f},
@@ -182,7 +182,7 @@ auto TScene::Load() -> bool {
     SetParent(sun3Light, _rootEntity);
 
     auto sun4Light = CreateGlobalLight(
-        "Sun Blue Light (W)",
+        "Sun Yellow Light (W)",
         glm::radians(270.0f),
         glm::radians(45.0f),
         glm::vec3{1.0f, 1.0f, 0.0f},
