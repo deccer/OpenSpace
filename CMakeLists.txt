@@ -23,7 +23,7 @@ project(OpenSpace
     LANGUAGES C CXX
 )
 
-set(CPM_SOURCE_CACHE "$ENV{HOME}/.cache/CPM")
+set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
