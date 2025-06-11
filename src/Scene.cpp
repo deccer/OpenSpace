@@ -153,7 +153,9 @@ auto TScene::Load() -> bool {
 
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/DamagedHelmet/DamagedHelmet.gltf");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
     /// Setup Scene ////////////
