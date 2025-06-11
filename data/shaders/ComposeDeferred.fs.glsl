@@ -25,7 +25,7 @@ struct TGpuGlobalLight {
     ivec4 Properties;
 };
 
-layout(binding = 0, std140) uniform GlobalLights {
+layout(binding = 1, std140) uniform GlobalLights {
     TGpuGlobalLight Lights[8];
 } u_global_lights;
 
@@ -39,39 +39,68 @@ vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-float DistributionGGX(vec3 N, vec3 H, float roughness) {
-    float a = roughness * roughness;
-    float a2 = a * a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH * NdotH;
-
-    float num = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-
-    return num / denom;
+vec3 F_Schlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness) {
+vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+// Normal Distribution function --------------------------------------
+float D_GGX(float dotNH, float roughness) {
+    float alpha = roughness * roughness;
+    float alphaSquared = alpha * alpha;
+    float denom = dotNH * dotNH * (alphaSquared - 1.0) + 1.0;
+    return (alphaSquared) / (PI * denom * denom);
+}
+
+// Geometric Shadowing function --------------------------------------
+float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness) {
     float r = (roughness + 1.0);
-    float k = (r * r) / 8.0; // Direct lighting k = (roughness + 1)^2 / 8
-
-    float num = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-
-    return num / denom;
+    float k = (r * r) / 8.0;
+    float GL = dotNL / (dotNL * (1.0 - k) + k);
+    float GV = dotNV / (dotNV * (1.0 - k) + k);
+    return GL * GV;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+vec3 GetPrefilteredReflection(vec3 R, float roughness) {
+    const float MAX_REFLECTION_LOD = 9.0; // 512x512 BRDF LUT
+    float lod = roughness * MAX_REFLECTION_LOD;
+    float lodf = floor(lod);
+    float lodc = ceil(lod);
+    vec3 a = textureLod(s_prefiltered_radiance_environment, R, lodf).rgb;
+    vec3 b = textureLod(s_prefiltered_radiance_environment, R, lodc).rgb;
+    return mix(a, b, lod - lodf);
+}
 
-    return ggx1 * ggx2;
+vec3 SpecularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness, vec3 albedo) {
+
+    // Precalculate vectors and dot products
+    vec3 H = normalize (V + L);
+    float dotNH = clamp(dot(N, H), 0.0, 1.0);
+    float dotNV = clamp(dot(N, V), 0.0, 1.0);
+    float dotNL = clamp(dot(N, L), 0.0, 1.0);
+
+    vec3 color = vec3(0.0);
+
+    if (dotNL > 0.0) {
+        // D = Normal distribution (Distribution of the microfacets)
+        float D = D_GGX(dotNH, roughness);
+        // G = Geometric shadowing term (Microfacets shadowing)
+        float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
+        // F = Fresnel factor (Reflectance depending on angle of incidence)
+        vec3 F = FresnelSchlick(dotNV, F0);
+        vec3 specular = D * F * G / (4.0 * dotNL * dotNV + 0.001);
+        vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+        color += (kD * albedo / PI + specular) * dotNL;
+    }
+
+    return color;
 }
 
 vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat4 invViewProj) {
+
     float z = depth * 2.0 - 1.0; // [0, 1] -> [-1, 1]
     vec2 position_cs = gl_FragCoord.xy / (screenSize - 1); // [0.5, screenSize] -> [0, 1]
     vec4 position_ndc = vec4(position_cs * 2.0 - 1.0, z, 1.0); // [0, 1] -> [-1, 1]
@@ -83,45 +112,13 @@ vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat
     return position_ws.xyz;
 }
 
-vec3 SamplePrefilteredEnvironmentMap(vec3 direction, float roughness) {
-    const float MAX_REFLECTION_LOD = 4.0; // maxMipLevels - 1
-    float lod = roughness * MAX_REFLECTION_LOD;
-    return textureLod(s_prefiltered_radiance_environment, direction, lod).rgb;
-}
-
-vec3 CalculateGlobalLight(TGpuGlobalLight light, vec3 worldPos, vec3 N, vec3 V, vec3 albedo, float metallic, float roughness) {
-    vec3 L = normalize(-light.Direction.xyz);
-    vec3 H = normalize(V + L);
-
-    float NdL = max(dot(N, L), 0.0);
-    if (NdL <= 0.0) return vec3(0.0);
-
-    // Calculate base reflectivity
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, metallic);
-
-    // Cook-Torrance BRDF
-    float NDF = DistributionGGX(N, H, roughness);
-    float G = GeometrySmith(N, V, L, roughness);
-    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
-
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0 * max(dot(N, V), 0.0) * NdL + 0.001;
-    vec3 specular = numerator / denominator;
-
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - metallic;
-
-    return (kD * albedo / PI + specular) * light.ColorAndIntensity.rgb * light.ColorAndIntensity.w * NdL;
-}
-
 void main()
 {
     float depth = texelFetch(s_texture_depth, ivec2(gl_FragCoord.xy), 0).r;
     vec4 albedo = texelFetch(s_texture_gbuffer_albedo, ivec2(gl_FragCoord.xy), 0);
-    vec3 normal = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0).rgb * 2.0 - 1.0;
+    vec4 normal_ao = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0);
     vec4 velocity_metallic_roughness = texelFetch(s_texture_gbuffer_velocity_metallic_roughness, ivec2(gl_FragCoord.xy), 0);
+    vec3 normal = normal_ao.xyz;
 
     if (depth >= 1.0) {
         vec3 color = texture(s_environment, v_sky_ray).rgb;
@@ -130,40 +127,45 @@ void main()
         return;
     }
 
+    vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
+    vec3 V = normalize(u_camera_position.xyz - fragmentPosition_ws);
+    vec3 N = normalize(normal);
+    vec3 R = reflect(-V, N);
+
     float metallic = velocity_metallic_roughness.b;
     float roughness = velocity_metallic_roughness.a;
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo.rgb, metallic);
+    vec3 F0 = mix(vec3(0.04), albedo.rgb, metallic);
 
-    vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
-    vec3 v = normalize(u_camera_position.xyz - fragmentPosition_ws);
-    vec3 n = normalize(normal);
-    vec3 r = reflect(-v, n);
-    vec3 f = FresnelSchlick(max(dot(n, v), 0.0), F0);
-    //vec3 f = FresnelSchlickRoughness(max(dot(n, v), 0.0), F0, roughness);
-
-    vec3 irradiance = texture(s_irradiance_environment, n).rgb;
-    vec3 prefilteredColor = SamplePrefilteredEnvironmentMap(r, roughness);
-    vec2 brdf = texture(s_brdf_lut, vec2(max(dot(n, v), 0.0), roughness)).rg;
-
-    // IBL diffuse & specular
-    vec3 diffuse = irradiance * albedo.rgb;
-    vec3 specular = prefilteredColor * (f * brdf.x + brdf.y);
-
-    vec3 kS = f;
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;
-
-    vec3 indirect_light = (kD * diffuse + specular); // * ao;
-
-    vec3 direct_light = vec3(0.0);
+    vec3 Lo = vec3(0.0);
     for (int i = 0; i < 8; i++) {
         if (u_global_lights.Lights[i].Properties.x == 1) {
-            direct_light += CalculateGlobalLight(u_global_lights.Lights[i], fragmentPosition_ws, n, v, albedo.rgb, metallic, roughness);
+            vec3 L = normalize(u_global_lights.Lights[i].Direction.xyz - fragmentPosition_ws);
+            Lo += SpecularContribution(L, V, N, F0, metallic, roughness, u_global_lights.Lights[i].ColorAndIntensity.rgb);
         }
     }
 
-    vec3 color = indirect_light + direct_light;
+    vec3 irradiance = texture(s_irradiance_environment, N).rgb;
+    vec3 reflection = GetPrefilteredReflection(R, roughness);
+    vec2 brdf = texture(s_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
 
-    o_color = vec4(color, 1.0);
+    // Diffuse based on irradiance
+    vec3 diffuse = irradiance * albedo.rgb;
+    vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
+    // Specular reflectance
+    vec3 specular = reflection * (F * brdf.x + brdf.y);
+
+    // Ambient part
+    vec3 kD = 1.0 - F;
+    kD *= 1.0 - metallic;
+    vec3 ambient = (kD * diffuse + specular) * normal_ao.w;
+
+    vec3 color = ambient + Lo;
+    if (dot(N, V) < 0) {
+        color = vec3(1, 0, 1);
+    }
+
+    //o_color = vec4(N, 1.0);
+    o_color = vec4(N, 1.0);
+    //o_color = 0.0000001 * vec4(color, 1.0) + vec4(ambient, 0.0);
 }
