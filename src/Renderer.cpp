@@ -1555,7 +1555,7 @@ auto UpdateGlobalLights(entt::registry& registry) -> void {
             .LightProperties = glm::ivec4{globalLight.IsEnabled, globalLight.CanCastShadows, 0, 0}
         };
         if (globalLight.IsDebugEnabled) {
-            DrawDirectionalLightMarker(glm::vec3(0), direction, 32.0f, 32.0f, glm::vec4(globalLight.Color, 1));
+            DrawDirectionalLightMarker(glm::vec3(0), direction, 2048.0f, 64.0f, glm::vec4(globalLight.Color, 1));
         }
         if (globalLightIndex >= MAX_GLOBAL_LIGHTS) {
             break;
