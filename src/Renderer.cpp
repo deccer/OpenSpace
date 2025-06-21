@@ -1458,6 +1458,7 @@ auto RenderEntityProperties(
             auto& camera = registry.get<TComponentCamera>(entity);
 
             ImGui::Indent();
+            ImGui::SliderFloat("Field Of View", &camera.FieldOfView, 1.0f, 179.0f);
             ImGui::Unindent();
         }
     }
