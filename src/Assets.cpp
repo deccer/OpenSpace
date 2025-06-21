@@ -452,6 +452,8 @@ auto LoadMeshes(
             } else  {
                 assetPrimitive.Tangents.resize(assetPrimitive.Positions.size());
                 std::fill_n(assetPrimitive.Tangents.begin(), assetPrimitive.Positions.size(), glm::vec4{1.0f});
+
+                CalculateTangents(assetPrimitive);
             }
 
             g_assetPrimitives[assetPrimitiveName] = assetPrimitive;
