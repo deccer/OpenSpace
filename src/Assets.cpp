@@ -366,18 +366,23 @@ auto LoadMaterials(
             };
         }
 
-        const auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
-        const auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
+        if (fgMaterial.emissiveTexture.has_value()) {
+            const auto emissiveTextureIndex = GetImageIndex(fgAsset, fgMaterial.emissiveTexture);
+            const auto emissiveSamplerIndex = GetSamplerIndex(fgAsset, fgMaterial.emissiveTexture);
 
-        material.EmissiveTextureChannel = TAssetMaterialChannelData {
-            .Channel = TAssetMaterialChannel::Color,
-            .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_L_L_C2E_C2E",
-            .TextureName = emissiveTextureIndex.has_value() ? asset.Images[emissiveTextureIndex.value()] : "T_Default_S"
-        };
+            material.EmissiveTextureChannel = TAssetMaterialChannelData {
+                .Channel = TAssetMaterialChannel::Color,
+                .SamplerName = emissiveSamplerIndex.has_value() ? asset.Samplers[emissiveSamplerIndex.value()] : "S_L_L_C2E_C2E",
+                .TextureName = emissiveTextureIndex.has_value() ? asset.Images[emissiveTextureIndex.value()] : "T_Default_S"
+            };
+        }
 
         material.BaseColor = glm::make_vec4(fgMaterial.pbrData.baseColorFactor.data());
-        material.Metalness = fgMaterial.pbrData.metallicFactor;
         material.Roughness = fgMaterial.pbrData.roughnessFactor;
+        material.Metalness = fgMaterial.pbrData.metallicFactor;
+
+        material.EmissiveFactor = fgMaterial.emissiveStrength;
+        material.EmissiveColor = glm::make_vec3(fgMaterial.emissiveFactor.data());
     });
 
     for (auto i = 0; i < assetMaterials.size(); ++i) {

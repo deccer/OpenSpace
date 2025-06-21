@@ -68,6 +68,7 @@ struct TAssetMaterial {
     float NormalStrength = 1.0f;
     float Metalness = 0.0f;
     float Roughness = 0.0f;
+    glm::vec3 EmissiveColor = {};
     float EmissiveFactor = 1.0f;
     std::optional<TAssetMaterialChannelData> BaseColorTextureChannel = {};
     std::optional<TAssetMaterialChannelData> NormalTextureChannel = {};

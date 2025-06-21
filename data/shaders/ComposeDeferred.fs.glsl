@@ -6,8 +6,9 @@ layout(location = 0) out vec4 o_color;
 
 layout(binding = 0) uniform sampler2D s_texture_depth;
 layout(binding = 1) uniform sampler2D s_texture_gbuffer_albedo;
-layout(binding = 2) uniform sampler2D s_texture_gbuffer_normal;
-layout(binding = 2) uniform sampler2D s_texture_gbuffer_velocity_metallic_roughness;
+layout(binding = 2) uniform sampler2D s_texture_gbuffer_normal_ao;
+layout(binding = 3) uniform sampler2D s_texture_gbuffer_velocity_roughness_metallic;
+layout(binding = 4) uniform sampler2D s_texture_gbuffer_emissive;
 
 layout(binding = 8) uniform samplerCube s_environment;
 layout(binding = 9) uniform samplerCube s_irradiance_environment;
@@ -74,13 +75,22 @@ vec3 GetPrefilteredReflection(vec3 R, float roughness) {
     return mix(a, b, lod - lodf);
 }
 
+float sqr(float x) { return x*x; }
+vec3 sqr(vec3 x) { return vec3(sqr(x.x), sqr(x.y), sqr(x.z)); }
+
+vec3 F_Fresnel(vec3 SpecularColor, float VoH) {
+	vec3 SpecularColorSqrt = sqrt(clamp(vec3(0, 0, 0), vec3(0.99, 0.99, 0.99), SpecularColor));
+	vec3 n = (1.0 + SpecularColorSqrt) / (1.0 - SpecularColorSqrt);
+	vec3 g = sqrt(n*n + VoH*VoH - 1.0);
+	return 0.5 * sqr((g - VoH) / (g + VoH)) * (1.0 + sqr(((g + VoH) * VoH - 1) / ((g-VoH)*VoH + 1)));
+}
+
 vec3 SpecularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness, vec3 albedo) {
 
-    // Precalculate vectors and dot products
-    vec3 H = normalize (V + L);
+    vec3 H = normalize (L + V);
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
-    float dotNL = clamp(dot(N, L), 0.0, 1.0);
+    float dotNV = clamp(dot(N, V), 0.001, 1.0);
+    float dotNL = clamp(dot(N, L), 0.001, 1.0);
 
     vec3 color = vec3(0.0);
 
@@ -91,7 +101,7 @@ vec3 SpecularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float
         float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
         // F = Fresnel factor (Reflectance depending on angle of incidence)
         vec3 F = FresnelSchlick(dotNV, F0);
-        vec3 specular = D * F * G / (4.0 * dotNL * dotNV + 0.001);
+        vec3 specular = D * F * G / (4.0 * dotNL * dotNV + 0.001) * albedo;
         vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
         color += (kD * albedo / PI + specular) * dotNL;
     }
@@ -115,10 +125,6 @@ vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat
 void main()
 {
     float depth = texelFetch(s_texture_depth, ivec2(gl_FragCoord.xy), 0).r;
-    vec4 albedo = texelFetch(s_texture_gbuffer_albedo, ivec2(gl_FragCoord.xy), 0);
-    vec4 normal_ao = texelFetch(s_texture_gbuffer_normal, ivec2(gl_FragCoord.xy), 0);
-    vec4 velocity_metallic_roughness = texelFetch(s_texture_gbuffer_velocity_metallic_roughness, ivec2(gl_FragCoord.xy), 0);
-    vec3 normal = normal_ao.xyz;
 
     if (depth >= 1.0) {
         vec3 color = texture(s_environment, v_sky_ray).rgb;
@@ -127,20 +133,29 @@ void main()
         return;
     }
 
+    vec4 albedo = texelFetch(s_texture_gbuffer_albedo, ivec2(gl_FragCoord.xy), 0);
+    vec4 normal_ao = texelFetch(s_texture_gbuffer_normal_ao, ivec2(gl_FragCoord.xy), 0);
+    vec4 velocity_roughness_metallic = texelFetch(s_texture_gbuffer_velocity_roughness_metallic, ivec2(gl_FragCoord.xy), 0);
+    vec3 emissive = texelFetch(s_texture_gbuffer_emissive, ivec2(gl_FragCoord.xy), 0).rgb;
+
+    vec3 normal = normal_ao.xyz;
+
     vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
     vec3 V = normalize(u_camera_position.xyz - fragmentPosition_ws);
     vec3 N = normalize(normal);
     vec3 R = reflect(-V, N);
 
-    float metallic = velocity_metallic_roughness.b;
-    float roughness = velocity_metallic_roughness.a;
+    float roughness = velocity_roughness_metallic.b;
+    float metallic = velocity_roughness_metallic.a;
     vec3 F0 = mix(vec3(0.04), albedo.rgb, metallic);
 
+    vec3 L = vec3(0.0);
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < 8; i++) {
-        if (u_global_lights.Lights[i].Properties.x == 1) {
-            vec3 L = normalize(u_global_lights.Lights[i].Direction.xyz - fragmentPosition_ws);
-            Lo += SpecularContribution(L, V, N, F0, metallic, roughness, u_global_lights.Lights[i].ColorAndIntensity.rgb);
+        TGpuGlobalLight global_light = u_global_lights.Lights[i];
+        if (global_light.Properties.x == 1) {
+            L = normalize(-global_light.Direction.xyz);
+            Lo += SpecularContribution(L, V, N, F0, metallic, roughness, global_light.ColorAndIntensity.rgb * global_light.ColorAndIntensity.a);
         }
     }
 
@@ -160,12 +175,12 @@ void main()
     kD *= 1.0 - metallic;
     vec3 ambient = (kD * diffuse + specular) * normal_ao.w;
 
-    vec3 color = ambient + Lo;
-    if (dot(N, V) < 0) {
-        color = vec3(1, 0, 1);
-    }
+    vec3 color = ambient + Lo + emissive;
+    //if (dot(N, V) < 0) {
+    //    color = vec3(1, 0, 1);
+    //}
 
     //o_color = vec4(N, 1.0);
-    o_color = vec4(N, 1.0);
-    //o_color = 0.0000001 * vec4(color, 1.0) + vec4(ambient, 0.0);
+    o_color = vec4(color, 1.0);
+    //o_color = 0.0000001 * vec4(color, 1.0) + vec4(normal, 0.0);
 }
