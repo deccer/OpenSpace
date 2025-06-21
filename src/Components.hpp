@@ -78,7 +78,7 @@ struct TComponentPlanet {
 
 struct TComponentCamera {
 
-    float FieldOfView = 90.0f;
+    float FieldOfView = 60.0f;
     float CameraSpeed = 2.0f;
     float Sensitivity = 0.0015f;
 
