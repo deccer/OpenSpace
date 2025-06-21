@@ -243,29 +243,36 @@ struct TGpuMesh {
     glm::mat4 InitialTransform;
 };
 
+struct TCpuTexture {
+    uint32_t Id;
+    std::optional<uint32_t> SamplerId;
+    std::optional<uint64_t> BindlessHandle;
+};
+
+enum TCpuTextureFlag {
+    HasBaseColor = 1 << 0,
+    HasNormal = 1 << 1,
+    HasArm = 1 << 2,
+    HasEmissive = 1 << 3,
+};
+
 struct TCpuMaterial {
     glm::vec4 BaseColor;
-    glm::vec4 Factors; // use .x = base color factor .y = normal strength, .z = metalness, .w = roughness
+    glm::vec4 NormalStrengthRoughnessMetalnessEmissiveStrength; // use .x = normal strength, .y = roughness, .z = metalness, .w = emissive strength
+    glm::vec4 EmissiveColor;
 
-    uint32_t BaseColorTextureId;
-    uint32_t BaseColorTextureSamplerId;
-    uint32_t NormalTextureId;
-    uint32_t NormalTextureSamplerId;
+    TCpuTexture BaseColorTexture;
+    TCpuTexture NormalTexture;
+    TCpuTexture ArmTexture;
+    TCpuTexture MetallicRoughnessTexture;
+    TCpuTexture EmissiveTexture;
 
-    uint32_t ArmTextureId;
-    uint32_t ArmTextureSamplerId;
-    uint32_t EmissiveTextureId;
-    uint32_t EmissiveTextureSamplerId;
-
-    uint32_t MetallicRoughnessTextureId;
-    uint32_t MetallicRoughnessTextureSamplerId;
-    uint32_t _padding1;
-    uint32_t _padding2;
+    uint32_t HasTextureFlags = 0;
 };
 
 struct TGpuMaterial {
     glm::vec4 BaseColor;
-    glm::vec4 Factors; // use .x = base color factor .y = normal strength, .z = metalness, .w = roughness
+    glm::vec4 Factors; // use .x = normal strength .y = metalness, .z = roughness, .w = emission strength
 
     uint64_t BaseColorTexture;
     uint64_t NormalTexture;
@@ -273,8 +280,8 @@ struct TGpuMaterial {
     uint64_t ArmTexture;
     uint64_t EmissiveTexture;
 
-    uint32_t BaseColorTextureId;
-    uint32_t NormalTextureId;
+    uint64_t MetallicRoughnessTexture;
+    uint64_t _padding1;
 };
 
 struct TCpuGlobalLight {
@@ -432,7 +439,7 @@ auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t
     return shCoefficientBuffer;
 }
 
-auto LoadSkyTexture(const std::string& skyBoxName) -> std::expected<TEnvironmentMaps, std::string> {
+auto LoadEnvironmentMaps(const std::string& skyBoxName) -> std::expected<TEnvironmentMaps, std::string> {
 
     TEnvironmentMaps environmentMaps = {};
 
@@ -447,7 +454,6 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> std::expected<TEnvironment
 
     TTextureId environmentMapId = {};
 
-    //EnableFlipImageVertically();
     for (auto imageIndex = 0; imageIndex < skyBoxNames.size(); imageIndex++) {
 
         auto imageName = skyBoxNames[imageIndex];
@@ -479,7 +485,6 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> std::expected<TEnvironment
 
         Image::FreeImage(imageData);
     }
-    //DisableFlipImageVertically();
 
     GenerateMipmaps(environmentMapId);
 
@@ -508,28 +513,24 @@ auto LoadSkyTexture(const std::string& skyBoxName) -> std::expected<TEnvironment
     return environmentMaps;
 }
 
-auto EncodeNormal(const glm::vec3& normal) -> glm::vec2 {
-
-    auto OctWrap = [](const glm::vec2& v) -> glm::vec2 {
-        return (glm::vec2(1.0f) - glm::abs(glm::vec2(v.y, v.x))) * glm::sign(v);
-    };
-
-    const glm::vec3 normalized = normal / (glm::abs(normal.x) + glm::abs(normal.y) + glm::abs(normal.z));
-    const glm::vec2 encodedNormal = normalized.z >= 0.0f
-        ? glm::vec2(normalized.x, normalized.y)
-        : OctWrap(glm::vec2(normalized.x, normalized.y));
-    return encodedNormal * 0.5f + 0.5f;
+inline auto SignNotZero(const glm::vec2 v) -> glm::vec2 {
+    return glm::vec2(v.x >= 0.0f ? +1.0f : -1.0f, v.y >= 0.0f ? +1.0f : -1.0f);
 }
 
-auto DecodeNormal(const glm::vec2& encodedNormal) -> glm::vec3 {
-    const glm::vec2 p = encodedNormal * 2.0f - 1.0f;
-    glm::vec3 n(p.x, p.y, 1.0f - glm::abs(p.x) - glm::abs(p.y));
+inline auto EncodeOctahedral(const glm::vec3 input) -> glm::vec2 {
+    const auto encoded = glm::vec2{input.x, input.y} * (1.0f / (abs(input.x) + abs(input.y) + abs(input.z)));
+    return input.z <= 0.0f
+        ? (1.0f - glm::abs(glm::vec2{encoded.y, encoded.x})) * SignNotZero(encoded)
+        : encoded;
+}
 
-    const float t = glm::clamp(-n.z, 0.0f, 1.0f);
-    n.x += p.x >= 0.0f ? -t : t;
-    n.y += p.y >= 0.0f ? -t : t;
-
-    return glm::normalize(n);
+inline auto DecodeOctahedral(const glm::vec2 encoded) -> glm::vec3 {
+    const auto decoded = glm::vec3(glm::vec2(encoded.x, encoded.y), 1.0f - abs(encoded.x) - abs(encoded.y));
+    const auto signNotZero = glm::vec2(decoded.x >= 0.0f ? +1.0f : -1.0f, decoded.y >= 0.0f ? +1.0f : -1.0f);
+    if (decoded.z < 0.0f) {
+        glm::vec2(decoded.x, decoded.y) = (1.0f - abs(glm::vec2(decoded.y, decoded.x))) * signNotZero;
+    }
+    return normalize(decoded);
 }
 
 auto RendererCreateGpuMesh(
@@ -547,8 +548,8 @@ auto RendererCreateGpuMesh(
         };
 
         vertexNormalUvTangents[i] = {
-            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Normals[i])),
-            glm::packSnorm2x16(EncodeNormal(assetPrimitive.Tangents[i].xyz())),
+            glm::packSnorm2x16(EncodeOctahedral(assetPrimitive.Normals[i])),
+            glm::packSnorm2x16(EncodeOctahedral(assetPrimitive.Tangents[i].xyz())),
             glm::vec4(assetPrimitive.Uvs[i], assetPrimitive.Tangents[i].w, 0.0f),
         };
     }
@@ -568,19 +569,17 @@ auto RendererCreateGpuMesh(
         glNamedBufferStorage(buffers[2], sizeof(uint32_t) * assetPrimitive.Indices.size(), assetPrimitive.Indices.data(), 0);
     }
 
-    const auto gpuMesh = TGpuMesh{
-        .Name = label,
-        .VertexPositionBuffer = buffers[0],
-        .VertexNormalUvTangentBuffer = buffers[1],
-        .IndexBuffer = buffers[2],
-
-        .VertexCount = vertexPositions.size(),
-        .IndexCount = assetPrimitive.Indices.size(),
-    };
-
     {
         PROFILER_ZONESCOPEDN("Add Gpu Mesh");
-        g_gpuMeshes[label] = gpuMesh;
+        g_gpuMeshes[label] = TGpuMesh{
+            .Name = label,
+            .VertexPositionBuffer = buffers[0],
+            .VertexNormalUvTangentBuffer = buffers[1],
+            .IndexBuffer = buffers[2],
+
+            .VertexCount = vertexPositions.size(),
+            .IndexCount = assetPrimitive.Indices.size(),
+        };
     }
 }
 
@@ -611,7 +610,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string_view materialData
     const auto textureId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::Texture2D,
         .Format = TFormat::R8G8B8A8_UNORM,
-        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
+        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u },
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
         .SampleCount = TSampleCount::One,
@@ -620,8 +619,8 @@ auto CreateResidentTextureForMaterialChannel(const std::string_view materialData
 
     UploadTexture(textureId, TUploadTextureDescriptor{
         .Level = 0,
-        .Offset = TOffset3D{ 0, 0, 0},
-        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
+        .Offset = TOffset3D{ 0, 0, 0 },
+        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u },
         .UploadFormat = TUploadFormat::Auto,
         .UploadType = TUploadType::Auto,
         .PixelData = imageData.Data.get()
@@ -647,7 +646,7 @@ auto CreateTextureForMaterialChannel(
         .Format = channel == Assets::TAssetMaterialChannel::Normals
             ? TFormat::R8G8B8A8_UNORM
             : TFormat::R8G8B8A8_SRGB,
-        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
+        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u },
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
         .SampleCount = TSampleCount::One,
@@ -656,8 +655,8 @@ auto CreateTextureForMaterialChannel(
 
     UploadTexture(textureId, TUploadTextureDescriptor{
         .Level = 0,
-        .Offset = TOffset3D{ 0, 0, 0},
-        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u},
+        .Offset = TOffset3D{ 0, 0, 0 },
+        .Extent = TExtent3D{ static_cast<uint32_t>(imageData.Width), static_cast<uint32_t>(imageData.Height), 1u },
         .UploadFormat = TUploadFormat::Auto,
         .UploadType = TUploadType::Auto,
         .PixelData = imageData.Data.get()
@@ -730,50 +729,88 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     auto cpuMaterial = TCpuMaterial{
         .BaseColor = assetMaterialData.BaseColor,
+        .NormalStrengthRoughnessMetalnessEmissiveStrength = {
+            assetMaterialData.NormalStrength,
+            assetMaterialData.Roughness,
+            assetMaterialData.Metalness,
+            assetMaterialData.EmissiveFactor
+        },
+        .EmissiveColor = glm::vec4(assetMaterialData.EmissiveColor, 1.0f),
     };
 
     const auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
-    if (baseColorChannel.has_value()) {
+    if (baseColorChannel) {
         const auto& baseColor = *baseColorChannel;
         const auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
-
-        cpuMaterial.BaseColorTextureId = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
         const auto& sampler = GetSampler(samplerId);
-        cpuMaterial.BaseColorTextureSamplerId = sampler.Id;
+
+        cpuMaterial.BaseColorTexture = {
+            .Id = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel),
+            .SamplerId = sampler.Id,
+            .BindlessHandle = std::nullopt,
+        };
+        cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasBaseColor;
     }
 
     const auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
-    if (normalTextureChannel.has_value()) {
+    if (normalTextureChannel) {
         const auto& normalTexture = *normalTextureChannel;
         const auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
-
-        cpuMaterial.NormalTextureId = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
         const auto& sampler = GetSampler(samplerId);
-        cpuMaterial.NormalTextureSamplerId = sampler.Id;
+
+        cpuMaterial.NormalTexture = {
+            .Id = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel),
+            .SamplerId = sampler.Id,
+            .BindlessHandle = std::nullopt,
+        };
+        cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasNormal;
     }
 
     const auto& armTextureChannel = assetMaterialData.ArmTextureChannel;
-    if (armTextureChannel.has_value()) {
+    if (armTextureChannel) {
         const auto& armTexture = *armTextureChannel;
         const auto& armTextureSampler = Assets::GetAssetSampler(armTexture.SamplerName);
-
-        cpuMaterial.ArmTextureId = CreateTextureForMaterialChannel(armTexture.TextureName, armTexture.Channel);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(armTextureSampler));
         const auto& sampler = GetSampler(samplerId);
-        cpuMaterial.ArmTextureSamplerId = sampler.Id;
+
+        cpuMaterial.ArmTexture = {
+            .Id = CreateTextureForMaterialChannel(armTexture.TextureName, armTexture.Channel),
+            .SamplerId = sampler.Id,
+            .BindlessHandle = std::nullopt,
+        };
+        cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
     }
 
     const auto& metallicRoughnessTextureChannel = assetMaterialData.MetallicRoughnessTextureChannel;
-    if (metallicRoughnessTextureChannel.has_value()) {
+    if (metallicRoughnessTextureChannel) {
         const auto& metallicRoughnessTexture = *metallicRoughnessTextureChannel;
         const auto& metallicRoughnessSampler = Assets::GetAssetSampler(metallicRoughnessTexture.SamplerName);
-
-        cpuMaterial.MetallicRoughnessTextureId = CreateTextureForMaterialChannel(metallicRoughnessTexture.TextureName, metallicRoughnessTexture.Channel);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(metallicRoughnessSampler));
         const auto& sampler = GetSampler(samplerId);
-        cpuMaterial.MetallicRoughnessTextureSamplerId = sampler.Id;
+
+        cpuMaterial.MetallicRoughnessTexture = {
+            .Id = CreateTextureForMaterialChannel(metallicRoughnessTexture.TextureName, metallicRoughnessTexture.Channel),
+            .SamplerId = sampler.Id,
+            .BindlessHandle = std::nullopt,
+        };
+        cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
+    }
+
+    const auto& emissiveTextureChannel = assetMaterialData.EmissiveTextureChannel;
+    if (emissiveTextureChannel) {
+        const auto& emissiveTexture = *emissiveTextureChannel;
+        const auto& emissiveTextureSampler = Assets::GetAssetSampler(emissiveTexture.SamplerName);
+        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(emissiveTextureSampler));
+        const auto& sampler = GetSampler(samplerId);
+
+        cpuMaterial.EmissiveTexture = {
+            .Id = CreateTextureForMaterialChannel(emissiveTexture.TextureName, emissiveTexture.Channel),
+            .SamplerId = sampler.Id,
+            .BindlessHandle = std::nullopt,
+        };
+        cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasEmissive;
     }
 
     g_cpuMaterials[assetMaterialName] = cpuMaterial;
@@ -825,7 +862,15 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
                 .Label = "Geometry FBO TAA Velocity",
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
-                .LoadOperation = TFramebufferAttachmentLoadOperation::Load,
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            },
+            TFramebufferColorAttachmentDescriptor{
+                .Label = "Geometry FBO Emissive",
+                .Format = TFormat::R16G16B16A16_FLOAT,
+                .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             }
         },
         .DepthStencilAttachment = TFramebufferExistingDepthStencilAttachmentDescriptor{
@@ -918,7 +963,7 @@ auto Renderer::Initialize(
 
     Assets::AddDefaultAssets();
 
-    const auto loadSkyTextureResult = LoadSkyTexture("Miramar");
+    const auto loadSkyTextureResult = LoadEnvironmentMaps("Green");
     if (!loadSkyTextureResult.has_value()) {
         spdlog::error("Failed to load sky texture: {}", loadSkyTextureResult.error());
         return false;
@@ -1759,13 +1804,23 @@ auto inline RenderGeometryPass(const entt::registry& registry) -> void {
             g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
             g_geometryPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexNormalUvTangentBuffer, 2);
             g_geometryPass.Pipeline.SetUniform(0, transformComponent);
+            g_geometryPass.Pipeline.SetUniform(5, cpuMaterial.NormalStrengthRoughnessMetalnessEmissiveStrength);
+            g_geometryPass.Pipeline.SetUniform(6, cpuMaterial.EmissiveColor);
+            g_geometryPass.Pipeline.SetUniform(7, cpuMaterial.HasTextureFlags);
 
-            g_geometryPass.Pipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTextureId, cpuMaterial.BaseColorTextureSamplerId);
-            g_geometryPass.Pipeline.BindTextureAndSampler(9, cpuMaterial.NormalTextureId, cpuMaterial.NormalTextureSamplerId);
-            if (cpuMaterial.ArmTextureId != 0) {
-                g_geometryPass.Pipeline.BindTextureAndSampler(10, cpuMaterial.ArmTextureId, cpuMaterial.ArmTextureSamplerId);
-            } else if (cpuMaterial.MetallicRoughnessTextureId != 0) {
-                g_geometryPass.Pipeline.BindTextureAndSampler(10, cpuMaterial.MetallicRoughnessTextureId, cpuMaterial.MetallicRoughnessTextureSamplerId);
+            g_geometryPass.Pipeline.BindTextureAndSampler(8, cpuMaterial.BaseColorTexture.Id, *cpuMaterial.BaseColorTexture.SamplerId);
+            g_geometryPass.Pipeline.BindTextureAndSampler(9, cpuMaterial.NormalTexture.Id, *cpuMaterial.NormalTexture.SamplerId);
+            if (cpuMaterial.ArmTexture.Id != 0) {
+                g_geometryPass.Pipeline.BindTextureAndSampler(10, cpuMaterial.ArmTexture.Id, *cpuMaterial.ArmTexture.SamplerId);
+            } else if (cpuMaterial.MetallicRoughnessTexture.Id != 0) {
+                g_geometryPass.Pipeline.BindTextureAndSampler(10, cpuMaterial.MetallicRoughnessTexture.Id, *cpuMaterial.MetallicRoughnessTexture.SamplerId);
+            } else {
+                g_geometryPass.Pipeline.BindTextureAndSampler(10, 0, 0);
+            }
+            if (cpuMaterial.EmissiveTexture.Id != 0) {
+                g_geometryPass.Pipeline.BindTextureAndSampler(11, cpuMaterial.EmissiveTexture.Id, *cpuMaterial.EmissiveTexture.SamplerId);
+            } else {
+                g_geometryPass.Pipeline.BindTextureAndSampler(11, 0, 0);
             }
 
             g_geometryPass.Pipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
@@ -1787,6 +1842,7 @@ auto inline RenderComposePass() -> void {
         g_composePass.Pipeline.BindTexture(1, g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id);
         g_composePass.Pipeline.BindTexture(2, g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id);
         g_composePass.Pipeline.BindTexture(3, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id);
+        g_composePass.Pipeline.BindTexture(4, g_geometryPass.Framebuffer.ColorAttachments[3]->Texture.Id);
 
         g_composePass.Pipeline.BindTextureAndSampler(8, g_environmentMaps.EnvironmentMap, sampler.Id);
         g_composePass.Pipeline.BindTextureAndSampler(9, g_environmentMaps.IrradianceMap, sampler.Id);
@@ -2067,8 +2123,9 @@ auto UiRender(
                 ImGui::RadioButton("GBuffer-Albedo", &g_sceneViewerTextureIndex, 2);
                 ImGui::RadioButton("GBuffer-Normals", &g_sceneViewerTextureIndex, 3);
                 ImGui::RadioButton("GBuffer-Velocity", &g_sceneViewerTextureIndex, 4);
+                ImGui::RadioButton("GBuffer-Emissive", &g_sceneViewerTextureIndex, 5);
                 if (g_fxaaPass.IsEnabled) {
-                    ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 5);
+                    ImGui::RadioButton("FXAA", &g_sceneViewerTextureIndex, 6);
                 }
                 ImGui::EndMenu();
             }
@@ -2106,7 +2163,8 @@ auto UiRender(
                     case 2: return g_geometryPass.Framebuffer.ColorAttachments[0]->Texture.Id;
                     case 3: return g_geometryPass.Framebuffer.ColorAttachments[1]->Texture.Id;
                     case 4: return g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id;
-                    case 5: return g_fxaaPass.Framebuffer.ColorAttachments[0]->Texture.Id;
+                    case 5: return g_geometryPass.Framebuffer.ColorAttachments[3]->Texture.Id;
+                    case 6: return g_fxaaPass.Framebuffer.ColorAttachments[0]->Texture.Id;
                     default: std::unreachable();
                 }
 
