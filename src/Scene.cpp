@@ -155,7 +155,11 @@ auto TScene::Load() -> bool {
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/SM_Capital_001.glb");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/DamagedHelmet/DamagedHelmet.gltf");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/DamagedHelmetReExported/DamagedHelmetReExported.glb");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/Sponza/Sponza.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/cutlass/cutlass.gltf");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/scene.gltf");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
     /// Setup Scene ////////////
@@ -165,14 +169,14 @@ auto TScene::Load() -> bool {
         0.0f,
         glm::radians(45.0f),
         glm::vec3{1.0f, 0.0f, 0.5f},
-        5.0f);
+        0.5f);
     SetParent(sun1Light, _rootEntity);
     auto sun2Light = CreateGlobalLight(
         "Sun Blue Light (S)",
         glm::radians(180.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 0.0f, 1.0f},
-        5.0f);
+        0.5f);
     SetParent(sun2Light, _rootEntity);
 
     auto sun3Light = CreateGlobalLight(
@@ -180,7 +184,7 @@ auto TScene::Load() -> bool {
         glm::radians(90.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 1.0f, 0.0f},
-        5.0f);
+        0.5f);
     SetParent(sun3Light, _rootEntity);
 
     auto sun4Light = CreateGlobalLight(
@@ -188,7 +192,7 @@ auto TScene::Load() -> bool {
         glm::radians(270.0f),
         glm::radians(45.0f),
         glm::vec3{1.0f, 1.0f, 0.0f},
-        5.0f);
+        0.5f);
     SetParent(sun4Light, _rootEntity);
 
     CreateModel("Axes", "axes");
@@ -214,6 +218,7 @@ auto TScene::Load() -> bool {
 
     const auto capitalEntity = CreateModel("Capital 001", "SM_Capital_001");
     SetParent(capitalEntity, _rootEntity);
+    SetScale(capitalEntity, glm::vec3{90.0f});
     SetPosition(capitalEntity, glm::vec3{0.0f, 30.0f, -200.0f});
 
     return true;
