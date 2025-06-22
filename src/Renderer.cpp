@@ -1330,160 +1330,135 @@ auto RenderEntityProperties(
     entt::registry& registry,
     const entt::entity entity) -> void {
 
-    if (registry.all_of<TComponentName>(entity)) {
+    if (registry.all_of<TComponentName>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Name", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::Indent();
+        auto& name = registry.get<TComponentName>(entity);
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Name", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::InputText("##Name", name.Name.data(), name.Name.size());
+        ImGui::PopItemWidth();
 
-            ImGui::Indent();
-            auto& name = registry.get<TComponentName>(entity);
-
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::InputText("##Name", name.Name.data(), name.Name.size());
-            ImGui::PopItemWidth();
-
-            ImGui::Unindent();
-        }
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentHierarchy>(entity)) {
+    if (registry.all_of<TComponentHierarchy>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::Indent();
+        const auto& hierarchy = registry.get<TComponentHierarchy>(entity);
+        const auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Parent", ImGuiTreeNodeFlags_Leaf)) {
-
-            ImGui::Indent();
-            const auto& hierarchy = registry.get<TComponentHierarchy>(entity);
-            const auto& parentName = registry.get<TComponentName>(hierarchy.Parent);
-
-            ImGui::TextUnformatted(parentName.Name.data());
-            ImGui::Unindent();
-        }
+        ImGui::TextUnformatted(parentName.Name.data());
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentTransform>(entity)) {
+    if (registry.all_of<TComponentTransform>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Transform", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::AlignTextToFramePadding();
+        float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Transform", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::Indent();
+        if (registry.any_of<TComponentPosition>(entity)) {
 
-            ImGui::AlignTextToFramePadding();
-            float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;                
+            auto& position = registry.get<TComponentPosition>(entity);
 
-            ImGui::Indent();
-            if (registry.any_of<TComponentPosition>(entity)) {
-
-                auto& position = registry.get<TComponentPosition>(entity);
-
-                glm::vec3 tempPosition = position;
-                if (ImGui::InputFloat3("Position", &tempPosition.x)) {
-                    position = tempPosition;
-                }
+            glm::vec3 tempPosition = position;
+            if (ImGui::InputFloat3("Position", &tempPosition.x)) {
+                position = tempPosition;
             }
-
-            if (registry.any_of<TComponentOrientationEuler>(entity)) {
-                auto& eulerAngles = registry.get<TComponentOrientationEuler>(entity);
-
-                glm::vec3 tempRotation = {eulerAngles.Pitch, eulerAngles.Yaw, eulerAngles.Roll};
-                if (ImGui::InputFloat3("Rotation", &tempRotation.x)) {
-                    eulerAngles.Pitch = tempRotation.x;
-                    eulerAngles.Yaw = tempRotation.y;
-                    eulerAngles.Roll = tempRotation.z;
-                }
-            }
-
-            if (registry.any_of<TComponentScale>(entity)) {
-                auto& scale = registry.get<TComponentScale>(entity);
-
-                glm::vec3 tempScale = scale;
-                if (ImGui::InputFloat3("Scale", &tempScale.x)) {
-                    scale = tempScale;
-                }
-            }
-            ImGui::Unindent();
         }
+
+        if (registry.any_of<TComponentOrientationEuler>(entity)) {
+            auto& eulerAngles = registry.get<TComponentOrientationEuler>(entity);
+
+            glm::vec3 tempRotation = {eulerAngles.Pitch, eulerAngles.Yaw, eulerAngles.Roll};
+            if (ImGui::InputFloat3("Rotation", &tempRotation.x)) {
+                eulerAngles.Pitch = tempRotation.x;
+                eulerAngles.Yaw = tempRotation.y;
+                eulerAngles.Roll = tempRotation.z;
+            }
+        }
+
+        if (registry.any_of<TComponentScale>(entity)) {
+            auto& scale = registry.get<TComponentScale>(entity);
+
+            glm::vec3 tempScale = scale;
+            if (ImGui::InputFloat3("Scale", &tempScale.x)) {
+                scale = tempScale;
+            }
+        }
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentGlobalLight>(entity)) {
+    if (registry.all_of<TComponentGlobalLight>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_WEATHER_SUNNY " Global Light", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::AlignTextToFramePadding();
+        float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_WEATHER_SUNNY " Global Light", ImGuiTreeNodeFlags_Leaf)) {
+        ImGui::Indent();
 
-            ImGui::AlignTextToFramePadding();
-            float itemWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetFontSize() * 3.0f)) / 3.0f;
+        auto& globalLight = registry.get<TComponentGlobalLight>(entity);
 
-            ImGui::Indent();
-
-            auto& globalLight = registry.get<TComponentGlobalLight>(entity);
-
-            auto& tempAzimuth = globalLight.Azimuth;
-            if (ImGui::DragFloat("Azimuth", &tempAzimuth, 0.01f, 0.0f, 2.0f * glm::pi<float>(), "%.2f")) {
-                globalLight.Azimuth = tempAzimuth;
-            }
-
-            auto& tempElevation = globalLight.Elevation;
-            if (ImGui::DragFloat("Elevation", &tempElevation, 0.01f, -(glm::pi<float>() - 0.2f), glm::pi<float>() - 0.2f, "%.2f")) {
-                globalLight.Elevation = tempElevation;
-            }
-
-            auto& tempColor = globalLight.Color;
-            if (ImGui::DragFloat3("Color", &tempColor.x, 0.01f, 0.0f, 1.0f, "%.2f")) {
-                globalLight.Color = tempColor;
-            }
-
-            auto& tempIntensity = globalLight.Intensity;
-            if (ImGui::DragFloat("Intensity", &tempIntensity, 0.01, 0.01f, 10.0f, "%.2f")) {
-                globalLight.Intensity = tempIntensity;
-            }
-
-            auto& tempIsEnabled = globalLight.IsEnabled;
-            if (ImGui::Checkbox("Is Enabled", &tempIsEnabled)) {
-                globalLight.IsEnabled = tempIsEnabled;
-            }
-
-            auto& tempCanCastShadow = globalLight.CanCastShadows;
-            if (ImGui::Checkbox("Can Cast Shadows", &tempCanCastShadow)) {
-                globalLight.CanCastShadows = tempCanCastShadow;
-            }
-
-            auto& tempIsDebugEnabled = globalLight.IsDebugEnabled;
-            if (ImGui::Checkbox("Draw Debug Lines", &tempIsDebugEnabled)) {
-                globalLight.IsDebugEnabled = tempIsDebugEnabled;
-            }
-
-            ImGui::Unindent();
+        auto& tempAzimuth = globalLight.Azimuth;
+        if (ImGui::DragFloat("Azimuth", &tempAzimuth, 0.01f, 0.0f, 2.0f * glm::pi<float>(), "%.2f")) {
+            globalLight.Azimuth = tempAzimuth;
         }
+
+        auto& tempElevation = globalLight.Elevation;
+        if (ImGui::DragFloat("Elevation", &tempElevation, 0.01f, -(glm::pi<float>() - 0.2f), glm::pi<float>() - 0.2f, "%.2f")) {
+            globalLight.Elevation = tempElevation;
+        }
+
+        auto& tempColor = globalLight.Color;
+        if (ImGui::DragFloat3("Color", &tempColor.x, 0.01f, 0.0f, 1.0f, "%.2f")) {
+            globalLight.Color = tempColor;
+        }
+
+        auto& tempIntensity = globalLight.Intensity;
+        if (ImGui::DragFloat("Intensity", &tempIntensity, 0.01, 0.01f, 10.0f, "%.2f")) {
+            globalLight.Intensity = tempIntensity;
+        }
+
+        auto& tempIsEnabled = globalLight.IsEnabled;
+        if (ImGui::Checkbox("Is Enabled", &tempIsEnabled)) {
+            globalLight.IsEnabled = tempIsEnabled;
+        }
+
+        auto& tempCanCastShadow = globalLight.CanCastShadows;
+        if (ImGui::Checkbox("Can Cast Shadows", &tempCanCastShadow)) {
+            globalLight.CanCastShadows = tempCanCastShadow;
+        }
+
+        auto& tempIsDebugEnabled = globalLight.IsDebugEnabled;
+        if (ImGui::Checkbox("Draw Debug Lines", &tempIsDebugEnabled)) {
+            globalLight.IsDebugEnabled = tempIsDebugEnabled;
+        }
+
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentCamera>(entity)) {
+    if (registry.all_of<TComponentCamera>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Camera", ImGuiTreeNodeFlags_Leaf)) {
+        auto& camera = registry.get<TComponentCamera>(entity);
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Camera", ImGuiTreeNodeFlags_Leaf)) {
-            auto& camera = registry.get<TComponentCamera>(entity);
-
-            ImGui::Indent();
-            ImGui::SliderFloat("Field Of View", &camera.FieldOfView, 1.0f, 179.0f);
-            ImGui::Unindent();
-        }
+        ImGui::Indent();
+        ImGui::SliderFloat("Field Of View", &camera.FieldOfView, 1.0f, 179.0f);
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentMesh>(entity)) {
+    if (registry.all_of<TComponentMesh>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Mesh", ImGuiTreeNodeFlags_Leaf)) {
+        const auto& mesh = registry.get<TComponentMesh>(entity);
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Mesh", ImGuiTreeNodeFlags_Leaf)) {
-            const auto& mesh = registry.get<TComponentMesh>(entity);
-
-            ImGui::Indent();
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::TextUnformatted(mesh.Mesh.data());
-            ImGui::PopItemWidth();
-            ImGui::Unindent();
-        }
+        ImGui::Indent();
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::TextUnformatted(mesh.Mesh.data());
+        ImGui::PopItemWidth();
+        ImGui::Unindent();
     }
 
-    if (registry.all_of<TComponentMaterial>(entity)) {
+    if (registry.all_of<TComponentMaterial>(entity) && ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Material", ImGuiTreeNodeFlags_Leaf)) {
+        const auto& material = registry.get<TComponentMaterial>(entity);
 
-        if (ImGui::CollapsingHeader((char*)ICON_MDI_CIRCLE " Material", ImGuiTreeNodeFlags_Leaf)) {
-            const auto& material = registry.get<TComponentMaterial>(entity);
-
-            ImGui::Indent();
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::TextUnformatted(material.Material.data());
-            ImGui::PopItemWidth();
-            ImGui::Unindent();
-        }
+        ImGui::Indent();
+        ImGui::PushItemWidth(-1.0f);
+        ImGui::TextUnformatted(material.Material.data());
+        ImGui::PopItemWidth();
+        ImGui::Unindent();
     }    
 }
 
