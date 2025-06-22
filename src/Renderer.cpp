@@ -735,16 +735,16 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         .EmissiveColor = glm::vec4(assetMaterialData.EmissiveColor, 1.0f),
     };
 
-    const auto& baseColorChannel = assetMaterialData.BaseColorTextureChannel;
-    if (baseColorChannel) {
-        const auto& baseColor = *baseColorChannel;
-        const auto& baseColorSampler = Assets::GetAssetSampler(baseColor.SamplerName);
-        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(baseColorSampler));
-        const auto& sampler = GetSampler(samplerId);
+    const auto& baseColorTextureChannel = assetMaterialData.BaseColorTextureChannel;
+    if (baseColorTextureChannel) {
+        const auto& [baseColorChannel, baseColorSamplerName, baseColorTextureName] = *baseColorTextureChannel;
+        const auto& baseColorTextureSampler = Assets::GetAssetSampler(baseColorSamplerName);
+        const auto baseColorSampler = GetOrCreateSampler(CreateSamplerDescriptor(baseColorTextureSampler));
+        const auto& [baseColorSamplerId] = GetSampler(baseColorSampler);
 
         cpuMaterial.BaseColorTexture = {
-            .Id = CreateTextureForMaterialChannel(baseColor.TextureName, baseColor.Channel),
-            .SamplerId = sampler.Id,
+            .Id = CreateTextureForMaterialChannel(baseColorTextureName, baseColorChannel),
+            .SamplerId = baseColorSamplerId,
             .BindlessHandle = std::nullopt,
         };
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasBaseColor;
@@ -752,14 +752,14 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     const auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
     if (normalTextureChannel) {
-        const auto& normalTexture = *normalTextureChannel;
-        const auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
-        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
-        const auto& sampler = GetSampler(samplerId);
+        const auto& [normalChannel, normalSamplerName, normalTextureName] = *normalTextureChannel;
+        const auto& normalTextureSampler = Assets::GetAssetSampler(normalSamplerName);
+        const auto normalSampler = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
+        const auto& [normalSamplerId] = GetSampler(normalSampler);
 
         cpuMaterial.NormalTexture = {
-            .Id = CreateTextureForMaterialChannel(normalTexture.TextureName, normalTexture.Channel),
-            .SamplerId = sampler.Id,
+            .Id = CreateTextureForMaterialChannel(normalTextureName, normalChannel),
+            .SamplerId = normalSamplerId,
             .BindlessHandle = std::nullopt,
         };
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasNormal;
@@ -767,14 +767,14 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     const auto& armTextureChannel = assetMaterialData.ArmTextureChannel;
     if (armTextureChannel) {
-        const auto& armTexture = *armTextureChannel;
-        const auto& armTextureSampler = Assets::GetAssetSampler(armTexture.SamplerName);
-        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(armTextureSampler));
-        const auto& sampler = GetSampler(samplerId);
+        const auto& [armChannel, armSamplerName, armTextureName] = *armTextureChannel;
+        const auto& armTextureSampler = Assets::GetAssetSampler(armSamplerName);
+        const auto armSampler = GetOrCreateSampler(CreateSamplerDescriptor(armTextureSampler));
+        const auto& [armSamplerId] = GetSampler(armSampler);
 
         cpuMaterial.ArmTexture = {
-            .Id = CreateTextureForMaterialChannel(armTexture.TextureName, armTexture.Channel),
-            .SamplerId = sampler.Id,
+            .Id = CreateTextureForMaterialChannel(armTextureName, armChannel),
+            .SamplerId = armSamplerId,
             .BindlessHandle = std::nullopt,
         };
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
@@ -782,14 +782,14 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     const auto& metallicRoughnessTextureChannel = assetMaterialData.MetallicRoughnessTextureChannel;
     if (metallicRoughnessTextureChannel) {
-        const auto& metallicRoughnessTexture = *metallicRoughnessTextureChannel;
-        const auto& metallicRoughnessSampler = Assets::GetAssetSampler(metallicRoughnessTexture.SamplerName);
-        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(metallicRoughnessSampler));
-        const auto& sampler = GetSampler(samplerId);
+        const auto& [metallicRoughnessChannel, metallicRoughnessSamplerName, metallicRoughnessTextureName] = *metallicRoughnessTextureChannel;
+        const auto& metallicRoughnessTextureSampler = Assets::GetAssetSampler(metallicRoughnessSamplerName);
+        const auto metallicRoughnessSampler = GetOrCreateSampler(CreateSamplerDescriptor(metallicRoughnessTextureSampler));
+        const auto& [metallicRoughnessSamplerId] = GetSampler(metallicRoughnessSampler);
 
         cpuMaterial.MetallicRoughnessTexture = {
-            .Id = CreateTextureForMaterialChannel(metallicRoughnessTexture.TextureName, metallicRoughnessTexture.Channel),
-            .SamplerId = sampler.Id,
+            .Id = CreateTextureForMaterialChannel(metallicRoughnessTextureName, metallicRoughnessChannel),
+            .SamplerId = metallicRoughnessSamplerId,
             .BindlessHandle = std::nullopt,
         };
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
@@ -797,14 +797,14 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
 
     const auto& emissiveTextureChannel = assetMaterialData.EmissiveTextureChannel;
     if (emissiveTextureChannel) {
-        const auto& emissiveTexture = *emissiveTextureChannel;
-        const auto& emissiveTextureSampler = Assets::GetAssetSampler(emissiveTexture.SamplerName);
-        const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(emissiveTextureSampler));
-        const auto& sampler = GetSampler(samplerId);
+        const auto& [emissiveChannel, emissiveSamplerName, emissiveTextureName] = *emissiveTextureChannel;
+        const auto& emissiveTextureSampler = Assets::GetAssetSampler(emissiveSamplerName);
+        const auto emissiveSampler = GetOrCreateSampler(CreateSamplerDescriptor(emissiveTextureSampler));
+        const auto& [emissiveSamplerId] = GetSampler(emissiveSampler);
 
         cpuMaterial.EmissiveTexture = {
-            .Id = CreateTextureForMaterialChannel(emissiveTexture.TextureName, emissiveTexture.Channel),
-            .SamplerId = sampler.Id,
+            .Id = CreateTextureForMaterialChannel(emissiveTextureName, emissiveChannel),
+            .SamplerId = emissiveSamplerId,
             .BindlessHandle = std::nullopt,
         };
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasEmissive;
