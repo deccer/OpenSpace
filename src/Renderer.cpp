@@ -352,7 +352,9 @@ auto ComputeIrradianceMap(const TTextureId textureId) -> std::expected<TTextureI
     return convolvedTextureId;
 }
 
-auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
+auto ComputePrefilteredRadianceMap(
+    const TTextureId environmentMapTextureId,
+    const int32_t prefilteredMapBaseSize = 512) -> std::expected<TTextureId, std::string> {
 
     auto computePrefilteredRadianceMapComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
         .Label = "Compute Prefiltered Radiance Map",
@@ -363,32 +365,29 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
         return std::unexpected(computePrefilteredRadianceMapComputePipelineResult.error());
     }
 
-    const auto& environmentTexture = GetTexture(textureId);
-
     auto computePrefilteredRadianceMapComputePipeline = *computePrefilteredRadianceMapComputePipelineResult;
 
-    constexpr auto baseSize = 512;
-    constexpr auto maxMipLevels = 9;
-
+    const auto maxMipLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(static_cast<float>(prefilteredMapBaseSize))));
     constexpr auto format = TFormat::R16G16B16A16_FLOAT;
 
     auto prefilteredEnvironmentMapId = CreateTexture(TCreateTextureDescriptor{
         .TextureType = TTextureType::TextureCube,
         .Format = format,
-        .Extent = TExtent3D(baseSize, baseSize, 1),
+        .Extent = TExtent3D(prefilteredMapBaseSize, prefilteredMapBaseSize, 1),
         .MipMapLevels = maxMipLevels,
         .Layers = 1,
         .SampleCount = TSampleCount::One,
         .Label = std::format("TextureCube-{}x{}-PrefilteredRadiance", prefilteredMapBaseSize, prefilteredMapBaseSize),
     });
 
+    const auto& environmentTexture = GetTexture(environmentMapTextureId);
     const auto& prefilteredEnvironmentMap = GetTexture(prefilteredEnvironmentMapId);
 
     computePrefilteredRadianceMapComputePipeline.Bind();
     computePrefilteredRadianceMapComputePipeline.BindTexture(0, environmentTexture.Id);
 
     for (auto mipLevel = 0; mipLevel < maxMipLevels; mipLevel++) {
-        const auto mipSize = baseSize >> mipLevel;
+        const auto mipSize = prefilteredMapBaseSize >> mipLevel;
         const auto roughness = static_cast<float>(mipLevel) / static_cast<float>(maxMipLevels - 1);
 
         computePrefilteredRadianceMapComputePipeline.BindImage(0, prefilteredEnvironmentMap.Id, mipLevel, 0, TMemoryAccess::WriteOnly, format);
@@ -403,7 +402,7 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
     return prefilteredEnvironmentMapId;
 }
 
-auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t, std::string> {
+auto ComputeSHCoefficients(const TTextureId irradianceMapTextureId) -> std::expected<uint32_t, std::string> {
 
     auto computeSHCoefficientsComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
         .Label = "Compute SH Coefficients",
@@ -415,17 +414,15 @@ auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t
     }
 
     auto computeSHCoefficientsComputePipeline = *computeSHCoefficientsComputePipelineResult;
-
-    constexpr auto faceSize = 128;
-
     auto shCoefficientBuffer = CreateBuffer("CoefficientBuffer", sizeof(float) * 3 * 9, nullptr, GL_DYNAMIC_STORAGE_BIT);
     constexpr auto zeroValue = 0.0f;
     UpdateBuffer(shCoefficientBuffer, 0, sizeof(float) * 3 * 9, &zeroValue);
 
-    const auto& convolvedTexture = GetTexture(textureId);
+    const auto& convolvedTexture = GetTexture(irradianceMapTextureId);
+    const auto faceSize = convolvedTexture.Extent.Width;
 
-    constexpr auto groupX = static_cast<uint32_t>(faceSize / 8);
-    constexpr auto groupY = static_cast<uint32_t>(faceSize / 8);
+    const auto groupX = faceSize / 8;
+    const auto groupY = faceSize / 8;
     constexpr auto groupZ = 6u;
 
     computeSHCoefficientsComputePipeline.Bind();
