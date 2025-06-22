@@ -1278,7 +1278,7 @@ auto RenderTransformComponent(
 
     auto& style = ImGui::GetStyle();
 
-    const auto showFloat = [&](int axis, float* value)
+    const auto showFloat = [&](const int axis, float* value)
     {
         const float labelFloatSpacing = ImGui::GetFontSize();
         const float step = 0.01f;
@@ -1304,14 +1304,14 @@ auto RenderTransformComponent(
         ImGui::PopID();
         ImGui::PopItemWidth();
 
-        static const ImU32 colourX = IM_COL32(168, 46, 2, 255);
-        static const ImU32 colourY = IM_COL32(112, 162, 22, 255);
-        static const ImU32 colourZ = IM_COL32(51, 122, 210, 255);
+        static constexpr ImU32 colorX = IM_COL32(168, 46, 2, 255);
+        static constexpr ImU32 colorY = IM_COL32(112, 162, 22, 255);
+        static constexpr ImU32 colorZ = IM_COL32(51, 122, 210, 255);
 
         const auto size = ImVec2(ImGui::GetFontSize() / 4.0f, ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.0f);
         posPostLabel = ImVec2(posPostLabel.x - 1.0f, posPostLabel.y + 0.0f); // ImGui::GetStyle().FramePadding.y / 2.0f);
         const auto axisColorRectangle = ImRect(posPostLabel.x, posPostLabel.y, posPostLabel.x + size.x, posPostLabel.y + size.y);
-        ImGui::GetWindowDrawList()->AddRectFilled(axisColorRectangle.Min, axisColorRectangle.Max, axis == 0 ? colourX : axis == 1 ? colourY : colourZ);
+        ImGui::GetWindowDrawList()->AddRectFilled(axisColorRectangle.Min, axisColorRectangle.Max, axis == 0 ? colorX : axis == 1 ? colorY : colorZ);
     };
 
     ImGui::BeginGroup();
