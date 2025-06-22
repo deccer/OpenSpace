@@ -309,7 +309,7 @@ std::unordered_map<std::string, TGpuMaterial> g_gpuMaterials = {};
 auto ComputeIrradianceMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
 
     auto computeIrradianceMapComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
-        .Label = "Irradiance Map",
+        .Label = "Compute Irradiance Map",
         .ComputeShaderFilePath = "data/shaders/ComputeIrradianceMap.cs.glsl",
     });
 
@@ -355,7 +355,7 @@ auto ComputeIrradianceMap(const TTextureId textureId) -> std::expected<TTextureI
 auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<TTextureId, std::string> {
 
     auto computePrefilteredRadianceMapComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
-        .Label = "Prefiltered Radiance Map",
+        .Label = "Compute Prefiltered Radiance Map",
         .ComputeShaderFilePath = "data/shaders/ComputePrefilteredRadianceMap.cs.glsl",
     });
 
@@ -379,7 +379,7 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
         .MipMapLevels = maxMipLevels,
         .Layers = 1,
         .SampleCount = TSampleCount::One,
-        .Label = std::format("TextureCube-{}x{}-PrefilteredRadiance", baseSize, baseSize),
+        .Label = std::format("TextureCube-{}x{}-PrefilteredRadiance", prefilteredMapBaseSize, prefilteredMapBaseSize),
     });
 
     const auto& prefilteredEnvironmentMap = GetTexture(prefilteredEnvironmentMapId);
@@ -406,7 +406,7 @@ auto ComputePrefilteredRadianceMap(const TTextureId textureId) -> std::expected<
 auto ComputeSHCoefficients(const TTextureId textureId) -> std::expected<uint32_t, std::string> {
 
     auto computeSHCoefficientsComputePipelineResult = CreateComputePipeline(TComputePipelineDescriptor{
-        .Label = "ComputeSHCoefficients",
+        .Label = "Compute SH Coefficients",
         .ComputeShaderFilePath = "data/shaders/ComputeSHCoefficients.cs.glsl",
     });
 
@@ -470,7 +470,7 @@ auto LoadEnvironmentMaps(const std::string& skyBoxName) -> std::expected<TEnviro
                 .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageWidth), static_cast<float>(imageHeight))))),
                 .Layers = 6,
                 .SampleCount = TSampleCount::One,
-                .Label = skyBoxName,
+                .Label = std::format("TextureCube-{}x{}-{}", imageWidth, imageHeight, skyBoxName),
             });
         }
 
@@ -559,9 +559,9 @@ auto RendererCreateGpuMesh(
         PROFILER_ZONESCOPEDN("Create GL Buffers + Upload Data");
 
         glCreateBuffers(3, buffers);
-        SetDebugLabel(buffers[0], GL_BUFFER, std::format("{}_position", label));
-        SetDebugLabel(buffers[1], GL_BUFFER, std::format("{}_normal_uv_tangent", label));
-        SetDebugLabel(buffers[2], GL_BUFFER, std::format("{}_indices", label));
+        SetDebugLabel(buffers[0], GL_BUFFER, std::format("Geometry Pass-{}-Position", label));
+        SetDebugLabel(buffers[1], GL_BUFFER, std::format("Geometry Pass-{}-Normal-Tangent-UvTangentSign", label));
+        SetDebugLabel(buffers[2], GL_BUFFER, std::format("Geometry Pass-{}-Indices", label));
         glNamedBufferStorage(buffers[0], sizeof(TGpuVertexPosition) * vertexPositions.size(),
                                 vertexPositions.data(), 0);
         glNamedBufferStorage(buffers[1], sizeof(TGpuPackedVertexNormalTangentUvTangentSign) * vertexNormalUvTangents.size(),
@@ -614,7 +614,7 @@ auto CreateResidentTextureForMaterialChannel(const std::string_view materialData
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
         .SampleCount = TSampleCount::One,
-        .Label = imageData.Name,
+        .Label = std::format("Texture-{}x{}-{}-Resident", imageData.Width, imageData.Height, imageData.Name),
     });
 
     UploadTexture(textureId, TUploadTextureDescriptor{
@@ -650,7 +650,7 @@ auto CreateTextureForMaterialChannel(
         .MipMapLevels = 1 + static_cast<uint32_t>(glm::floor(glm::log2(glm::max(static_cast<float>(imageData.Width), static_cast<float>(imageData.Height))))),
         .Layers = 1,
         .SampleCount = TSampleCount::One,
-        .Label = imageData.Name,
+        .Label = std::format("Texture-{}x{}-{}", imageData.Width, imageData.Height, imageData.Name),
     });
 
     UploadTexture(textureId, TUploadTextureDescriptor{
@@ -831,9 +831,9 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     PROFILER_ZONESCOPEDN("CreateRendererFramebuffers");
 
     g_depthPrePass.Framebuffer = CreateFramebuffer({
-        .Label = "Depth PrePass FBO",
+        .Label = "Depth PrePass-FBO",
         .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
-            .Label = "Depth PrePass FBO Depth",
+            .Label = std::format("Depth PrePass-FBO-Depth-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
             .Format = TFormat::D24_UNORM_S8_UINT,
             .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
             .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -842,31 +842,31 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_geometryPass.Framebuffer = CreateFramebuffer({
-        .Label = "Geometry FBO",
+        .Label = "Geometry Pass-FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "Geometry FBO Albedo",
+                .Label = std::format("Geometry Pass-Albedo-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "Geometry FBO Normals",
+                .Label = std::format("Geometry Pass-Normals-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R32G32B32A32_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "Geometry FBO TAA Velocity",
+                .Label = std::format("Geometry Pass-TAA-Velocity-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
                 .ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
             },
             TFramebufferColorAttachmentDescriptor{
-                .Label = "Geometry FBO Emissive",
+                .Label = std::format("Geometry Pass-Emissive-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -879,10 +879,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_composePass.Framebuffer = CreateFramebuffer({
-        .Label = "ComposeGeometry FBO",
+        .Label = "Compose Pass-FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "ComposeGeometry FBO Output",
+                .Label = std::format("Compose Pass-FBO-Output-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -892,10 +892,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_fxaaPass.Framebuffer = CreateFramebuffer({
-        .Label = "FXAA FBO",
+        .Label = "Fxaa Pass-FBO",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "FXAA FBO Output",
+                .Label = std::format("Fxaa Pass-FBO-Output-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R8G8B8A8_SRGB,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
@@ -905,10 +905,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_taaPass.Framebuffers[0] = CreateFramebuffer({
-        .Label = "TAA1 FBO",
+        .Label = "TAA Pass-FBO-Taa1",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "TAA1 FBO History",
+                .Label = std::format("TAA Pass-FBO-Taa1-Output-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -918,10 +918,10 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
     });
 
     g_taaPass.Framebuffers[1] = CreateFramebuffer({
-        .Label = "TAA2 FBO",
+        .Label = "TAA Pass-FBO-Taa2",
         .ColorAttachments = {
             TFramebufferColorAttachmentDescriptor{
-                .Label = "TAA2 FBO History",
+                .Label = std::format("TAA Pass-FBO-Taa2-Output-{}x{}", scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .Format = TFormat::R16G16B16A16_FLOAT,
                 .Extent = TExtent2D(scaledFramebufferSize.x, scaledFramebufferSize.y),
                 .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
@@ -1010,7 +1010,7 @@ auto Renderer::Initialize(
     g_depthPrePass.Pipeline = *depthPrePassGraphicsPipelineResult;
 
     auto geometryGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "GeometryPipeline",
+        .Label = "Geometry Pass",
         .VertexShaderFilePath = "data/shaders/Geometry.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/Geometry.fs.glsl",
         .InputAssembly = {
@@ -1036,7 +1036,7 @@ auto Renderer::Initialize(
     g_geometryPass.Pipeline = *geometryGraphicsPipelineResult;
 
     auto composeDeferredGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "ComposeDeferredPipeline",
+        .Label = "Compose Pass",
         .VertexShaderFilePath = "data/shaders/ComposeDeferred.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/ComposeDeferred.fs.glsl",
         .InputAssembly = {
@@ -1070,7 +1070,7 @@ auto Renderer::Initialize(
     g_fstGraphicsPipeline = *fstGraphicsPipelineResult;
 
     auto debugLinesGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "DebugLinesPipeline",
+        .Label = "Debug Lines Pass",
         .VertexShaderFilePath = "data/shaders/DebugLines.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/DebugLines.fs.glsl",
         .InputAssembly = {
@@ -1102,7 +1102,7 @@ auto Renderer::Initialize(
     g_debugLinesPass.Pipeline = *debugLinesGraphicsPipelineResult;
 
     auto fxaaGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "FXAA",
+        .Label = "FXAA Pass",
         .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/FST.fs.glsl",
         .InputAssembly = {
@@ -1122,7 +1122,7 @@ auto Renderer::Initialize(
     g_fxaaPass.Pipeline = *fxaaGraphicsPipelineResult;
 
     auto taaGraphicsPipelineResult = CreateGraphicsPipeline({
-        .Label = "TAA",
+        .Label = "TAA Pass",
         .VertexShaderFilePath = "data/shaders/FST.vs.glsl",
         .FragmentShaderFilePath = "data/shaders/TAA.fs.glsl",
         .InputAssembly = {
@@ -1142,14 +1142,14 @@ auto Renderer::Initialize(
     g_taaPass.Pipeline = *taaGraphicsPipelineResult;
 
     g_taaPass.Sampler = GetOrCreateSampler(TSamplerDescriptor{
-        .Label = "TAA Sampler",
+        .Label = "TAA Pass Sampler Linear/ClampToEdge",
         .AddressModeU = TTextureAddressMode::ClampToEdge,
         .AddressModeV = TTextureAddressMode::ClampToEdge,
         .MagFilter = TTextureMagFilter::Linear,
         .MinFilter = TTextureMinFilter::Linear,
     });
 
-    g_debugLinesPass.VertexBuffer = CreateBuffer("VertexBuffer-DebugLines", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    g_debugLinesPass.VertexBuffer = CreateBuffer("Debug Lines Pass-VBO", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     for (int i = 0; i < g_jitterCount; ++i) {
         g_jitter[i].x = GetHaltonSequence(2, i + 1) - 0.5f;

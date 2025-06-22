@@ -964,7 +964,7 @@ auto CreateTexture2DFromFile(
             : 1,
         .Layers = 0,
         .SampleCount = TSampleCount::One,
-        .Label = filePath.filename().string(),
+        .Label = std::format("Texture-{}x{}-{}", imageWidth, imageHeight, filePath.filename().string()),
     });
 
     UploadTexture(textureId, TUploadTextureDescriptor{
@@ -1548,7 +1548,7 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
 
         uint32_t inputLayout = 0;
         glCreateVertexArrays(1, &inputLayout);
-        SetDebugLabel(inputLayout, GL_VERTEX_ARRAY, std::format("InputLayout-{}", graphicsPipelineDescriptor.Label));
+        SetDebugLabel(inputLayout, GL_VERTEX_ARRAY, std::format("{}-InputLayout", graphicsPipelineDescriptor.Label));
 
         const auto& vertexInput = *graphicsPipelineDescriptor.VertexInput;
         for(auto inputAttributeIndex = 0; auto& inputAttribute : vertexInput.VertexInputAttributes) {
