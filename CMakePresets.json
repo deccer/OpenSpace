@@ -74,6 +74,25 @@
          }
       },
       {
+         "name": "Clang-Debug-With-Asan",
+         "displayName": "Clang - Debug - With Asan",
+         "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
+         "generator": "Ninja",
+         "binaryDir": "${sourceDir}/build/${presetName}",
+         "cacheVariables": {
+            "CMAKE_BUILD_TYPE": "Debug",
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/install/${presetName}",
+            "CMAKE_C_COMPILER": "clang",
+            "CMAKE_CXX_COMPILER": "clang++",
+            "SANITIZER": "-fsanitize=undefined -fsanitize=integer -fsanitize=nullability -fsanitize=memory -fsanitize-memory-track-origins"
+         },
+         "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
+         }
+      },
+      {
          "name": "Clang-Release",
          "displayName": "Clang - Release",
          "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",

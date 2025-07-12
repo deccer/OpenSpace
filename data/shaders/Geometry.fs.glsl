@@ -10,12 +10,13 @@ layout(location = 5) in vec3 v_tangent;
 layout(location = 6) in vec2 v_uv;
 layout(location = 7) in vec4 v_current_world_position;
 layout(location = 8) in vec4 v_previous_world_position;
-layout(location = 9) flat in uint v_material_id;
+layout(location = 9) in vec3 v_fragment_position_vs;
+layout(location = 10) flat in uint v_material_id;
 
 layout(location = 0) out vec4 o_color;
 layout(location = 1) out vec4 o_normal_ao;
 layout(location = 2) out vec4 o_velocity_roughness_metalness;
-layout(location = 3) out vec4 o_emissive;
+layout(location = 3) out vec4 o_emissive_viewz;
 
 //layout(binding = 0) uniform sampler2D u_sampler_shadow;
 //layout(binding = 1) uniform sampler2D u_sampler_grid;
@@ -87,8 +88,8 @@ void main()
 
     o_velocity_roughness_metalness = vec4(velocity, ao_roughness_metalness.gb);
 
-    o_emissive = vec4(u_material_emissive.rgb, 1.0);
+    o_emissive_viewz = vec4(u_material_emissive.rgb, v_fragment_position_vs.z);
     if (hasEmissiveTexture) {
-        o_emissive = vec4(texture(u_texture_emissive, v_uv).rgb, 1.0);
+        o_emissive_viewz = vec4(texture(u_texture_emissive, v_uv).rgb, 1.0);
     }
 }

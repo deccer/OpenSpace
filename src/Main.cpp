@@ -168,6 +168,7 @@ auto main(
         .IsVSyncEnabled = true,
     };
 
+    spdlog::set_level(spdlog::level::trace);
     if (glfwInit() == GLFW_FALSE) {
         spdlog::error("Glfw: Unable to initialize");
         return 0;

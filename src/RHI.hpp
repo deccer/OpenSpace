@@ -7,6 +7,30 @@ using TBufferId = TId<struct GBufferId>;
 using TGraphicsPipelineId = TId<struct GGraphicsPipelineId>;
 using TComputePipelineId = TId<struct GComputePipelineId>;
 
+constexpr uint32_t MAX_COLOR_ATTACHMENTS = 8;
+constexpr uint32_t MAX_COLOR_BLEND_ATTACHMENTS = 8;
+
+static struct TLimits {
+    float MaxTextureAnisotropy;
+    int32_t MaxUniformBufferBindings;
+    int32_t MaxUniformBlockSize;
+    int32_t UniformBufferOffsetAlignment;
+    int32_t MaxCombinedUniformBlocks;
+
+    int32_t MaxShaderStorageBufferBindings;
+    int32_t MaxShaderStorageBlockSize;
+    int32_t ShaderStorageBufferOffsetAlignment;
+    int32_t MaxCombinedShaderStorageBlocks;
+
+    int32_t MaxCombinedShaderOutputResources;
+    int32_t MaxCombinedTextureImageUnits;
+
+    int32_t MaxImageUnits;
+    int32_t MaxFragmentCombinedOutputResources;
+    int32_t MaxCombinedImageUniforms;
+    int32_t MaxServerWaitTimeout;
+} g_limits;
+
 enum class TFormat : uint32_t {
 
     Undefined,
@@ -300,13 +324,18 @@ struct TFramebufferDepthStencilAttachmentDescriptor {
 };
 
 struct TFramebufferExistingDepthStencilAttachmentDescriptor {
-    TTexture& ExistingDepthTexture;
+    TTextureId ExistingDepthTextureId;
+};
+
+struct TFramebufferExistingDepthStencilAttachmentForSpecificLayerDescriptor {
+    TTextureId ExistingDepthTextureId;
+    uint32_t Layer;
 };
 
 struct TFramebufferDescriptor {
     std::string_view Label;
-    std::array<std::optional<TFramebufferColorAttachmentDescriptor>, 8> ColorAttachments;
-    std::optional<std::variant<TFramebufferDepthStencilAttachmentDescriptor, TFramebufferExistingDepthStencilAttachmentDescriptor>> DepthStencilAttachment;
+    std::array<std::optional<TFramebufferColorAttachmentDescriptor>, MAX_COLOR_ATTACHMENTS> ColorAttachments;
+    std::optional<std::variant<TFramebufferDepthStencilAttachmentDescriptor, TFramebufferExistingDepthStencilAttachmentDescriptor, TFramebufferExistingDepthStencilAttachmentForSpecificLayerDescriptor>> DepthStencilAttachment;
 };
 
 struct TFramebufferColorAttachment {
@@ -317,13 +346,14 @@ struct TFramebufferColorAttachment {
 
 struct TFramebufferDepthStencilAttachment {
     TTexture Texture;
+    TTextureId TextureId;
     TFramebufferAttachmentClearDepthStencil ClearDepthStencil;
     TFramebufferAttachmentLoadOperation LoadOperation;
 };
 
 struct TFramebuffer {
     uint32_t Id;
-    std::array<std::optional<TFramebufferColorAttachment>, 8> ColorAttachments;
+    std::array<std::optional<TFramebufferColorAttachment>, MAX_COLOR_ATTACHMENTS> ColorAttachments;
     std::optional<TFramebufferDepthStencilAttachment> DepthStencilAttachment;
 };
 
@@ -343,6 +373,15 @@ struct TVertexInputDescriptor {
     std::array<std::optional<const TVertexInputAttributeDescriptor>, 16> VertexInputAttributes = {};
 };
 
+enum class TColorMaskBits {
+    None = 0,
+    R = 1 << 0,
+    G = 1 << 1,
+    B = 1 << 2,
+    A = 1 << 3
+};
+DECLARE_FLAG_TYPE(TColorMask, TColorMaskBits, uint32_t)
+
 enum class TFillMode {
     Solid,
     Wireframe,
@@ -361,7 +400,7 @@ enum class TFaceWindingOrder {
     CounterClockwise
 };
 
-enum class TDepthFunction {
+enum class TCompareFunction {
     Never,
     Less,
     Equal,
@@ -391,28 +430,47 @@ struct TRasterizerState {
     float PointSize = 1.0f;
 };
 
-struct TBlendState {
-    bool IsBlendEnabled;
+enum class TBlendOperation {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max
+};
+
+enum class TBlendFactor {
+    Zero,
+    One,
+    SrcColor,
+    OneMinusSrcColor,
+    DstColor,
+    OneMinusDstColor,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+};
+
+struct TBlendStateDescriptor {
+    bool IsBlendEnabled = false;
+    TBlendFactor ColorSourceBlendFactor = TBlendFactor::One;
+    TBlendFactor ColorDestinationBlendFactor = TBlendFactor::Zero;
+    TBlendOperation ColorBlendOperation = TBlendOperation::Add;
+    TBlendFactor AlphaSourceBlendFactor = TBlendFactor::One;
+    TBlendFactor AlphaDestinationBlendFactor = TBlendFactor::Zero;
+    TBlendOperation AlphaBlendOperation = TBlendOperation::Add;
+    TColorMask ColorWriteMask = TColorMaskBits::R | TColorMaskBits::G | TColorMaskBits::B | TColorMaskBits::A;
 };
 
 struct TDepthState {
     bool IsDepthTestEnabled;
     bool IsDepthWriteEnabled;
-    TDepthFunction DepthFunction;
+    TCompareFunction DepthCompareFunction;
 };
 
 struct TStencilState {
 
 };
-
-enum class TColorMaskBits {
-    None = 0,
-    R = 1 << 0,
-    G = 1 << 1,
-    B = 1 << 2,
-    A = 1 << 3
-};
-DECLARE_FLAG_TYPE(TColorMask, TColorMaskBits, uint32_t)
 
 enum class TMemoryBarrierMaskBits : uint32_t
 {
@@ -436,9 +494,8 @@ enum class TMemoryBarrierMaskBits : uint32_t
 };
 DECLARE_FLAG_TYPE(TMemoryBarrierMask, TMemoryBarrierMaskBits, uint32_t)
 
-struct TOutputMergerState {
-    TColorMask ColorMask = TColorMaskBits::R | TColorMaskBits::G | TColorMaskBits::B | TColorMaskBits::A;
-    TBlendState BlendState = {};
+struct TOutputMergerStateDescriptor {
+    std::array<TBlendStateDescriptor, MAX_COLOR_BLEND_ATTACHMENTS> BlendStates = {};
     TDepthState DepthState = {};
     TStencilState StencilState = {};
 };
@@ -452,7 +509,7 @@ struct TGraphicsPipelineDescriptor {
     std::optional<TVertexInputDescriptor> VertexInput;
 
     TRasterizerState RasterizerState = {};
-    TOutputMergerState OutputMergerState = {};
+    TOutputMergerStateDescriptor OutputMergerState = {};
 };
 
 struct TComputePipelineDescriptor {
@@ -497,7 +554,18 @@ struct TPipeline {
     auto SetUniform(int32_t location, const glm::mat4& value) const -> void;
 };
 
-struct TGraphicsPipeline : public TPipeline {
+struct TBlendState {
+    bool IsEnabled = {};
+    uint32_t SourceColorBlendFactor = {};
+    uint32_t DestinationColorBlendFactor = {};
+    uint32_t ColorBlendOperation = {};
+    uint32_t SourceAlphaBlendFactor = {};
+    uint32_t DestinationAlphaBlendFactor = {};
+    uint32_t AlphaBlendOperation = {};
+    TColorMask ColorWriteMask = {};
+};
+
+struct TGraphicsPipeline : TPipeline {
 
     auto Bind() -> void override;
     auto BindBufferAsVertexBuffer(uint32_t buffer, uint32_t bindingIndex, size_t offset, size_t stride) -> void;
@@ -525,10 +593,11 @@ struct TGraphicsPipeline : public TPipeline {
     float PointSize = {};
 
     // Output Merger State
-    TColorMask ColorMask = {};
+    std::array<TColorMask, MAX_COLOR_BLEND_ATTACHMENTS> ColorMasks = {};
     bool IsDepthTestEnabled = {};
     bool IsDepthWriteEnabled = {};
-    TDepthFunction DepthFunction = {};
+    TCompareFunction DepthCompareFunction = {};
+    std::array<TBlendState, MAX_COLOR_BLEND_ATTACHMENTS> BlendStates = {};
 };
 
 struct TComputePipeline : public TPipeline {
@@ -542,6 +611,15 @@ struct TSampler {
     uint32_t Id;
 };
 
+enum class TSamplerBorderColor {
+    FloatTransparentBlack,
+    FloatOpaqueBlack,
+    FloatOpaqueWhite,
+    IntegerTransparentBlack,
+    IntegerOpaqueBlack,
+    IntegerOpaqueWhite,
+};
+
 struct TSamplerDescriptor {
     std::string_view Label;
     TTextureAddressMode AddressModeU = TTextureAddressMode::ClampToEdge;
@@ -552,6 +630,9 @@ struct TSamplerDescriptor {
     float LodBias = 0;
     float LodMin = -1000;
     float LodMax = 1000;
+    bool IsComparisonEnabled = false;
+    TCompareFunction CompareFunction = TCompareFunction::Never;
+    TSamplerBorderColor BorderColor = TSamplerBorderColor::IntegerOpaqueWhite;
 
     bool operator==(const TSamplerDescriptor& rhs) const {
         return Label == rhs.Label &&
@@ -562,14 +643,18 @@ struct TSamplerDescriptor {
             MinFilter == rhs.MinFilter &&
             LodBias == rhs.LodBias &&
             LodMin == rhs.LodMin &&
-            LodMax == rhs.LodMax;
+            LodMax == rhs.LodMax &&
+            IsComparisonEnabled == rhs.IsComparisonEnabled &&
+            CompareFunction == rhs.CompareFunction &&
+            BorderColor == rhs.BorderColor;
+
     }
 };
 
 namespace std {
     template<>
     struct hash<TSamplerDescriptor> {
-        size_t operator()(const TSamplerDescriptor& samplerDescriptor) const {
+        size_t operator()(const TSamplerDescriptor& samplerDescriptor) const noexcept {
             size_t seed = 0;
             hash_combine(seed, samplerDescriptor.Label);
             hash_combine(seed, samplerDescriptor.AddressModeU);
@@ -592,10 +677,10 @@ namespace std {
 }
 
 auto SetDebugLabel(
-    const uint32_t object,
-    const uint32_t objectType,
-    const std::string_view label) -> void;
-auto PushDebugGroup(const std::string_view label) -> void;
+    uint32_t object,
+    uint32_t objectType,
+    std::string_view label) -> void;
+auto PushDebugGroup(std::string_view label) -> void;
 auto PopDebugGroup() -> void;
 
 auto CreateBuffer(
@@ -609,7 +694,7 @@ auto UpdateBuffer(
     int64_t sizeInBytes,
     const void* data) -> void;
 auto DeleteBuffer(uint32_t buffer) -> void;
-auto DeletePipeline(const TPipeline& pipeline) -> void;
+auto DeletePipeline(TPipeline& pipeline) -> void;
 
 auto GetTexture(TTextureId id) -> TTexture&;
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId;

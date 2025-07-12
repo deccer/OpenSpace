@@ -159,19 +159,20 @@ auto TScene::Load() -> bool {
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/Sponza/Sponza.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/cutlass/cutlass.gltf");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/scene.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/exported.glb");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/deccer_balls.glb");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
     /// Setup Scene ////////////
     _rootEntity = CreateEmpty("Root");
-    auto sun1Light = CreateGlobalLight(
+    const auto sun1Light = CreateGlobalLight(
         "Sun Purple Light (N)",
         0.0f,
         glm::radians(45.0f),
         glm::vec3{1.0f, 0.0f, 0.5f},
         0.5f);
     SetParent(sun1Light, _rootEntity);
-    auto sun2Light = CreateGlobalLight(
+    const auto sun2Light = CreateGlobalLight(
         "Sun Blue Light (S)",
         glm::radians(180.0f),
         glm::radians(45.0f),
@@ -179,7 +180,7 @@ auto TScene::Load() -> bool {
         0.5f);
     SetParent(sun2Light, _rootEntity);
 
-    auto sun3Light = CreateGlobalLight(
+    const auto sun3Light = CreateGlobalLight(
         "Sun Green Light (E)",
         glm::radians(90.0f),
         glm::radians(45.0f),
@@ -187,7 +188,7 @@ auto TScene::Load() -> bool {
         0.5f);
     SetParent(sun3Light, _rootEntity);
 
-    auto sun4Light = CreateGlobalLight(
+    const auto sun4Light = CreateGlobalLight(
         "Sun Yellow Light (W)",
         glm::radians(270.0f),
         glm::radians(45.0f),

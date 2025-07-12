@@ -14,7 +14,7 @@ layout(location = 0) uniform float u_roughness;
 #include "Include.Hammersley.glsl"
 
 // Based omn http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
-float random(vec2 co) {
+float Random(vec2 co) {
     float a = 12.9898;
     float b = 78.233;
     float c = 43758.5453;

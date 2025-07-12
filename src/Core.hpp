@@ -2,8 +2,9 @@
 
 #define nameof(name) #name
 
-struct TExtent2D
-{
+
+
+struct TExtent2D {
     uint32_t Width{};
     uint32_t Height{};
 
@@ -14,40 +15,39 @@ struct TExtent2D
     constexpr TExtent2D operator/(const TExtent2D& other) const { return { Width / other.Width, Height / other.Height }; }
     constexpr TExtent2D operator>>(const TExtent2D& other) const { return { Width >> other.Width, Height >> other.Height }; }
     constexpr TExtent2D operator<<(const TExtent2D& other) const { return { Width << other.Width, Height << other.Height }; }
-    constexpr TExtent2D operator+(uint32_t value) const { return *this + TExtent2D{ value, value }; }
-    constexpr TExtent2D operator-(uint32_t value) const { return *this - TExtent2D{ value, value }; }
-    constexpr TExtent2D operator*(uint32_t value) const { return *this * TExtent2D{ value, value }; }
-    constexpr TExtent2D operator/(uint32_t value) const { return *this / TExtent2D{ value, value }; }
-    constexpr TExtent2D operator>>(uint32_t value) const { return *this >> TExtent2D{ value, value }; }
-    constexpr TExtent2D operator<<(uint32_t value) const { return *this << TExtent2D{ value, value }; }
+    constexpr TExtent2D operator+(const uint32_t value) const { return *this + TExtent2D{ value, value }; }
+    constexpr TExtent2D operator-(const uint32_t value) const { return *this - TExtent2D{ value, value }; }
+    constexpr TExtent2D operator*(const uint32_t value) const { return *this * TExtent2D{ value, value }; }
+    constexpr TExtent2D operator/(const uint32_t value) const { return *this / TExtent2D{ value, value }; }
+    constexpr TExtent2D operator>>(const uint32_t value) const { return *this >> TExtent2D{ value, value }; }
+    constexpr TExtent2D operator<<(const uint32_t value) const { return *this << TExtent2D{ value, value }; }
 };
 
-constexpr TExtent2D operator+(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator+(const uint32_t value, const TExtent2D extent) {
     return extent + value;
 }
 
-constexpr TExtent2D operator-(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator-(const uint32_t value, const TExtent2D extent) {
     return extent - value;
 }
 
-constexpr TExtent2D operator*(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator*(const uint32_t value, const TExtent2D extent) {
     return extent * value;
 }
 
-constexpr TExtent2D operator/(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator/(const uint32_t value, const TExtent2D extent) {
     return extent / value;
 }
 
-constexpr TExtent2D operator>>(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator>>(const uint32_t value, const TExtent2D extent) {
     return extent >> value;
 }
 
-constexpr TExtent2D operator<<(uint32_t value, TExtent2D extent) {
+constexpr TExtent2D operator<<(const uint32_t value, const TExtent2D extent) {
     return extent << value;
 }
 
-struct TExtent3D
-{
+struct TExtent3D {
     uint32_t Width{};
     uint32_t Height{};
     uint32_t Depth{};
@@ -60,35 +60,35 @@ struct TExtent3D
     constexpr TExtent3D operator/(const TExtent3D& other) const { return { Width / other.Width, Height / other.Height, Depth / other.Depth }; }
     constexpr TExtent3D operator>>(const TExtent3D& other) const { return { Width >> other.Width, Height >> other.Height, Depth >> other.Depth }; }
     constexpr TExtent3D operator<<(const TExtent3D& other) const { return { Width << other.Width, Height << other.Height, Depth << other.Depth }; }
-    constexpr TExtent3D operator+(uint32_t value) const { return *this + TExtent3D{ value, value, value }; }
-    constexpr TExtent3D operator-(uint32_t value) const { return *this - TExtent3D{ value, value, value }; }
-    constexpr TExtent3D operator*(uint32_t value) const { return *this * TExtent3D{ value, value, value }; }
-    constexpr TExtent3D operator/(uint32_t value) const { return *this / TExtent3D{ value, value, value }; }
-    constexpr TExtent3D operator>>(uint32_t value) const { return *this >> TExtent3D{ value, value, value }; }
-    constexpr TExtent3D operator<<(uint32_t value) const { return *this << TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator+(const uint32_t value) const { return *this + TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator-(const uint32_t value) const { return *this - TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator*(const uint32_t value) const { return *this * TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator/(const uint32_t value) const { return *this / TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator>>(const uint32_t value) const { return *this >> TExtent3D{ value, value, value }; }
+    constexpr TExtent3D operator<<(const uint32_t value) const { return *this << TExtent3D{ value, value, value }; }
 };
 
-constexpr TExtent3D operator+(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator+(const uint32_t value, const TExtent3D extent) {
     return extent + value;
 }
 
-constexpr TExtent3D operator-(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator-(const uint32_t value, const TExtent3D extent) {
     return extent - value;
 }
 
-constexpr TExtent3D operator*(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator*(const uint32_t value, const TExtent3D extent) {
     return extent * value;
 }
 
-constexpr TExtent3D operator/(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator/(const uint32_t value, const TExtent3D extent) {
     return extent / value;
 }
 
-constexpr TExtent3D operator>>(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator>>(const uint32_t value, const TExtent3D extent) {
     return extent >> value;
 }
 
-constexpr TExtent3D operator<<(uint32_t value, TExtent3D extent) {
+constexpr TExtent3D operator<<(const uint32_t value, const TExtent3D extent) {
     return extent << value;
 }
 
@@ -98,41 +98,41 @@ struct TOffset2D {
     uint32_t Y{};
 
     bool operator==(const TOffset2D&) const noexcept = default;
-    constexpr TOffset2D operator+(const TOffset2D & other) const { return { X + other.X, Y + other.Y }; }
-    constexpr TOffset2D operator-(const TOffset2D & other) const { return { X - other.X, Y - other.Y }; }
-    constexpr TOffset2D operator*(const TOffset2D & other) const { return { X * other.X, Y * other.Y }; }
-    constexpr TOffset2D operator/(const TOffset2D & other) const { return { X / other.X, Y / other.Y }; }
-    constexpr TOffset2D operator>>(const TOffset2D & other) const { return { X >> other.X, Y >> other.Y }; }
-    constexpr TOffset2D operator<<(const TOffset2D & other) const { return { X << other.X, Y << other.Y }; }
-    constexpr TOffset2D operator+(uint32_t value) const { return *this + TOffset2D{ value, value }; }
-    constexpr TOffset2D operator-(uint32_t value) const { return *this - TOffset2D{ value, value }; }
-    constexpr TOffset2D operator*(uint32_t value) const { return *this * TOffset2D{ value, value }; }
-    constexpr TOffset2D operator/(uint32_t value) const { return *this / TOffset2D{ value, value }; }
-    constexpr TOffset2D operator>>(uint32_t value) const { return *this >> TOffset2D{ value, value }; }
-    constexpr TOffset2D operator<<(uint32_t value) const { return *this << TOffset2D{ value, value }; }
+    constexpr TOffset2D operator+(const TOffset2D& other) const { return { X + other.X, Y + other.Y }; }
+    constexpr TOffset2D operator-(const TOffset2D& other) const { return { X - other.X, Y - other.Y }; }
+    constexpr TOffset2D operator*(const TOffset2D& other) const { return { X * other.X, Y * other.Y }; }
+    constexpr TOffset2D operator/(const TOffset2D& other) const { return { X / other.X, Y / other.Y }; }
+    constexpr TOffset2D operator>>(const TOffset2D& other) const { return { X >> other.X, Y >> other.Y }; }
+    constexpr TOffset2D operator<<(const TOffset2D& other) const { return { X << other.X, Y << other.Y }; }
+    constexpr TOffset2D operator+(const uint32_t value) const { return *this + TOffset2D{ value, value }; }
+    constexpr TOffset2D operator-(const uint32_t value) const { return *this - TOffset2D{ value, value }; }
+    constexpr TOffset2D operator*(const uint32_t value) const { return *this * TOffset2D{ value, value }; }
+    constexpr TOffset2D operator/(const uint32_t value) const { return *this / TOffset2D{ value, value }; }
+    constexpr TOffset2D operator>>(const uint32_t value) const { return *this >> TOffset2D{ value, value }; }
+    constexpr TOffset2D operator<<(const uint32_t value) const { return *this << TOffset2D{ value, value }; }
 };
 
-constexpr TOffset2D operator+(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator+(const uint32_t value, const TOffset2D offset) {
     return offset + value;
 }
 
-constexpr TOffset2D operator-(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator-(const uint32_t value, const TOffset2D offset) {
     return offset - value;
 }
 
-constexpr TOffset2D operator*(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator*(const uint32_t value, const TOffset2D offset) {
     return offset * value;
 }
 
-constexpr TOffset2D operator/(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator/(const uint32_t value, const TOffset2D offset) {
     return offset / value;
 }
 
-constexpr TOffset2D operator>>(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator>>(const uint32_t value, const TOffset2D offset) {
     return offset >> value;
 }
 
-constexpr TOffset2D operator<<(uint32_t value, TOffset2D offset) {
+constexpr TOffset2D operator<<(const uint32_t value, const TOffset2D offset) {
     return offset << value;
 }
 
@@ -150,35 +150,35 @@ struct TOffset3D {
     constexpr TOffset3D operator/(const TOffset3D& other) const { return { X / other.X, Y / other.Y, Z / other.Z }; }
     constexpr TOffset3D operator>>(const TOffset3D& other) const { return { X >> other.X, Y >> other.Y, Z >> other.Z }; }
     constexpr TOffset3D operator<<(const TOffset3D& other) const { return { X << other.X, Y << other.Y, Z << other.Z }; }
-    constexpr TOffset3D operator+(uint32_t value) const { return *this + TOffset3D{ value, value, value }; }
-    constexpr TOffset3D operator-(uint32_t value) const { return *this - TOffset3D{ value, value, value }; }
-    constexpr TOffset3D operator*(uint32_t value) const { return *this * TOffset3D{ value, value, value }; }
-    constexpr TOffset3D operator/(uint32_t value) const { return *this / TOffset3D{ value, value, value }; }
-    constexpr TOffset3D operator>>(uint32_t value) const { return *this >> TOffset3D{ value, value, value }; }
-    constexpr TOffset3D operator<<(uint32_t value) const { return *this << TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator+(const uint32_t value) const { return *this + TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator-(const uint32_t value) const { return *this - TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator*(const uint32_t value) const { return *this * TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator/(const uint32_t value) const { return *this / TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator>>(const uint32_t value) const { return *this >> TOffset3D{ value, value, value }; }
+    constexpr TOffset3D operator<<(const uint32_t value) const { return *this << TOffset3D{ value, value, value }; }
 };
 
-constexpr TOffset3D operator+(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator+(const uint32_t value, const TOffset3D offset) {
     return offset + value;
 }
 
-constexpr TOffset3D operator-(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator-(const uint32_t value, const TOffset3D offset) {
     return offset - value;
 }
 
-constexpr TOffset3D operator*(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator*(const uint32_t value, const TOffset3D offset) {
     return offset * value;
 }
 
-constexpr TOffset3D operator/(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator/(const uint32_t value, const TOffset3D offset) {
     return offset / value;
 }
 
-constexpr TOffset3D operator>>(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator>>(const uint32_t value, const TOffset3D offset) {
     return offset >> value;
 }
 
-constexpr TOffset3D operator<<(uint32_t value, TOffset3D offset) {
+constexpr TOffset3D operator<<(const uint32_t value, const TOffset3D offset) {
     return offset << value;
 }
 
@@ -278,7 +278,6 @@ using TId = typename TIdImpl<TTag>::Id;
 
 template<class TTag>
 struct TIdGenerator {
-public:
     auto Next() -> TId<TTag> {
         _counter += 1;
         return { _counter };

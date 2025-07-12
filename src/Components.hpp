@@ -78,6 +78,7 @@ struct TComponentPlanet {
 
 struct TComponentCamera {
 
+    float NearPlane = 0.1f;
     float FieldOfView = 60.0f;
     float CameraSpeed = 2.0f;
     float Sensitivity = 0.0015f;
@@ -90,9 +91,9 @@ struct TComponentGlobalLight {
     float Elevation;
     glm::vec3 Color = {1.0f, 1.0f, 1.0f};
     float Intensity = 1.0f;
-    bool IsEnabled = false;
-    bool CanCastShadows = false;
+    bool IsEnabled = true;
     bool IsDebugEnabled = true;
+    bool CanCastShadows = false;
 };
 
 auto EntityChangeParent(entt::registry& registry, entt::entity entity, entt::entity parent) -> void;

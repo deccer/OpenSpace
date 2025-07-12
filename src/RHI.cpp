@@ -21,8 +21,6 @@ std::unordered_map<TSamplerDescriptor, TSamplerId> g_samplerDescriptors;
 uint32_t g_defaultInputLayout = 0;
 uint32_t g_lastIndexBuffer = 0;
 
-float g_maxTextureAnisotropy = 0.0f;
-
 auto OnOpenGLDebugMessage(
     [[maybe_unused]] uint32_t source,
     const uint32_t type,
@@ -168,6 +166,33 @@ constexpr auto MemoryAccessToGL(const TMemoryAccess memoryAccess) -> uint32_t {
     }
 }
 
+auto BlendFactorToGL(const TBlendFactor blendFactor) -> uint32_t {
+    switch (blendFactor) {
+        case TBlendFactor::Zero: return GL_ZERO;
+        case TBlendFactor::SrcColor: return GL_SRC_COLOR;
+        case TBlendFactor::DstColor: return GL_DST_COLOR;
+        case TBlendFactor::SrcAlpha: return GL_SRC_ALPHA;
+        case TBlendFactor::DstAlpha: return GL_DST_ALPHA;
+        case TBlendFactor::One: return GL_ONE;
+        case TBlendFactor::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
+        case TBlendFactor::OneMinusDstColor: return GL_ONE_MINUS_DST_COLOR;
+        case TBlendFactor::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
+        case TBlendFactor::OneMinusSrcColor: return GL_ONE_MINUS_SRC_COLOR;
+        default: std::unreachable();
+    }
+}
+
+auto BlendOperationToGL(const TBlendOperation blendOperation) -> uint32_t {
+    switch (blendOperation) {
+        case TBlendOperation::Add: return GL_FUNC_ADD;
+        case TBlendOperation::Subtract: return GL_FUNC_SUBTRACT;
+        case TBlendOperation::ReverseSubtract: return GL_FUNC_REVERSE_SUBTRACT;
+        case TBlendOperation::Min: return GL_MIN;
+        case TBlendOperation::Max: return GL_MAX;
+        default: std::unreachable();
+    }
+}
+
 auto FormatToGL(const TFormat format) -> uint32_t {
 
     switch (format) {
@@ -242,14 +267,14 @@ auto FormatToGL(const TFormat format) -> uint32_t {
         case TFormat::D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
         case TFormat::S8_UINT: return GL_STENCIL_INDEX8;
         /*
-        case EFormat::BC1_RGB_UNORM: return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-        case EFormat::BC1_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-        case EFormat::BC1_RGB_SRGB: return GL_COMPRESSED_SRGB_S3TC_DXT1_EXT;
-        case EFormat::BC1_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-        case EFormat::BC2_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-        case EFormat::BC2_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-        case EFormat::BC3_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-        case EFormat::BC3_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+        case TFormat::BC1_RGB_UNORM: return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+        case TFormat::BC1_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+        case TFormat::BC1_RGB_SRGB: return GL_COMPRESSED_SRGB_S3TC_DXT1_EXT;
+        case TFormat::BC1_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+        case TFormat::BC2_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+        case TFormat::BC2_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+        case TFormat::BC3_RGBA_UNORM: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        case TFormat::BC3_RGBA_SRGB: return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
         */
         case TFormat::BC4_R_UNORM: return GL_COMPRESSED_RED_RGTC1;
         case TFormat::BC4_R_SNORM: return GL_COMPRESSED_SIGNED_RED_RGTC1;
@@ -722,15 +747,55 @@ auto FormatToFormatClass(const TFormat format) -> TFormatClass {
     }
 }
 
+auto FillModeToGL(const TFillMode fillMode) -> uint32_t {
+    switch (fillMode) {
+        case TFillMode::Solid: return GL_FILL;
+        case TFillMode::Wireframe: return GL_LINE;
+        case TFillMode::Points: return GL_POINT;
+        default: std::unreachable();
+    }
+}
+
+auto CullModeToGL(const TCullMode cullMode) -> uint32_t {
+    switch (cullMode) {
+        case TCullMode::None: return GL_NONE;
+        case TCullMode::Back: return GL_BACK;
+        case TCullMode::Front: return GL_FRONT;
+        case TCullMode::FrontAndBack: return GL_FRONT_AND_BACK;
+        default: std::unreachable();
+    }
+}
+
+auto FaceWindingOrderToGL(const TFaceWindingOrder faceWindingOrder) -> uint32_t {
+    switch (faceWindingOrder) {
+        case TFaceWindingOrder::CounterClockwise: return GL_CCW;
+        case TFaceWindingOrder::Clockwise: return GL_CW;
+        default: std::unreachable();
+    }
+}
+
+auto CompareFunctionToGL(const TCompareFunction depthFunction) -> uint32_t {
+    switch (depthFunction) {
+        case TCompareFunction::Never: return GL_NEVER;
+        case TCompareFunction::Less: return GL_LESS;
+        case TCompareFunction::Equal: return GL_EQUAL;
+        case TCompareFunction::LessThanOrEqual: return GL_LEQUAL;
+        case TCompareFunction::Greater: return GL_GREATER;
+        case TCompareFunction::NotEqual: return GL_NOTEQUAL;
+        case TCompareFunction::GreaterThanOrEqual: return GL_GEQUAL;
+        case TCompareFunction::Always: return GL_ALWAYS;
+        default: std::unreachable();
+    }
+}
+
 auto ReadShaderSourceFromFile(const std::filesystem::path& filePath) -> std::expected<std::string, std::string> {
 
     std::string pathStr = filePath.string();
     std::string parentPathStr = filePath.parent_path().string();
     char error[256]{};
     const auto processedSource = std::unique_ptr<char, decltype([](char* ptr) { free(ptr); })>(stb_include_file(pathStr.data(), nullptr, parentPathStr.data(), error));
-    if (!processedSource)
-    {
-        return std::unexpected(std::format("Failed to process includes for {}", filePath.string()));
+    if (!processedSource) {
+        return std::unexpected(std::format("Failed to process includes for {}. Error: {}", filePath.string(), error));
     }
 
     return processedSource.get();
@@ -754,6 +819,24 @@ auto PopDebugGroup() -> void {
     glPopDebugGroup();
 }
 
+auto ClearResourceBindings() -> void {
+    for (int i = 0; i < g_limits.MaxShaderStorageBufferBindings; i++) {
+        glBindBufferRange(GL_SHADER_STORAGE_BUFFER, i, 0, 0, 0);
+    }
+
+    for (int i = 0; i < g_limits.MaxUniformBufferBindings; i++) {
+        glBindBufferRange(GL_UNIFORM_BUFFER, i, 0, 0, 0);
+    }
+
+    for (int i = 0; i < g_limits.MaxImageUnits; i++) {
+        glBindImageTexture(i, 0, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
+    }
+
+    for (int i = 0; i < g_limits.MaxCombinedTextureImageUnits; i++) {
+        glBindTextureUnit(i, 0);
+        glBindSampler(i, 0);
+    }
+}
 
 auto CreateBuffer(
     const std::string_view label,
@@ -779,17 +862,25 @@ auto UpdateBuffer(
 
 auto DeleteBuffer(const uint32_t buffer) -> void {
 
+    assert(buffer != 0);
     glDeleteBuffers(1, &buffer);
 }
 
-auto DeletePipeline(const TPipeline& pipeline) -> void {
+auto DeletePipeline(TPipeline& pipeline) -> void {
 
+    assert(pipeline.Id != 0);
     glDeleteProgram(pipeline.Id);
+    pipeline.Id = 0;
 }
 
 auto TPipeline::Bind() -> void {
 
     glUseProgram(Id);
+#ifdef DEBUG
+    PushDebugGroup("Clear Bindings");
+    ClearResourceBindings();
+    PopDebugGroup();
+#endif
 }
 
 auto TPipeline::BindBufferAsUniformBuffer(
@@ -1186,11 +1277,46 @@ auto GetOrCreateSampler(const TSamplerDescriptor& samplerDescriptor) -> TSampler
     glSamplerParameterf(sampler.Id, GL_TEXTURE_LOD_BIAS, samplerDescriptor.LodBias);
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MIN_LOD, samplerDescriptor.LodMin);
     glSamplerParameteri(sampler.Id, GL_TEXTURE_MAX_LOD, samplerDescriptor.LodMax);
+    glSamplerParameteri(sampler.Id, GL_TEXTURE_COMPARE_MODE, samplerDescriptor.IsComparisonEnabled ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE);
+    glSamplerParameteri(sampler.Id, GL_TEXTURE_COMPARE_FUNC, CompareFunctionToGL(samplerDescriptor.CompareFunction));
+
+    switch (samplerDescriptor.BorderColor) {
+        case TSamplerBorderColor::FloatTransparentBlack: {
+            constexpr float color[4]{0, 0, 0, 0};
+            glSamplerParameterfv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+        case TSamplerBorderColor::IntegerTransparentBlack: {
+            constexpr int32_t color[4]{0, 0, 0, 0};
+            glSamplerParameteriv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+        case TSamplerBorderColor::FloatOpaqueBlack: {
+            constexpr float color[4]{0, 0, 0, 1};
+            glSamplerParameterfv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+        case TSamplerBorderColor::IntegerOpaqueBlack: {
+            constexpr int32_t color[4]{0, 0, 0, 1};
+            glSamplerParameteriv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+        case TSamplerBorderColor::FloatOpaqueWhite: {
+            constexpr float color[4]{1, 1, 1, 1};
+            glSamplerParameterfv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+        case TSamplerBorderColor::IntegerOpaqueWhite: {
+            constexpr int32_t color[4]{1, 1, 1, 1};
+            glSamplerParameteriv(sampler.Id, GL_TEXTURE_BORDER_COLOR, color);
+            break;
+        }
+    }
 
     if (samplerDescriptor.MinFilter == TTextureMinFilter::Linear ||
         samplerDescriptor.MinFilter == TTextureMinFilter::NearestMipmapLinear ||
         samplerDescriptor.MinFilter == TTextureMinFilter::LinearMipmapLinear) {
-        glSamplerParameterf(sampler.Id, GL_TEXTURE_MAX_ANISOTROPY, g_maxTextureAnisotropy);
+        glSamplerParameterf(sampler.Id, GL_TEXTURE_MAX_ANISOTROPY, g_limits.MaxTextureAnisotropy);
     }
 
     const auto samplerId = static_cast<TSamplerId>(g_samplers.size());
@@ -1250,17 +1376,15 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
     if (framebufferDescriptor.DepthStencilAttachment.has_value()) {
         auto& depthStencilAttachment = *framebufferDescriptor.DepthStencilAttachment;
         if (auto* createDepthStencilAttachment = std::get_if<TFramebufferDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
+
             const auto depthTextureId = CreateTexture({
                 .TextureType = TTextureType::Texture2D,
                 .Format = createDepthStencilAttachment->Format,
-                .Extent = TExtent3D(createDepthStencilAttachment->Extent.Width,
-                                    createDepthStencilAttachment->Extent.Height, 1),
+                .Extent = TExtent3D(createDepthStencilAttachment->Extent.Width, createDepthStencilAttachment->Extent.Height, 1),
                 .MipMapLevels = 1,
                 .Layers = 0,
                 .SampleCount = TSampleCount::One,
-                .Label = std::format("{}_{}x{}", createDepthStencilAttachment->Label,
-                                     createDepthStencilAttachment->Extent.Width,
-                                     createDepthStencilAttachment->Extent.Height)
+                .Label = std::format("{}_{}x{}", createDepthStencilAttachment->Label, createDepthStencilAttachment->Extent.Width, createDepthStencilAttachment->Extent.Height)
             });
             const auto& depthTexture = GetTexture(depthTextureId);
 
@@ -1269,15 +1393,29 @@ auto CreateFramebuffer(const TFramebufferDescriptor& framebufferDescriptor) -> T
 
             framebuffer.DepthStencilAttachment = {
                 .Texture = depthTexture,
+                .TextureId = depthTextureId,
                 .ClearDepthStencil = createDepthStencilAttachment->ClearDepthStencil,
                 .LoadOperation = createDepthStencilAttachment->LoadOperation,
             };
         } else if (auto* existingDepthStencilAttachment = std::get_if<TFramebufferExistingDepthStencilAttachmentDescriptor>(&depthStencilAttachment)) {
-            const auto& depthTexture = existingDepthStencilAttachment->ExistingDepthTexture;
+            const auto& depthTexture = GetTexture(existingDepthStencilAttachment->ExistingDepthTextureId);
             glNamedFramebufferTexture(framebuffer.Id, GL_DEPTH_ATTACHMENT, depthTexture.Id, 0);
             framebuffer.DepthStencilAttachment = {
                 .Texture = depthTexture,
+                .TextureId = existingDepthStencilAttachment->ExistingDepthTextureId,
                 .LoadOperation = TFramebufferAttachmentLoadOperation::DontCare,
+            };
+        } else if (auto* existingDepthStencilAttachmentForLayer = std::get_if<TFramebufferExistingDepthStencilAttachmentForSpecificLayerDescriptor>(&depthStencilAttachment)) {
+            const auto& depthTexture = GetTexture(existingDepthStencilAttachmentForLayer->ExistingDepthTextureId);
+            glNamedFramebufferTextureLayer(framebuffer.Id, GL_DEPTH_ATTACHMENT, depthTexture.Id, 0, existingDepthStencilAttachmentForLayer->Layer);
+            framebuffer.DepthStencilAttachment = {
+                .Texture = depthTexture,
+                .TextureId = existingDepthStencilAttachmentForLayer->ExistingDepthTextureId,
+                .ClearDepthStencil = {
+                    .Depth = 1.0f,
+                    .Stencil = 0,
+                },
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
             };
         }
     } else {
@@ -1316,7 +1454,7 @@ auto BindFramebuffer(const TFramebuffer& framebuffer) -> void {
                         glClearNamedFramebufferuiv(framebuffer.Id, GL_COLOR, colorAttachmentIndex, std::get_if<std::array<uint32_t, 4>>(&colorAttachment.ClearColor.Data)->data());
                         break;
                     default:
-                        std::unreachable_sentinel;
+                        std::unreachable();
                 }
             }
         } else {
@@ -1488,45 +1626,17 @@ auto CreateComputeProgram(
     return program;
 }
 
-auto FillModeToGL(const TFillMode fillMode) -> uint32_t {
-    switch (fillMode) {
-    case TFillMode::Solid: return GL_FILL;
-    case TFillMode::Wireframe: return GL_LINE;
-    case TFillMode::Points: return GL_POINT;
-    default: std::unreachable();
-    }
-}
-
-auto CullModeToGL(const TCullMode cullMode) -> uint32_t {
-    switch (cullMode) {
-    case TCullMode::None: return GL_NONE;
-    case TCullMode::Back: return GL_BACK;
-    case TCullMode::Front: return GL_FRONT;
-    case TCullMode::FrontAndBack: return GL_FRONT_AND_BACK;
-    default: std::unreachable();
-    }
-}
-
-auto FaceWindingOrderToGL(const TFaceWindingOrder faceWindingOrder) -> uint32_t {
-    switch (faceWindingOrder) {
-    case TFaceWindingOrder::CounterClockwise: return GL_CCW;
-    case TFaceWindingOrder::Clockwise: return GL_CW;
-    default: std::unreachable();
-    }
-}
-
-auto DepthFunctionToGL(const TDepthFunction depthFunction) -> uint32_t {
-    switch (depthFunction) {
-    case TDepthFunction::Never: return GL_NEVER;
-    case TDepthFunction::Less: return GL_LESS;
-    case TDepthFunction::Equal: return GL_EQUAL;
-    case TDepthFunction::LessThanOrEqual: return GL_LEQUAL;
-    case TDepthFunction::Greater: return GL_GREATER;
-    case TDepthFunction::NotEqual: return GL_NOTEQUAL;
-    case TDepthFunction::GreaterThanOrEqual: return GL_GEQUAL;
-    case TDepthFunction::Always: return GL_ALWAYS;
-    default: std::unreachable();
-    }
+auto MapBlendState(const TBlendStateDescriptor& blendStateDescriptor) -> TBlendState {
+    return TBlendState {
+        .IsEnabled = blendStateDescriptor.IsBlendEnabled,
+        .SourceColorBlendFactor = BlendFactorToGL(blendStateDescriptor.ColorSourceBlendFactor),
+        .DestinationColorBlendFactor = BlendFactorToGL(blendStateDescriptor.ColorDestinationBlendFactor),
+        .ColorBlendOperation = BlendOperationToGL(blendStateDescriptor.ColorBlendOperation),
+        .SourceAlphaBlendFactor = BlendFactorToGL(blendStateDescriptor.AlphaSourceBlendFactor),
+        .DestinationAlphaBlendFactor = BlendFactorToGL(blendStateDescriptor.AlphaDestinationBlendFactor),
+        .AlphaBlendOperation = BlendOperationToGL(blendStateDescriptor.AlphaBlendOperation),
+        .ColorWriteMask = blendStateDescriptor.ColorWriteMask,
+    };
 }
 
 auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineDescriptor) -> std::expected<TGraphicsPipeline, std::string> {
@@ -1603,10 +1713,12 @@ auto CreateGraphicsPipeline(const TGraphicsPipelineDescriptor& graphicsPipelineD
     pipeline.LineWidth = graphicsPipelineDescriptor.RasterizerState.LineWidth;
     pipeline.PointSize = graphicsPipelineDescriptor.RasterizerState.PointSize;
     // Output Merger Stage
-    pipeline.ColorMask = graphicsPipelineDescriptor.OutputMergerState.ColorMask;
     pipeline.IsDepthTestEnabled = graphicsPipelineDescriptor.OutputMergerState.DepthState.IsDepthTestEnabled;
     pipeline.IsDepthWriteEnabled = graphicsPipelineDescriptor.OutputMergerState.DepthState.IsDepthWriteEnabled;
-    pipeline.DepthFunction = graphicsPipelineDescriptor.OutputMergerState.DepthState.DepthFunction;
+    pipeline.DepthCompareFunction = graphicsPipelineDescriptor.OutputMergerState.DepthState.DepthCompareFunction;
+    for (auto i = 0; i < MAX_COLOR_BLEND_ATTACHMENTS; i++) {
+        pipeline.BlendStates[i] = MapBlendState(graphicsPipelineDescriptor.OutputMergerState.BlendStates[i]);
+    }
 
     return pipeline;
 }
@@ -1672,16 +1784,40 @@ auto TGraphicsPipeline::Bind() -> void {
 
     if (IsDepthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
-        glDepthFunc(DepthFunctionToGL(DepthFunction));
+        glDepthFunc(CompareFunctionToGL(DepthCompareFunction));
     } else {
         glDisable(GL_DEPTH_TEST);
     }
 
     glDepthMask(IsDepthWriteEnabled ? GL_TRUE : GL_FALSE);
-    glColorMask((ColorMask & TColorMaskBits::R) == TColorMaskBits::R,
-                (ColorMask & TColorMaskBits::G) == TColorMaskBits::G,
-                (ColorMask & TColorMaskBits::B) == TColorMaskBits::B,
-                (ColorMask & TColorMaskBits::A) == TColorMaskBits::A);
+
+    auto isAnyBlendEnabled = false;
+    for (auto i = 0; i < MAX_COLOR_BLEND_ATTACHMENTS; i++) {
+        const auto& blendState = BlendStates[i];
+        if (blendState.IsEnabled) {
+            isAnyBlendEnabled = true;
+        }
+        glColorMaski(i, (blendState.ColorWriteMask & TColorMaskBits::R) == TColorMaskBits::R,
+                        (blendState.ColorWriteMask & TColorMaskBits::G) == TColorMaskBits::G,
+                        (blendState.ColorWriteMask & TColorMaskBits::B) == TColorMaskBits::B,
+                        (blendState.ColorWriteMask & TColorMaskBits::A) == TColorMaskBits::A);
+
+        glBlendFuncSeparatei(
+            i,
+            blendState.SourceColorBlendFactor,
+            blendState.DestinationColorBlendFactor,
+            blendState.SourceAlphaBlendFactor,
+            blendState.DestinationAlphaBlendFactor);
+        glBlendEquationSeparatei(
+            i,
+            blendState.ColorBlendOperation,
+            blendState.AlphaBlendOperation);
+    }
+    if (isAnyBlendEnabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
 }
 
 auto TGraphicsPipeline::BindBufferAsVertexBuffer(
@@ -1744,15 +1880,36 @@ auto RhiInitialize(bool isDebug) -> void {
         glDebugMessageCallback(OnOpenGLDebugMessage, nullptr);
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        spdlog::info("OpenGL Debugging Enabled");
     }
 
     glCreateVertexArrays(1, &g_defaultInputLayout);
     SetDebugLabel(g_defaultInputLayout, GL_VERTEX_ARRAY, "InputLayout-Default");
 
-    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &g_maxTextureAnisotropy);
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &g_limits.MaxTextureAnisotropy);
+
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &g_limits.MaxUniformBufferBindings);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &g_limits.MaxUniformBlockSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &g_limits.UniformBufferOffsetAlignment);
+    glGetIntegerv(GL_MAX_COMBINED_UNIFORM_BLOCKS, &g_limits.MaxCombinedUniformBlocks);
+
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &g_limits.MaxShaderStorageBufferBindings);
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &g_limits.MaxShaderStorageBlockSize);
+    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &g_limits.ShaderStorageBufferOffsetAlignment);
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, &g_limits.MaxCombinedShaderStorageBlocks);
+
+    glGetIntegerv(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES, &g_limits.MaxCombinedShaderOutputResources);
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &g_limits.MaxCombinedTextureImageUnits);
+
+    glGetIntegerv(GL_MAX_IMAGE_UNITS, &g_limits.MaxImageUnits);
+    glGetIntegerv(GL_MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS, &g_limits.MaxFragmentCombinedOutputResources);
+    glGetIntegerv(GL_MAX_COMBINED_IMAGE_UNIFORMS, &g_limits.MaxCombinedImageUniforms);
+    glGetIntegerv(GL_MAX_SERVER_WAIT_TIMEOUT, &g_limits.MaxServerWaitTimeout);    
 }
 
 auto RhiShutdown() -> void {
     DeleteTextures();
     glDeleteVertexArrays(1, &g_defaultInputLayout);
+
+    spdlog::info("OpenGL Shutdown");
 }

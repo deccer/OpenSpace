@@ -8,7 +8,8 @@ layout(location = 5) out vec3 v_tangent;
 layout(location = 6) out vec2 v_uv;
 layout(location = 7) out vec4 v_current_world_position;
 layout(location = 8) out vec4 v_previous_world_position;
-layout(location = 9) flat out uint v_material_id;
+layout(location = 9) out vec3 v_fragment_position_vs;
+layout(location = 10) flat out uint v_material_id;
 
 layout (binding = 0, std140) uniform TGpuGlobalUniformBuffer
 {
@@ -56,6 +57,8 @@ void main()
     vec4 worldPosition = u_object_world_matrix * vec4(PackedToVec3(vertex_position.Position), 1.0);
     v_current_world_position = u_camera_information.CurrentJitteredViewProjectionMatrix * worldPosition;
     v_previous_world_position = u_camera_information.PreviousJitteredViewProjectionMatrix * worldPosition;
+
+    v_fragment_position_vs = vec3(u_camera_information.ViewMatrix * u_object_world_matrix * vec4(PackedToVec3(vertex_position.Position), 1.0f));
 
     gl_Position = v_current_world_position;
 }

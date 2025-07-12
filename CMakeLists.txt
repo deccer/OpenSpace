@@ -41,7 +41,7 @@ else()
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ftime-report")
-    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fno-pch-timestamp")
+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fno-pch-timestamp ${SANITIZER}")
 endif()
 
 set(USE_PROFILER OFF CACHE BOOL "Use Profiler")
