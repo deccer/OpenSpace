@@ -75,7 +75,6 @@ struct TGpuGlobalLight {
     alignas(16) glm::vec4 Direction = {};
     alignas(16) glm::vec4 ColorAndIntensity = {};
     alignas(16) glm::ivec4 LightProperties = {1, 0, 0, 0}; // IsEnabled, CanCastShadows, padding, padding
-    alignas(16) glm::ivec4 _padding1 = {};
 };
 
 entt::entity g_playerEntity = entt::null;

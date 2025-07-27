@@ -28,7 +28,6 @@ struct TGpuGlobalLight {
     vec4 ColorAndIntensity;
 
     ivec4 Properties; // .x = isEnabled, .y = hasShadows
-    ivec4 _padding1;
 };
 
 layout(binding = 1, std430) readonly buffer GlobalLightsBuffer {
