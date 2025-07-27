@@ -1018,6 +1018,13 @@ auto TPipeline::SetUniform(
 
 auto TPipeline::SetUniform(
     const int32_t location,
+    const glm::ivec4& value) const -> void {
+
+    glProgramUniform4iv(Id, location, 1, glm::value_ptr(value));
+}
+
+auto TPipeline::SetUniform(
+    const int32_t location,
     const glm::mat3& value) const -> void {
 
     glProgramUniformMatrix3fv(Id, location, 1, GL_FALSE, glm::value_ptr(value));

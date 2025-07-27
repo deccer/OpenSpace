@@ -8,10 +8,9 @@ layout(location = 0) in mat3 v_tbn;
 layout(location = 4) in vec3 v_normal;
 layout(location = 5) in vec3 v_tangent;
 layout(location = 6) in vec2 v_uv;
-layout(location = 7) in vec4 v_current_world_position;
-layout(location = 8) in vec4 v_previous_world_position;
-layout(location = 9) in vec3 v_fragment_position_vs;
-layout(location = 10) flat in uint v_material_id;
+layout(location = 7) in vec4 v_fragment_position_cs;
+layout(location = 8) in vec4 v_fragment_position_vs;
+layout(location = 9) flat in uint v_material_id;
 
 layout(location = 0) out vec4 o_color;
 layout(location = 1) out vec4 o_normal_ao;
@@ -30,8 +29,7 @@ layout(location = 5) uniform vec4 u_factors;
 layout(location = 6) uniform vec4 u_material_emissive;
 layout(location = 7) uniform uint u_texture_flags;
 
-struct TGpuMaterial
-{
+struct TGpuMaterial {
     vec4 base_color;
     vec4 factors; // normal strength, metalness, roughness, emission strength
     vec4 emissive_color;
@@ -45,8 +43,7 @@ struct TGpuMaterial
     uint64_t _padding1;
 };
 
-layout (binding = 4, std430) readonly buffer TGpuMaterialBuffer
-{
+layout (binding = 4, std430) readonly buffer TGpuMaterialBuffer {
     TGpuMaterial GpuMaterials[];
 };
 
@@ -82,14 +79,10 @@ void main()
         o_normal_ao = vec4(normal, ao_roughness_metalness.r);
     }
 
-    vec2 currentPosition = v_current_world_position.xy / v_current_world_position.w;
-    vec2 previousPosition = v_previous_world_position.xy / v_previous_world_position.w;
-    vec2 velocity = (currentPosition - previousPosition) * 0.5 + 0.5; // map [-1,1] ndc to [0,1]
-
-    o_velocity_roughness_metalness = vec4(velocity, ao_roughness_metalness.gb);
+    o_velocity_roughness_metalness = vec4(0.0, 0.0, ao_roughness_metalness.gb);
 
     o_emissive_viewz = vec4(u_material_emissive.rgb, v_fragment_position_vs.z);
     if (hasEmissiveTexture) {
-        o_emissive_viewz = vec4(texture(u_texture_emissive, v_uv).rgb, 1.0);
+        o_emissive_viewz = vec4(texture(u_texture_emissive, v_uv).rgb, v_fragment_position_vs.z);
     }
 }

@@ -22,15 +22,16 @@ const int MAX_SHADOW_CASCADES = 4;
 
 struct TGpuGlobalLight {
     mat4 LightProjectionView[MAX_SHADOW_CASCADES];
+    float ShadowCascadeDepths[8]; // contains 5 values, 8 for alignment
 
     vec4 Direction;
     vec4 ColorAndIntensity;
-    ivec4 Properties; // .x = isEnabled, .y = hasShadows
 
-    float ShadowCascadeDepths[8]; // contains 5 values, 8 for alignment
+    ivec4 Properties; // .x = isEnabled, .y = hasShadows
+    ivec4 _padding1;
 };
 
-layout(binding = 1, std430) uniform PerLightData {
+layout(binding = 1, std430) readonly buffer GlobalLightsBuffer {
     TGpuGlobalLight u_lights[MAX_GLOBAL_LIGHTS];
 };
 
@@ -67,10 +68,10 @@ float GetShadow(TGpuGlobalLight light, vec3 fragmentPositionWs, float fragmentPo
     );
 
     float shadow = 0.0;
-    float bias = max(0.005 * (1.0 - dot(normalWs, normalize(-light.Direction.xyz))), 0.0005);
+    float bias = max(0.005 * (1.0 - dot(normalWs, normalize(light.Direction.xyz))), 0.0005);
 
     for (int i = 0; i < 16; i++) {
-        shadow += texture(s_shadowMap, vec4(fragPosShadowSpace.xy + poissonDisk[i] / 1000.0, shadowCascade, fragPosShadowSpace.z - bias));
+        shadow += 1.0 - texture(s_shadowMap, vec4(fragPosShadowSpace.xy + poissonDisk[i] / 1000.0, u_global_light_index * MAX_GLOBAL_LIGHTS + shadowCascade, fragPosShadowSpace.z - bias));
     }
 
     return shadow / 16.0;
@@ -97,15 +98,18 @@ void main() {
 
     TGpuGlobalLight light = u_lights[u_global_light_index];
 
-    vec3 L = normalize(-light.Direction.xyz);
+    vec3 L = normalize(light.Direction.xyz);
     vec3 light_color = light.ColorAndIntensity.rgb * light.ColorAndIntensity.a;
     vec3 accumulated_light = SpecularContribution(L, V, normal, F0, metallic, roughness, albedo.rgb) * light_color;
 
-    float shadow = 1.0;
+    /*
+    float shadow = 0.0;
     if (light.Properties.x == 1) {
-        shadow = GetShadow(light, fragmentPosition_ws, -fragmentPosition_vs_z, normal);
+        shadow = GetShadow(light, fragmentPosition_ws, fragmentPosition_vs_z, normal);
+        accumulated_light += shadow;
     }
-    accumulated_light *= shadow;
+    */
 
-    o_accumulated_light = 0.000001 * vec4(accumulated_light, 1.0) + vec4(shadow, shadow, shadow, 1.0);
+    //o_accumulated_light = 0.000001 * vec4(accumulated_light, 1.0) + vec4(shadow, shadow, shadow, 1.0);
+    o_accumulated_light = vec4(accumulated_light, 1.0);
 }

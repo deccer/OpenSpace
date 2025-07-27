@@ -22,21 +22,21 @@ auto TScene::PlayerControlShip(
 
     auto& shipPosition = registry.get<TComponentPosition>(_shipEntity);
     auto& [Pitch, Yaw, Roll] = registry.get<TComponentOrientationEuler>(_shipEntity);
-    const glm::quat shipOrientation = glm::eulerAngleYXZ(Yaw, Pitch, Roll);
+    const glm::quat shipOrientation = glm::eulerAngleXYZ(Pitch, Yaw, Roll);
 
     glm::vec3 forward = glm::normalize(shipOrientation * -g_unitZ);
     glm::vec3 right = glm::normalize(shipOrientation * g_unitX);
     glm::vec3 up = glm::normalize(shipOrientation * g_unitY);
 
     auto tempCameraSpeed = playerCamera.CameraSpeed;
+    if (controlState.Slow.IsDown) {
+        tempCameraSpeed *= 0.0625f;
+    }
     if (controlState.Fast.IsDown) {
         tempCameraSpeed *= 10.0f;
     }
     if (controlState.Faster.IsDown) {
-        tempCameraSpeed *= 4000.0f;
-    }
-    if (controlState.Slow.IsDown) {
-        tempCameraSpeed *= 0.125f;
+        tempCameraSpeed *= 400.0f;
     }
 
     forward *= tempCameraSpeed;
@@ -139,17 +139,16 @@ auto TScene::Load() -> bool {
      * Load Assets
      */
 
-    /*
-    Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
-    Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
-    Assets::AddAssetModelFromFile("fform3", "data/basic/fform_3.glb");
-    Assets::AddAssetModelFromFile("fform4", "data/basic/fform_4.glb");
-    Assets::AddAssetModelFromFile("fform5", "data/basic/fform_5.glb");
-    Assets::AddAssetModelFromFile("fform6", "data/basic/fform_6.glb");
-    Assets::AddAssetModelFromFile("fform7", "data/basic/fform_7.glb");
-    Assets::AddAssetModelFromFile("fform8", "data/basic/fform_9.glb");
-    Assets::AddAssetModelFromFile("fform9", "data/basic/fform_10.glb");
-    */
+    //Assets::AddAssetModelFromFile("fform1", "data/basic/fform_1.glb");
+    //Assets::AddAssetModelFromFile("fform2", "data/basic/fform_2.glb");
+    //Assets::AddAssetModelFromFile("fform3", "data/basic/fform_3.glb");
+    //Assets::AddAssetModelFromFile("fform4", "data/basic/fform_4.glb");
+    //Assets::AddAssetModelFromFile("fform5", "data/basic/fform_5.glb");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/fform_4.glb");
+    //Assets::AddAssetModelFromFile("fform7", "data/basic/fform_7.glb");
+    //Assets::AddAssetModelFromFile("fform8", "data/basic/fform_9.glb");
+    //Assets::AddAssetModelFromFile("fform9", "data/basic/fform_10.glb");
+
 
     //Assets::AddAssetModelFromFile("axes", "data/scenes/SillyShip/SM_Ship6.gltf");
     Assets::AddAssetModelFromFile("LessSillyShip", "data/basic/SM_DemonShip.glb");
@@ -159,8 +158,9 @@ auto TScene::Load() -> bool {
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/Sponza/Sponza.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/cutlass/cutlass.gltf");
-    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/exported.glb");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/deccer_balls.glb");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/scene.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/deccer_balls.glb");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/CubiclePlane.glb");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
     /// Setup Scene ////////////
@@ -172,6 +172,7 @@ auto TScene::Load() -> bool {
         glm::vec3{1.0f, 0.0f, 0.5f},
         0.5f);
     SetParent(sun1Light, _rootEntity);
+
     const auto sun2Light = CreateGlobalLight(
         "Sun Blue Light (S)",
         glm::radians(180.0f),
@@ -185,7 +186,7 @@ auto TScene::Load() -> bool {
         glm::radians(90.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 1.0f, 0.0f},
-        0.5f);
+        1.0f);
     SetParent(sun3Light, _rootEntity);
 
     const auto sun4Light = CreateGlobalLight(
@@ -196,11 +197,12 @@ auto TScene::Load() -> bool {
         0.5f);
     SetParent(sun4Light, _rootEntity);
 
+
     CreateModel("Axes", "axes");
 
     _playerEntity = CreateEmpty("Player");
     SetParent(_playerEntity, _rootEntity);
-    SetPosition(_playerEntity, glm::vec3{-30.0f, 0.0f, -10.0f});
+    SetPosition(_playerEntity, glm::vec3{-30.0f, 0.0f, -0.0f});
     SetOrientation(_playerEntity, 0.0f, glm::radians(-90.0f), 0.0f);
     AddComponent<TComponentPositionBackup>(_playerEntity, glm::vec3{0.0f});
     AddComponent<TComponentCamera>(_playerEntity, TComponentCamera {
@@ -211,16 +213,16 @@ auto TScene::Load() -> bool {
 
     _landingPadEntity = CreateModel("Landing Pad", "SM_Cube_x1_y1_z1");
     SetParent(_landingPadEntity, _rootEntity);
-    SetPosition(_landingPadEntity, glm::vec3{-50.0f, -5.0f, 0.0f});
+    SetPosition(_landingPadEntity, glm::vec3{-50.0f, -5.0f, -300.0f});
 
     _shipEntity = CreateModel("SillyShip", "LessSillyShip");
     SetParent(_shipEntity, _rootEntity);
-    SetPosition(_shipEntity, glm::vec3{-70.0f, 0.0f, -10.0f});
+    SetPosition(_shipEntity, glm::vec3{-70.0f, 0.0f, -310.0f});
 
     const auto capitalEntity = CreateModel("Capital 001", "SM_Capital_001");
     SetParent(capitalEntity, _rootEntity);
-    SetScale(capitalEntity, glm::vec3{90.0f});
-    SetPosition(capitalEntity, glm::vec3{0.0f, 30.0f, -200.0f});
+    SetScale(capitalEntity, glm::vec3{1.0f});
+    //SetPosition(capitalEntity, glm::vec3{0.0f, 30.0f, -200.0f});
 
     return true;
 }

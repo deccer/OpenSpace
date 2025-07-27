@@ -2,8 +2,8 @@
 
 #include "Include.VertexTypes.glsl"
 
-layout (location = 0) uniform mat4 u_object_world_matrix;
-layout (location = 4) uniform mat4 u_light_matrix;
+layout (location = 0) uniform mat4 u_light_view_projection_matrix;
+layout (location = 4) uniform mat4 u_object_world_matrix;
 
 layout(binding = 1, std430) restrict readonly buffer TVertexPositionBuffer {
     TVertexPosition VertexPositions[];
@@ -12,7 +12,10 @@ layout(binding = 1, std430) restrict readonly buffer TVertexPositionBuffer {
 void main()
 {
     TVertexPosition vertex_position = VertexPositions[gl_VertexID];
-    gl_Position = u_light_matrix *
+    //vec4 in_position = vec4(PackedToVec4(vertex_position.Position).xyz, 1.0);
+    vec4 in_position = vec4(vertex_position.Position.xyz, 1.0);
+
+    gl_Position = u_light_view_projection_matrix *
                   u_object_world_matrix *
-                  vec4(PackedToVec3(vertex_position.Position), 1.0);
+                  in_position;
 }

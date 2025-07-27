@@ -3,20 +3,17 @@
 
 #include "Include.BasicTypes.glsl"
 
-struct TVertexPosition
-{
-    TPackedVec3 Position;
+struct TVertexPosition {
+    vec4 Position;
 };
 
-struct TPackedVertexNormalTangentUvSign
-{
+struct TPackedVertexNormalTangentUvSign {
     uint Normal;
     uint Tangent;
     TPackedVec4 UvAndTangentSign;
 };
 
-struct TVertexNormalTangentUvSign
-{
+struct TVertexNormalTangentUvSign {
     vec4 Normal;
     vec4 Tangent;
     vec4 UvAndTangentSign;
