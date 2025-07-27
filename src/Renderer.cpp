@@ -105,19 +105,10 @@ struct TDepthPrePass {
 } g_depthPrePass;
 
 struct TShadowPass {
-
-    TShadowPass() {
-        spdlog::info("Initializing shadow pass");
-    }
-
-    TShadowPass(const TShadowPass&) = delete;
-    TShadowPass(TShadowPass&&) = delete;
-    TShadowPass& operator=(const TShadowPass&) = delete;
-
     std::array<TFramebuffer, MAX_GLOBAL_LIGHTS * MAX_SHADOW_CASCADES> ShadowMapFramebuffers;
     TTextureId ShadowMapTexture = TTextureId::Invalid;
     uint32_t ShadowMapResolution = SHADOW_MAP_SIZE;
-    float CascadeSplitLambda = 0.5f;
+    float CascadeSplitLambda = 0.15f;
     TGraphicsPipeline Pipeline = {};
 } g_shadowPass;
 
@@ -311,7 +302,7 @@ inline auto ComputeShadowCascades(
         const auto ratio = cascadeIndex / static_cast<float>(MAX_SHADOW_CASCADES);
         const auto logarithmic = cameraNearPlane * glm::pow(cameraFarPlane / cameraNearPlane, ratio);
         const auto linear = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * ratio;
-        globalLight.CascadeSplitDistances[cascadeIndex] = glm::mix(logarithmic, linear, 0.2f);
+        globalLight.CascadeSplitDistances[cascadeIndex] = glm::mix(logarithmic, linear, g_shadowPass.CascadeSplitLambda);
     }
     globalLight.CascadeSplitDistances[MAX_SHADOW_CASCADES] = cameraFarPlane;
 
