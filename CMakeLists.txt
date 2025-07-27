@@ -23,6 +23,7 @@ project(OpenSpace
     LANGUAGES C CXX
 )
 
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
 set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 
