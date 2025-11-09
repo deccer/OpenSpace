@@ -26,9 +26,6 @@ project(OpenSpace
 set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "")
-set(CMAKE_CXX_STANDARD 23)
 if(!${MSVC})
     set(CMAKE_CXX_LINKER_LAUNCHER "/usr/bin/ccache")
     set(CMAKE_LINKER_TYPE MOLD)
@@ -39,6 +36,7 @@ else()
         set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION "-std:c++latest")
     endif()
 endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ftime-report")
     set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fno-pch-timestamp")
