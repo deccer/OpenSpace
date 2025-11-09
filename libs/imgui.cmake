@@ -22,6 +22,13 @@ if(imgui_ADDED)
         ${imgui_SOURCE_DIR}/backends
         ${glfw_SOURCE_DIR}/include)
 
-    target_link_libraries(imgui PRIVATE glfw)
+    target_link_libraries(imgui
+            PRIVATE glfw
+    )
+    if(WIN32 && !APPLE)
+        target_link_libraries(imgui
+            PRIVATE X11
+        )
+    endif()
 endif()
 
