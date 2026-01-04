@@ -18,7 +18,7 @@ include(entt.cmake)
 include(imgui.cmake)
 include(imguizmo.cmake)
 
-include(ktx.cmake)
+#include(ktx.cmake)
 include(mikktspace.cmake)
 include(fastgltf.cmake)
 include(meshoptimizer.cmake)
