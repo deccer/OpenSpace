@@ -1,0 +1,4 @@
+CompileFlags:
+  CompilationDatabase: @CLANGD_COMPILATIONDB_DIR@
+  Add: [__cpp_concepts=202002]
+  Remove: [-fmodules-ts, -fmodule-mapper=*, -fdeps-format=*]
