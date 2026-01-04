@@ -1,18 +1,19 @@
-cmake_minimum_required(VERSION 3.29.4)
+cmake_minimum_required(VERSION 3.30)
 
-if(EXISTS ".git/")
-    find_package(Git REQUIRED)
-    execute_process(
-        COMMAND "${GIT_EXECUTABLE}" describe --tags --match=?[0-9.]*
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        OUTPUT_VARIABLE DESCRIBE_NAME COMMAND_ERROR_IS_FATAL ANY
-    )
-    #set(CPM_DEVELOPMENT "-development-version")
-else()
-    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/.git_archival" DESCRIBE_NAME
-        REGEX "^describe-name:.*"
-    )
-endif()
+cmake_policy(SET CMP0091 NEW)  # MSVC runtime library flags selected by CMAKE_MSVC_RUNTIME_LIBRARY
+cmake_policy(SET CMP0092 NEW)  # MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default
+cmake_policy(SET CMP0135 NEW)  # ExternalProject download methods timestamp
+
+set(CMAKE_POLICY_VERSION_MINIMUM "3.10")
+set(CMAKE_WARN_DEPRECATED FALSE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CLANGD_COMPILATIONDB_DIR "${CMAKE_BINARY_DIR}")
+configure_file(
+    ${CMAKE_SOURCE_DIR}/.clangd.in
+    ${CMAKE_SOURCE_DIR}/.clangd
+    @ONLY
+)
+
 include(cmake/PopulateChangeSetVariables.cmake)
 
 set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
@@ -26,31 +27,26 @@ set(OPENSPACE_VERSION_FULL "${OPENSPACE_VERSION_MAJOR}.${OPENSPACE_VERSION_MINOR
 configure_file(${CMAKE_SOURCE_DIR}/src/Version.hpp.in ${CMAKE_SOURCE_DIR}/src/Version.hpp @ONLY)
 
 project(OpenSpace
-    VERSION "${EXTRACTED_OPENSPACE_VERSION}"
-    DESCRIPTION "A space game written with c++23 and OpenGL 4.6"
     VERSION "${OPENSPACE_VERSION}"
+    DESCRIPTION "A space game written in C++23 and powered by OpenGL 4.6"
     HOMEPAGE_URL "https://github.com/deccer/OpenSpace"
     LANGUAGES C CXX
 )
 
-set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(!${MSVC})
+if (NOT MSVC)
     set(CMAKE_CXX_LINKER_LAUNCHER "/usr/bin/ccache")
     set(CMAKE_LINKER_TYPE MOLD)
-else()
+else ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.12.25835)
-        set(CMAKE_CXX20_STANDARD_COMPILE_OPTION "-std:c++latest")
-        set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION "-std:c++latest")
-    endif()
-endif()
+endif ()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ftime-report")
     set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Xclang -fno-pch-timestamp")
-endif()
+endif ()
 
 set(USE_PROFILER OFF CACHE BOOL "Use Profiler")
 
