@@ -461,6 +461,7 @@ struct TComputePipelineDescriptor {
 };
 
 struct TPipeline {
+    virtual ~TPipeline() = default;
     uint32_t Id;
 
     virtual auto Bind() -> void;
