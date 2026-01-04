@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Version.hpp"
+
 #define nameof(name) #name
 
 struct TExtent2D

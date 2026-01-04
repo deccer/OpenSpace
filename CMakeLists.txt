@@ -13,12 +13,19 @@ else()
         REGEX "^describe-name:.*"
     )
 endif()
+include(cmake/PopulateChangeSetVariables.cmake)
 
-string(REGEX MATCH "([0-9\\.]+)" EXTRACTED_OPENSPACE_VERSION "${DESCRIBE_NAME}")
+set(OPENSPACE_VERSION_MAJOR 0)
+set(OPENSPACE_VERSION_MINOR 1)
+set(OPENSPACE_VERSION_PATCH 0)
+set(OPENSPACE_VERSION "${OPENSPACE_VERSION_MAJOR}.${OPENSPACE_VERSION_MINOR}.${OPENSPACE_VERSION_PATCH}.${OPENSPACE_REVISION_ID}")
+set(OPENSPACE_VERSION_FULL "${OPENSPACE_VERSION_MAJOR}.${OPENSPACE_VERSION_MINOR}.${OPENSPACE_VERSION_PATCH}.${OPENSPACE_REVISION_ID}-${OPENSPACE_SHORT_CHANGE_SET}")
+configure_file(${CMAKE_SOURCE_DIR}/src/Version.hpp.in ${CMAKE_SOURCE_DIR}/src/Version.hpp @ONLY)
 
 project(OpenSpace
     VERSION "${EXTRACTED_OPENSPACE_VERSION}"
     DESCRIPTION "A space game written with c++23 and OpenGL 4.6"
+    VERSION "${OPENSPACE_VERSION}"
     HOMEPAGE_URL "https://github.com/deccer/OpenSpace"
     LANGUAGES C CXX
 )
@@ -46,3 +53,13 @@ set(USE_PROFILER OFF CACHE BOOL "Use Profiler")
 
 add_subdirectory(libs)
 add_subdirectory(src)
+
+message(STATUS "=======================================================")
+message(STATUS "GIT Revision ID: ${OPENSPACE_REVISION_ID}")
+message(STATUS "GIT Short ChangeSet: ${OPENSPACE_SHORT_CHANGE_SET}")
+message(STATUS "GIT ChangeSet: ${OPENSPACE_CHANGE_SET}")
+message(STATUS "GIT ChangeSet Date: ${OPENSPACE_CHANGE_SET_DATE}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "=======================================================")
+
