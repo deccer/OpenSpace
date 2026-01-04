@@ -751,8 +751,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasBaseColor;
     }
 
-    const auto& normalTextureChannel = assetMaterialData.NormalTextureChannel;
-    if (normalTextureChannel) {
+    if (const auto& normalTextureChannel = assetMaterialData.NormalTextureChannel) {
         const auto& normalTexture = *normalTextureChannel;
         const auto& normalTextureSampler = Assets::GetAssetSampler(normalTexture.SamplerName);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(normalTextureSampler));
@@ -766,8 +765,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasNormal;
     }
 
-    const auto& armTextureChannel = assetMaterialData.ArmTextureChannel;
-    if (armTextureChannel) {
+    if (const auto& armTextureChannel = assetMaterialData.ArmTextureChannel) {
         const auto& armTexture = *armTextureChannel;
         const auto& armTextureSampler = Assets::GetAssetSampler(armTexture.SamplerName);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(armTextureSampler));
@@ -781,8 +779,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
     }
 
-    const auto& metallicRoughnessTextureChannel = assetMaterialData.MetallicRoughnessTextureChannel;
-    if (metallicRoughnessTextureChannel) {
+    if (const auto& metallicRoughnessTextureChannel = assetMaterialData.MetallicRoughnessTextureChannel) {
         const auto& metallicRoughnessTexture = *metallicRoughnessTextureChannel;
         const auto& metallicRoughnessSampler = Assets::GetAssetSampler(metallicRoughnessTexture.SamplerName);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(metallicRoughnessSampler));
@@ -796,8 +793,7 @@ auto RendererCreateCpuMaterial(const std::string& assetMaterialName) -> void {
         cpuMaterial.HasTextureFlags |= TCpuTextureFlag::HasArm;
     }
 
-    const auto& emissiveTextureChannel = assetMaterialData.EmissiveTextureChannel;
-    if (emissiveTextureChannel) {
+    if (const auto& emissiveTextureChannel = assetMaterialData.EmissiveTextureChannel) {
         const auto& emissiveTexture = *emissiveTextureChannel;
         const auto& emissiveTextureSampler = Assets::GetAssetSampler(emissiveTexture.SamplerName);
         const auto samplerId = GetOrCreateSampler(CreateSamplerDescriptor(emissiveTextureSampler));
