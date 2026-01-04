@@ -140,7 +140,7 @@ void main()
 
     vec4 albedo = texelFetch(s_texture_gbuffer_albedo, uv_ss, 0);
     vec4 normal_ao = texelFetch(s_texture_gbuffer_normal_ao, uv_ss, 0);
-    vec4 velocity_roughness_metallic = texelFetch(s_texture_gbuffer_velocity_roughness_metallic, texCoord, 0);
+    vec4 velocity_roughness_metallic = texelFetch(s_texture_gbuffer_velocity_roughness_metallic, uv_ss, 0);
     vec3 emissive = texelFetch(s_texture_gbuffer_emissive, uv_ss, 0).rgb;
 
     float roughness = velocity_roughness_metallic.b;
