@@ -794,14 +794,14 @@ auto TPipeline::Bind() -> void {
 
 auto TPipeline::BindBufferAsUniformBuffer(
     const uint32_t buffer,
-    const int32_t bindingIndex) const -> void {
+    const uint32_t bindingIndex) const -> void {
 
     glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, buffer);
 }
 
 auto TPipeline::BindBufferAsUniformBuffer(
     const uint32_t buffer,
-    const int32_t bindingIndex,
+    const uint32_t bindingIndex,
     const int64_t offset,
     const int64_t size) const -> void {
 
@@ -810,14 +810,14 @@ auto TPipeline::BindBufferAsUniformBuffer(
 
 auto TPipeline::BindBufferAsShaderStorageBuffer(
     const uint32_t buffer,
-    const int32_t bindingIndex) const -> void {
+    const uint32_t bindingIndex) const -> void {
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, buffer);
 }
 
 auto TPipeline::BindBufferAsShaderStorageBuffer(
     const uint32_t buffer,
-    const int32_t bindingIndex,
+    const uint32_t bindingIndex,
     const int64_t offset,
     const int64_t size) const -> void {
 
@@ -825,14 +825,14 @@ auto TPipeline::BindBufferAsShaderStorageBuffer(
 }
 
 auto TPipeline::BindTexture(
-    const int32_t bindingIndex,
+    const uint32_t bindingIndex,
     const uint32_t texture) const  -> void {
 
     glBindTextureUnit(bindingIndex, texture);
 }
 
 auto TPipeline::BindTextureAndSampler(
-    const int32_t bindingIndex,
+    const uint32_t bindingIndex,
     const uint32_t texture,
     const uint32_t sampler) const  -> void {
 
