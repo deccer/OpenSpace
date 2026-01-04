@@ -120,7 +120,7 @@ struct TFxaaPass {
 struct TTaaPass {
     std::array<TFramebuffer, 2> Framebuffers = {};
     TGraphicsPipeline Pipeline = {};
-    int32_t HistoryIndex = 0;
+    size_t HistoryIndex = 0;
     TSamplerId Sampler = {};
     bool IsEnabled = true;
     float BlendFactor = 0.1f;
