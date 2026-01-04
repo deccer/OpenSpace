@@ -85,28 +85,33 @@ vec3 F_Fresnel(vec3 SpecularColor, float VoH) {
 	return 0.5 * sqr((g - VoH) / (g + VoH)) * (1.0 + sqr(((g + VoH) * VoH - 1) / ((g-VoH)*VoH + 1)));
 }
 
-vec3 SpecularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness, vec3 albedo) {
+vec3 CalculateDirectLighting(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness, vec3 albedo, vec3 lightColor) {
 
-    vec3 H = normalize (L + V);
-    float dotNH = clamp(dot(N, H), 0.0, 1.0);
-    float dotNV = clamp(dot(N, V), 0.001, 1.0);
-    float dotNL = clamp(dot(N, L), 0.001, 1.0);
+    vec3 H = normalize(L + V);
 
-    vec3 color = vec3(0.0);
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotV = max(dot(N, V), 0.0001);
+    float NdotL = max(dot(N, L), 0.0);
+    float VdotH = max(dot(V, H), 0.0);
 
-    if (dotNL > 0.0) {
-        // D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-        // G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
-        // F = Fresnel factor (Reflectance depending on angle of incidence)
-        vec3 F = FresnelSchlick(dotNV, F0);
-        vec3 specular = D * F * G / (4.0 * dotNL * dotNV + 0.001) * albedo;
-        vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
-        color += (kD * albedo / PI + specular) * dotNL;
+    if (NdotL <= 0.0) {
+        return vec3(0.0);
     }
 
-    return color;
+    // cook torranceisms
+    float D = D_GGX(NdotH, roughness); // normal Distribution
+    float G = G_SchlicksmithGGX(NdotL, NdotV, roughness); // Geometry micro shadowing
+    vec3 F = FresnelSchlick(VdotH, F0);
+
+    // specular term: DFG / (4 * NdotV * NdotL)
+    vec3 specular = (D * F * G) / (4.0 * NdotV * NdotL + 0.0001);
+
+    // diffuse term: using Lambertian BRDF
+    // kD is the ratio of light that gets refracted (not reflected)
+    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+    vec3 diffuse = kD * albedo / PI;
+
+    return (diffuse + specular) * lightColor * NdotL;
 }
 
 vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat4 invViewProj) {
@@ -124,63 +129,82 @@ vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat
 
 void main()
 {
-    float depth = texelFetch(s_texture_depth, ivec2(gl_FragCoord.xy), 0).r;
+    ivec2 uv_ss = ivec2(gl_FragCoord.xy);
+    float depth = texelFetch(s_texture_depth, uv_ss, 0).r;
 
+    // sky
     if (depth >= 1.0) {
-        vec3 color = texture(s_environment, v_sky_ray).rgb;
-
-        o_color = vec4(color, 1.0);
+        o_color = vec4(texture(s_environment, v_sky_ray).rgb, 1.0);
         return;
     }
 
-    vec4 albedo = texelFetch(s_texture_gbuffer_albedo, ivec2(gl_FragCoord.xy), 0);
-    vec4 normal_ao = texelFetch(s_texture_gbuffer_normal_ao, ivec2(gl_FragCoord.xy), 0);
-    vec4 velocity_roughness_metallic = texelFetch(s_texture_gbuffer_velocity_roughness_metallic, ivec2(gl_FragCoord.xy), 0);
-    vec3 emissive = texelFetch(s_texture_gbuffer_emissive, ivec2(gl_FragCoord.xy), 0).rgb;
-
-    vec3 normal = normal_ao.xyz;
-
-    vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
-    vec3 V = normalize(u_camera_position.xyz - fragmentPosition_ws);
-    vec3 N = normalize(normal);
-    vec3 R = reflect(-V, N);
+    vec4 albedo = texelFetch(s_texture_gbuffer_albedo, uv_ss, 0);
+    vec4 normal_ao = texelFetch(s_texture_gbuffer_normal_ao, uv_ss, 0);
+    vec4 velocity_roughness_metallic = texelFetch(s_texture_gbuffer_velocity_roughness_metallic, texCoord, 0);
+    vec3 emissive = texelFetch(s_texture_gbuffer_emissive, uv_ss, 0).rgb;
 
     float roughness = velocity_roughness_metallic.b;
     float metallic = velocity_roughness_metallic.a;
+
+    vec3 fragmentPosition_ws = ReconstructFragmentWorldPositionFromDepth(depth, u_screen_size, u_camera_inverse_view_projection);
+    vec3 V = normalize(u_camera_position.xyz - fragmentPosition_ws);
+    vec3 N = normalize(normal_ao.xyz);
+    vec3 R = reflect(-V, N);
+
+    // base reflectance
     vec3 F0 = mix(vec3(0.04), albedo.rgb, metallic);
 
-    vec3 L = vec3(0.0);
-    vec3 Lo = vec3(0.0);
+    // direct lighting
+    vec3 directLighting = vec3(0.0);
     for (int i = 0; i < 8; i++) {
-        TGpuGlobalLight global_light = u_global_lights.Lights[i];
-        if (global_light.Properties.x == 1) {
-            L = normalize(-global_light.Direction.xyz);
-            Lo += SpecularContribution(L, V, N, F0, metallic, roughness, global_light.ColorAndIntensity.rgb * global_light.ColorAndIntensity.a);
+        TGpuGlobalLight light = u_global_lights.Lights[i];
+        if (light.Properties.x == 1) {
+            vec3 L = normalize(-light.Direction.xyz);
+            vec3 lightColor = light.ColorAndIntensity.rgb * light.ColorAndIntensity.a;
+            directLighting += CalculateDirectLighting(L, V, N, F0, metallic, roughness, albedo.rgb, lightColor);
         }
     }
 
+    // IBL
+    float NdotV = max(dot(N, V), 0.0);
+
     vec3 irradiance = texture(s_irradiance_environment, N).rgb;
-    vec3 reflection = GetPrefilteredReflection(R, roughness);
-    vec2 brdf = texture(s_brdf_lut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 prefilteredColor = GetPrefilteredReflection(R, roughness);
+    vec2 brdfLUT = texture(s_brdf_lut, vec2(NdotV, roughness)).rg;
 
-    // Diffuse based on irradiance
-    vec3 diffuse = irradiance * albedo.rgb;
-    vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    vec3 F_ambient = FresnelSchlickRoughness(NdotV, F0, roughness);
 
-    // Specular reflectance
-    vec3 specular = reflection * (F * brdf.x + brdf.y);
+    // diffuse ambient - energy that gets refracted
+    vec3 kD_ambient = (1.0 - F_ambient) * (1.0 - metallic);
+    vec3 ambientDiffuse = kD_ambient * irradiance * albedo.rgb;
 
-    // Ambient part
-    vec3 kD = 1.0 - F;
-    kD *= 1.0 - metallic;
-    vec3 ambient = (kD * diffuse + specular) * normal_ao.w;
+    // dpecular ambient - split-sum approximation
+    vec3 ambientSpecular = prefilteredColor * (F_ambient * brdfLUT.x + brdfLUT.y);
 
-    vec3 color = ambient + Lo + emissive;
-    //if (dot(N, V) < 0) {
-    //    color = vec3(1, 0, 1);
-    //}
+    float ambientOcclusion = normal_ao.w;
+    vec3 ambient = (ambientDiffuse + ambientSpecular) * ambientOcclusion;
 
-    //o_color = vec4(N, 1.0);
+    vec3 color = ambient + directLighting + emissive;
+
+    // Debug: Check for degenerate cases
+    if (any(isnan(N)) || any(isinf(N))) {
+        color = vec3(1.0, 0.0, 1.0); // Magenta for NaN/Inf normals
+    }
+    if (any(isnan(color)) || any(isinf(color))) {
+        color = vec3(1.0, 1.0, 0.0); // Yellow for NaN/Inf color
+    }
+
     o_color = vec4(color, 1.0);
-    //o_color = 0.0000001 * vec4(color, 1.0) + vec4(normal, 0.0);
+
+    // o_color = vec4(ambientDiffuse, 1.0);           // Diffuse IBL
+    // o_color = vec4(ambientSpecular, 1.0);          // Specular IBL (should show env on metallic)
+    // o_color = vec4(prefilteredColor, 1.0);         // Raw environment reflection
+    // o_color = vec4(irradiance, 1.0);               // Irradiance map
+    // o_color = vec4(F_ambient, 1.0);                // Fresnel term
+    // o_color = vec4(vec3(metallic), 1.0);           // Metallic value
+    // o_color = vec4(vec3(roughness), 1.0);          // Roughness value
+    // o_color = vec4(brdfLUT.x, brdfLUT.y, 0.0, 1.0); // BRDF LUT
+    // o_color = vec4(N * 0.5 + 0.5, 1.0);            // Normals
+    // o_color = vec4(R * 0.5 + 0.5, 1.0);            // Reflection vector
+    // o_color = vec4(texture(s_environment, R).rgb, 1.0); // Source environment map via reflection
 }

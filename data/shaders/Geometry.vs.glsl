@@ -44,11 +44,18 @@ void main()
     vec3 decoded_tangent = DecodeOctahedral(unpackSnorm2x16(vertex_normal_uv_tangent.Tangent));
     vec4 decoded_uv_and_tangent_sign = PackedToVec4(vertex_normal_uv_tangent.UvAndTangentSign);
 
+    // MikkTSpace already generates orthogonalized tangents in object space
     v_normal = normalize((u_object_world_matrix * vec4(decoded_normal, 0.0)).xyz);
-    v_tangent = normalize((u_object_world_matrix * vec4(decoded_tangent, 0.0)).xyz);
-    v_tangent = normalize(v_tangent - dot(v_tangent, v_normal) * v_normal);
+    vec3 tangent_ws = normalize((u_object_world_matrix * vec4(decoded_tangent, 0.0)).xyz);
 
-    vec3 bitangent = cross(v_tangent, v_normal);
+    // re-orthogonalize in case world matrix has non-uniform scale
+    vec3 tangent_orthogonal = tangent_ws - dot(tangent_ws, v_normal) * v_normal;
+    float tangent_len = length(tangent_orthogonal);
+    v_tangent = tangent_len > 0.0001 ? tangent_orthogonal / tangent_len : tangent_ws;
+
+    float tangentSign = decoded_uv_and_tangent_sign.z;
+    vec3 bitangent = cross(v_normal, v_tangent) * tangentSign;
+
     v_tbn = mat3(v_tangent, bitangent, v_normal);
     v_uv = decoded_uv_and_tangent_sign.xy;
     v_material_id = u_object_parameters.x;

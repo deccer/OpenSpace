@@ -126,14 +126,15 @@ void main(void)
     // Weight by cosine term since Epic claims it generally improves quality.
 
     float roughness = clamp(u_roughness, 0.005, 0.995);
-    float mipLevel = max(0.5 * log2((1.0 / NumSamples) / wt) + 1.0, 0.0);
-    if (mipLevel == 0.0)
+
+    // For lowest roughness (mip 0), just copy the environment map
+    if (roughness <= 0.01)
     {
-        color += textureLod(s_environment, N, 0).rgb;
+        color = textureLod(s_environment, N, 0).rgb;
     }
     else
     {
-        float weight = 0;
+        float weight = 0.0;
 
         // Convolve environment map using GGX NDF importance sampling.
         // Weight by cosine term since Epic claims it generally improves quality.
@@ -160,15 +161,17 @@ void main(void)
                 // Solid angle associated with this sample.
                 float ws = 1.0 / (NumSamples * pdf);
 
-                // Mip level to sample from.
-                float mipLevel = max(0.5 * log2(ws / wt) + 1.0, 0.0);
+                // Mip level to sample from source environment map
+                float sampleMipLevel = max(0.5 * log2(ws / wt) + 1.0, 0.0);
 
-                color += textureLod(s_environment, Li, mipLevel).rgb * cosLi;
-                //color += Li;
+                color += textureLod(s_environment, Li, sampleMipLevel).rgb * cosLi;
                 weight += cosLi;
             }
         }
-        color /= weight;
+
+        if (weight > 0.0001) {
+            color /= weight;
+        }
     }
 
     imageStore(s_prefiltered, ivec3(gl_GlobalInvocationID), vec4(color, 1.0));
