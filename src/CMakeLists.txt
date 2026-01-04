@@ -5,13 +5,24 @@ add_custom_target(CopyData ALL
 add_executable(OpenSpace
     Version.hpp
     Core.hpp
+    Profiler.hpp
+    FrameTimer.hpp
     FrameTimer.cpp
+    Io.hpp
     Io.cpp
+    Images.hpp
     Images.cpp
+    Key.hpp
+    Components.hpp
     Components.cpp
+    Controls.hpp
+    Assets.hpp
     Assets.cpp
+    RHI.hpp
     RHI.cpp
+    Renderer.hpp
     Renderer.cpp
+    Scene.hpp
     Scene.cpp
     Main.cpp
 )
