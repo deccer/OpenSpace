@@ -1,6 +1,6 @@
-add_custom_target(CopyData ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
-)
+#add_custom_target(CopyData ALL
+#    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
+#)
 
 add_executable(OpenSpace
     Version.hpp
@@ -26,9 +26,10 @@ add_executable(OpenSpace
     Scene.cpp
     Main.cpp
 )
-add_dependencies(OpenSpace
-    CopyData
-)
+
+#add_dependencies(OpenSpace
+#    CopyData
+#)
 
 target_compile_definitions(OpenSpace
     PRIVATE GLM_FORCE_CXX2A
