@@ -165,6 +165,7 @@ ImFont* g_uiFontRobotoRegular = nullptr;
 ImFont* g_uiFontRobotoRegularSmaller = nullptr;
 ImFont* g_uiFontRobotoBold = nullptr;
 ImFont* g_uiFontJetbrainsMonoRegular = nullptr;
+ImFont* g_uiFontJetbrainsMonoRegularSmaller = nullptr;
 auto UiInitialize(GLFWwindow* window) -> bool;
 auto UiUnload() -> void;
 auto UiRender(
@@ -2038,6 +2039,7 @@ auto UiInitialize(GLFWwindow* window) -> bool {
     g_uiFontRobotoBold = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoBold_compressed_data, RobotoBold_compressed_size, fontSize + 2.0f, &fontConfig, fontRanges);
     g_uiFontRobotoRegularSmaller = io.Fonts->AddFontFromMemoryCompressedTTF(RobotoRegular_compressed_data, RobotoRegular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
     g_uiFontJetbrainsMonoRegular = io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMono_Regular_compressed_data, JetBrainsMono_Regular_compressed_size, fontSize * 0.8f, &fontConfig, fontRanges);
+    g_uiFontJetbrainsMonoRegularSmaller = io.Fonts->AddFontFromMemoryCompressedTTF(JetBrainsMono_Regular_compressed_data, JetBrainsMono_Regular_compressed_size, fontSize * 0.6f, &fontConfig, fontRanges);
 
     io.Fonts->TexGlyphPadding = 1;
     for (int32_t fontConfigIndex = 0; fontConfigIndex < io.Fonts->Sources.Size; fontConfigIndex++) {
@@ -2095,10 +2097,14 @@ auto UiRender(
 
             ImGui::TextColored(ImColor::HSV(0.14f, 1.0f, 1.0f), " mft: %.2f ms", renderContext.AverageFramesPerSecond);
             ImGui::Text("  ft: %.2f ms", renderContext.DeltaTimeInSeconds * 1000.0f);
+
+            ImGui::PushFont(g_uiFontJetbrainsMonoRegularSmaller);
             ImGui::TextColored(ImColor::HSV(0.14f, 1.0f, 1.0f), "rfps: %.0f Hz", renderContext.FramesPerSecond);
             ImGui::TextColored(ImColor::HSV(0.16f, 1.0f, 1.0f), "      %.0f Hz (1%%)", renderContext.FramesPerSecond1P);
             ImGui::TextColored(ImColor::HSV(0.18f, 1.0f, 1.0f), "      %.0f Hz (0.1%%)", renderContext.FramesPerSecond01P);
             ImGui::Text("   f: %lu", renderContext.FrameCounter);
+            ImGui::PopFont();
+
             ImGui::PopFont();
         }
         ImGui::End();
