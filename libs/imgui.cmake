@@ -38,7 +38,7 @@ if(imgui_ADDED)
     target_link_libraries(imgui
             PRIVATE glfw
     )
-    if(UNIX AND !APPLE)
+    if(UNIX AND NOT APPLE)
         target_link_libraries(imgui
             PRIVATE X11
         )
