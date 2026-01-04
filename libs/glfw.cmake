@@ -13,4 +13,5 @@ CPMAddPackage(
     OPTIONS         "GLFW_VULKAN_STATIC OFF"
     OPTIONS         "GLFW_INSTALL OFF"
     OPTIONS         "GLFW_INCLUDE_NONE ON"
+    SYSTEM          TRUE
 )

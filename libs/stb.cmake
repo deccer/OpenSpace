@@ -6,8 +6,14 @@ CPMAddPackage(
     GIT_TAG         master
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
+    SYSTEM          TRUE
 )
 if(stb_ADDED)
-    add_library(stb INTERFACE ${stb_SOURCE_DIR}/stb_image.h)
-    target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+    add_library(stb 
+        INTERFACE ${stb_SOURCE_DIR}/stb_image.h
+    )
+    
+    target_include_directories(stb
+        SYSTEM INTERFACE ${stb_SOURCE_DIR}
+    )
 endif()

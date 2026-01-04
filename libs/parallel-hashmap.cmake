@@ -8,4 +8,5 @@ CPMAddPackage(
     GIT_PROGRESS    TRUE
     OPTIONS         "PHMAP_BUILD_TESTS OFF"
     OPTIONS         "PHMAP_BUILD_EXAMPLES OFF"
+    SYSTEM          TRUE
 )

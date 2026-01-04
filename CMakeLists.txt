@@ -15,6 +15,9 @@ else()
 endif()
 include(cmake/PopulateChangeSetVariables.cmake)
 
+set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_SOURCE_DIR}/.cache/cpm" CACHE STRING "CPM cache path")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+
 set(OPENSPACE_VERSION_MAJOR 0)
 set(OPENSPACE_VERSION_MINOR 1)
 set(OPENSPACE_VERSION_PATCH 0)

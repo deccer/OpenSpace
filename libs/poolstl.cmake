@@ -6,4 +6,5 @@ CPMAddPackage(
     GIT_TAG         v0.3.5
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
+    SYSTEM          TRUE
 )

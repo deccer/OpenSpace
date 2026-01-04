@@ -6,7 +6,8 @@ CPMAddPackage(
     GIT_TAG         master
     GIT_SHALLOW     TRUE
     GIT_PROGRESS    TRUE
+    SYSTEM          TRUE
 )
 if (joltphysics_ADDED)
-    add_subdirectory(${joltphysics_SOURCE_DIR}/Build ${joltphysics_BINARY_DIR})
+    add_subdirectory(${joltphysics_SOURCE_DIR}/Build ${joltphysics_BINARY_DIR} SYSTEM)
 endif()
