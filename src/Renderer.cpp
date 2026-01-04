@@ -942,9 +942,7 @@ auto Renderer::Initialize(
 
     g_windowSettings = windowSettings;
 
-#ifdef USE_PROFILER
-    TracyGpuContext
-#endif
+    PROFILER_GPUCONTEXT
 
     if (!UiInitialize(window)) {
         return false;

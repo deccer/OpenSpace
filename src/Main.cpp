@@ -316,10 +316,9 @@ auto main(
             renderContext.FrameCounter++;
         }
 
-#ifdef USE_PROFILER
-        TracyGpuCollect
-        FrameMark;
-#endif
+        PROFILER_GPUCOLLECT
+        PROFILER_FRAMEMARK
+
         if (!g_windowHasFocus && g_sleepWhenWindowHasNoFocus) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
