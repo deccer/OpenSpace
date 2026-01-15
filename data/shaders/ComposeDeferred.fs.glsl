@@ -114,6 +114,36 @@ vec3 CalculateDirectLighting(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, fl
     return (diffuse + specular) * lightColor * NdotL;
 }
 
+float ggx(float NdotH, float a2)
+{
+    float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
+    return a2 / (PI * denom * denom);
+}
+
+vec3 schlick(vec3 F0, float VdotH)
+{
+    return F0 + (vec3(1.0) - F0) * pow(1.0 - VdotH, 5.0);
+}
+
+vec3 lighting_ggx(vec3 l_color, vec3 F0, vec3 light, vec3 eye, vec3 normal, vec3 albedo, float metallic, float alpha, float alpha2, float k2, float attenuation)
+{
+    vec3 halfvec = normalize(light + eye);
+    float LdotH = clamp(dot(light, halfvec), 0.0, 1.0);
+    float NdotH = clamp(dot(normal, halfvec), 0.0, 1.0);
+    float NdotL = clamp(dot(normal, light), 0.0, 1.0);
+
+    float D = ggx(NdotH, alpha2);
+    vec3 F = schlick(F0, LdotH);
+
+    float V = 1.0 / (LdotH * LdotH * (1.0 - k2) + k2);
+
+    vec3 specular = F * (NdotL * D * V);
+
+    vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
+
+    return (attenuation * NdotL) * l_color * (kd * albedo + specular);
+}
+
 vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat4 invViewProj) {
 
     float z = depth * 2.0 - 1.0; // [0, 1] -> [-1, 1]
@@ -151,6 +181,12 @@ void main()
     vec3 N = normalize(normal_ao.xyz);
     vec3 R = reflect(-V, N);
 
+    float alpha     = roughness * roughness;
+    float alpha2    = alpha * alpha;
+
+    float k = 0.5 * alpha;
+    float k2 = k * k;
+
     // base reflectance
     vec3 F0 = mix(vec3(0.04), albedo.rgb, metallic);
 
@@ -161,7 +197,11 @@ void main()
         if (light.Properties.x == 1) {
             vec3 L = normalize(-light.Direction.xyz);
             vec3 lightColor = light.ColorAndIntensity.rgb * light.ColorAndIntensity.a;
-            directLighting += CalculateDirectLighting(L, V, N, F0, metallic, roughness, albedo.rgb, lightColor);
+
+            // vec3 lighting_ggx(vec3 l_color, vec3 F0, vec3 light, vec3 eye, vec3 normal, vec3 albedo,
+            // float metallic, float alpha, float alpha2, float k2, float attenuation)
+
+            directLighting += lighting_ggx(lightColor, F0, L, V, N, albedo.rgb, metallic, alpha, alpha2, k2, 0.5);
         }
     }
 
