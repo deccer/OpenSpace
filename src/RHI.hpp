@@ -623,6 +623,9 @@ auto UploadTexture(
     const TTextureId& textureId,
     const TUploadTextureDescriptor& updateTextureDescriptor) -> void;
 auto MakeTextureResident(const TTextureId& textureId) -> uint64_t;
+auto MakeTextureResident(
+    const TTextureId& textureId,
+    const TSamplerId& samplerId) -> uint64_t;
 auto GenerateMipmaps(const TTextureId& textureId) -> void;
 
 auto GetSampler(const TSamplerId& id) -> TSampler&;

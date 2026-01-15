@@ -984,16 +984,17 @@ auto CreateTexture2DFromFile(
 auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> TTextureId {
 
     PROFILER_ZONESCOPEDN("CreateTexture");
-    TTexture texture = {};
+    uint32_t id = 0;
+    glCreateTextures(TextureTypeToGL(createTextureDescriptor.TextureType), 1, &id);
+    auto& texture = g_textures.emplace_back(
+        id,
+        createTextureDescriptor.Format,
+        createTextureDescriptor.Extent,
+        createTextureDescriptor.TextureType);
 
-    glCreateTextures(TextureTypeToGL(createTextureDescriptor.TextureType), 1, &texture.Id);
     if (!createTextureDescriptor.Label.empty()) {
         SetDebugLabel(texture.Id, GL_TEXTURE, createTextureDescriptor.Label);
     }
-
-    texture.Extent = createTextureDescriptor.Extent;
-    texture.Format = createTextureDescriptor.Format;
-    texture.TextureType = createTextureDescriptor.TextureType;
 
     switch (createTextureDescriptor.TextureType)
     {
@@ -1069,9 +1070,7 @@ auto CreateTexture(const TCreateTextureDescriptor& createTextureDescriptor) -> T
             std::unreachable();
     }
 
-    const auto textureId = static_cast<TTextureId>(g_textures.size());
-    g_textures.emplace_back(texture);
-
+    const auto textureId = static_cast<TTextureId>(g_textures.size() - 1);
     return textureId;
 }
 
@@ -1083,27 +1082,20 @@ auto UploadTexture(
     const auto& texture = GetTexture(textureId);
 
     uint32_t format = 0;
-    if (updateTextureDescriptor.UploadFormat == TUploadFormat::Auto)
-    {
+    if (updateTextureDescriptor.UploadFormat == TUploadFormat::Auto) {
         format = UploadFormatToGL(FormatToUploadFormat(texture.Format));
-    }
-    else
-    {
+    } else {
         format = UploadFormatToGL(updateTextureDescriptor.UploadFormat);
     }
 
     uint32_t type = 0;
-    if (updateTextureDescriptor.UploadType == TUploadType::Auto)
-    {
+    if (updateTextureDescriptor.UploadType == TUploadType::Auto) {
         type = FormatToUnderlyingOpenGLType(texture.Format);
-    }
-    else
-    {
+    } else {
         type = UploadTypeToGL(updateTextureDescriptor.UploadType);
     }
 
-    switch (TextureTypeToDimension(texture.TextureType))
-    {
+    switch (TextureTypeToDimension(texture.TextureType)) {
         case 1:
             glTextureSubImage1D(texture.Id,
                                 updateTextureDescriptor.Level,
@@ -1137,6 +1129,8 @@ auto UploadTexture(
                                 type,
                                 updateTextureDescriptor.PixelData);
             break;
+        default:
+            std::unreachable();
     }
 }
 
@@ -1145,6 +1139,19 @@ auto MakeTextureResident(const TTextureId& textureId) -> uint64_t {
     const auto& texture = GetTexture(textureId);
 
     const auto textureHandle = glGetTextureHandleARB(texture.Id);
+    glMakeTextureHandleResidentARB(textureHandle);
+
+    return textureHandle;
+}
+
+auto MakeTextureResident(
+    const TTextureId& textureId,
+    const TSamplerId& samplerId) -> uint64_t {
+
+    const auto& texture = GetTexture(textureId);
+    const auto& sampler = GetSampler(samplerId);
+
+    const auto textureHandle = glGetTextureSamplerHandleARB(texture.Id, sampler.Id);
     glMakeTextureHandleResidentARB(textureHandle);
 
     return textureHandle;
