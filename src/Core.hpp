@@ -263,8 +263,7 @@ constexpr TFlagType operator~(TFlagTypeBits key) noexcept                       
     return static_cast<TFlagType>(~static_cast<TFlagBaseType>(key));                              \
 }                                                                                                 \
                                                                                                   \
-constexpr TFlagType operator^(TFlagTypeBits a, TFlagTypeBits b) noexcept                          \
-{                                                                                                 \
+constexpr TFlagType operator^(TFlagTypeBits a, TFlagTypeBits b) noexcept {                        \
     return static_cast<TFlagType>(static_cast<TFlagBaseType>(a) ^ static_cast<TFlagBaseType>(b)); \
 }
 
