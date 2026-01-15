@@ -338,16 +338,15 @@ auto ComputeIrradianceMap(const TTextureId textureId) -> std::expected<TTextureI
 
     const auto& convolvedTexture = GetTexture(convolvedTextureId);
 
-    constexpr auto groupX = static_cast<uint32_t>(width / 32);
-    constexpr auto groupY = static_cast<uint32_t>(height / 32);
+    constexpr auto groupX = static_cast<uint32_t>((width + 31) / 32);
+    constexpr auto groupY = static_cast<uint32_t>((height + 31) / 32);
     constexpr auto groupZ = 6u;
 
     computeIrradianceMapComputePipeline.Bind();
     computeIrradianceMapComputePipeline.BindTexture(0, environmentTexture.Id);
     computeIrradianceMapComputePipeline.BindImage(0, convolvedTexture.Id, 0, 0, TMemoryAccess::WriteOnly, format);
     computeIrradianceMapComputePipeline.Dispatch(groupX, groupY, groupZ);
-
-    computeIrradianceMapComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
+    computeIrradianceMapComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::All);
     GenerateMipmaps(convolvedTextureId);
 
     return convolvedTextureId;
@@ -397,7 +396,7 @@ auto ComputePrefilteredRadianceMap(
         const auto numGroups = (mipSize + 31) / 32;
         computePrefilteredRadianceMapComputePipeline.Dispatch(numGroups, numGroups, 6u);
 
-        computePrefilteredRadianceMapComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
+        computePrefilteredRadianceMapComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::All);
     }
 
     return prefilteredEnvironmentMapId;
@@ -422,8 +421,8 @@ auto ComputeSHCoefficients(const TTextureId irradianceMapTextureId) -> std::expe
     const auto& convolvedTexture = GetTexture(irradianceMapTextureId);
     const auto faceSize = convolvedTexture.Extent.Width;
 
-    const auto groupX = faceSize / 8;
-    const auto groupY = faceSize / 8;
+    const auto groupX = (faceSize + 7) / 8;
+    const auto groupY = (faceSize + 7) / 8;
     constexpr auto groupZ = 6u;
 
     computeSHCoefficientsComputePipeline.Bind();
@@ -431,7 +430,6 @@ auto ComputeSHCoefficients(const TTextureId irradianceMapTextureId) -> std::expe
     computeSHCoefficientsComputePipeline.BindBufferAsShaderStorageBuffer(shCoefficientBuffer, 1);
     computeSHCoefficientsComputePipeline.SetUniform(0, faceSize);
     computeSHCoefficientsComputePipeline.Dispatch(groupX, groupY, groupZ);
-
     computeSHCoefficientsComputePipeline.InsertMemoryBarrier(TMemoryBarrierMaskBits::ShaderImageAccess);
 
     return shCoefficientBuffer;
@@ -948,22 +946,16 @@ auto Renderer::Initialize(
 
     Assets::AddDefaultAssets();
 
-    const auto loadSkyTextureResult = LoadEnvironmentMaps("Green");
+    const auto loadSkyTextureResult = LoadEnvironmentMaps("SkyRed");
     if (!loadSkyTextureResult.has_value()) {
         spdlog::error("Failed to load sky texture: {}", loadSkyTextureResult.error());
         return false;
     }
     g_environmentMaps = *loadSkyTextureResult;
 
-    /*
-     * Renderer - Initialize Framebuffers
-     */
     g_scaledFramebufferSize = initialFramebufferSize;
     CreateRendererFramebuffers(g_scaledFramebufferSize);
 
-    /*
-     * Renderer - Initialize Pipelines
-     */
     auto depthPrePassGraphicsPipelineResult = CreateGraphicsPipeline({
         .Label = "Depth PrePass",
         .VertexShaderFilePath = "data/shaders/DepthPrePass.vs.glsl",
@@ -1144,7 +1136,7 @@ auto Renderer::Initialize(
     auto cameraPosition = glm::vec3{-60.0f, -3.0f, 0.0f};
     auto cameraDirection = glm::vec3{0.0f, 0.0f, -1.0f};
     auto cameraUp = glm::vec3{0.0f, 1.0f, 0.0f};
-    auto fieldOfView = glm::radians(160.0f);
+    auto fieldOfView = glm::radians(60.0f);
     auto aspectRatio = g_scaledFramebufferSize.x / g_scaledFramebufferSize.y;
 
     g_globalUniforms.ProjectionMatrix = glm::infinitePerspective(fieldOfView, aspectRatio, 0.1f);
@@ -1831,6 +1823,7 @@ auto inline RenderComposePass() -> void {
         g_composePass.Pipeline.BindTexture(4, g_geometryPass.Framebuffer.ColorAttachments[3]->Texture.Id);
 
         g_composePass.Pipeline.BindTextureAndSampler(8, g_environmentMaps.EnvironmentMap, sampler.Id);
+        //g_composePass.Pipeline.BindTextureAndSampler(8, g_environmentMaps.IrradianceMap, sampler.Id);
         g_composePass.Pipeline.BindTextureAndSampler(9, g_environmentMaps.IrradianceMap, sampler.Id);
         g_composePass.Pipeline.BindTextureAndSampler(10, g_environmentMaps.PrefilteredRadianceMap, sampler.Id);
         g_composePass.Pipeline.BindTextureAndSampler(11, g_environmentMaps.BrdfIntegrationMap, sampler.Id);
