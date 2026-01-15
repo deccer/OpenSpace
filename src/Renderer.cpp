@@ -944,14 +944,7 @@ auto Renderer::Initialize(
         return false;
     }
 
-    glfwSwapInterval(g_windowSettings.IsVSyncEnabled ? 1 : 0);
-
-    glEnable(GL_FRAMEBUFFER_SRGB);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-    glEnable(GL_DEPTH_TEST);
-    glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
+    glfwSwapInterval(g_windowSettings.IsVSyncEnabled ? GLFW_TRUE : GLFW_FALSE);
 
     Assets::AddDefaultAssets();
 

@@ -1757,6 +1757,22 @@ auto RhiInitialize(bool isDebug) -> void {
     SetDebugLabel(g_defaultInputLayout, GL_VERTEX_ARRAY, "InputLayout-Default");
 
     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &g_maxTextureAnisotropy);
+
+    int32_t g_maxComputeWorkgroupInvocations = 0;
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &g_maxComputeWorkgroupInvocations);
+
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.03f, 0.05f, 0.07f, 1.0f);
+
+    const auto gpuVendor = std::string((const char*)glGetString(GL_VENDOR));
+    const auto gpuRenderer = std::string((const char*)glGetString(GL_RENDERER));
+
+    spdlog::info("OpenGL Vendor: {}", gpuVendor);
+    spdlog::info("OpenGL Renderer: {}", gpuRenderer);
 }
 
 auto RhiShutdown() -> void {
