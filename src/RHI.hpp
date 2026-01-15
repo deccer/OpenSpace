@@ -269,9 +269,10 @@ struct TFramebufferAttachmentClearColor {
     TFramebufferAttachmentClearColor() = default;
 
     template<typename... Args>
-    requires (sizeof...(Args) <= 4)
+        requires (sizeof...(Args) == 4)
+    // ReSharper disable once CppNonExplicitConvertingConstructor
     TFramebufferAttachmentClearColor(const Args&... args)
-      : Data(std::array<std::common_type_t<std::remove_cvref_t<Args>...>, 4>{ args...})
+      : Data(std::array<std::common_type_t<std::remove_cvref_t<Args>...>, 4>{ args... })
     {
     }
 
