@@ -1,4 +1,0 @@
-CompileFlags:
-  CompilationDatabase: ./build/Gcc-Debug/compile_commands.json
-  Add: [__cpp_concepts=202002]
-  Remove: [-fmodules-ts, -fmodule-mapper=*, -fdeps-format=*]
