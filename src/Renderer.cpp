@@ -67,6 +67,7 @@ struct TGpuObject {
 };
 
 struct TGpuGlobalLight {
+    glm::mat4 ShadowViewProjectionMatrix;
     glm::vec4 Direction;
     glm::vec4 ColorAndIntensity;
     glm::ivec4 LightProperties; // IsEnabled, CanCastShadows, padding, padding
@@ -125,6 +126,15 @@ struct TTaaPass {
     bool IsEnabled = true;
     float BlendFactor = 0.1f;
 } g_taaPass;
+
+constexpr auto SHADOW_MAP_RESOLUTION = 2048;
+
+struct TShadowPass {
+    std::array<TFramebuffer, MAX_GLOBAL_LIGHTS> Framebuffers = {};
+    std::array<TTexture, MAX_GLOBAL_LIGHTS> ShadowMaps = {};
+    TGraphicsPipeline Pipeline = {};
+    bool IsEnabled = true;
+} g_shadowPass;
 
 std::array<TGpuGlobalLight, MAX_GLOBAL_LIGHTS> g_gpuGlobalLights;
 uint32_t g_globalLightsBuffer = {};
@@ -816,6 +826,12 @@ auto DeleteRendererFramebuffers() -> void {
     DeleteFramebuffer(g_fxaaPass.Framebuffer);
     DeleteFramebuffer(g_taaPass.Framebuffers[0]);
     DeleteFramebuffer(g_taaPass.Framebuffers[1]);
+
+    for (auto& framebuffer : g_shadowPass.Framebuffers) {
+        if (framebuffer.Id != 0) {
+            DeleteFramebuffer(framebuffer);
+        }
+    }
 }
 
 auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void {
@@ -921,6 +937,24 @@ auto CreateRendererFramebuffers(const glm::vec2& scaledFramebufferSize) -> void 
             }
         }
     });
+
+    // Create shadow map framebuffers for each light
+    for (int i = 0; i < MAX_GLOBAL_LIGHTS; ++i) {
+        g_shadowPass.Framebuffers[i] = CreateFramebuffer({
+            .Label = std::format("Shadow Pass-FBO-Light{}", i),
+            .DepthStencilAttachment = TFramebufferDepthStencilAttachmentDescriptor{
+                .Label = std::format("Shadow Pass-FBO-Light{}-Depth-{}x{}", i, SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION),
+                .Format = TFormat::D32_FLOAT,
+                .Extent = TExtent2D(SHADOW_MAP_RESOLUTION, SHADOW_MAP_RESOLUTION),
+                .LoadOperation = TFramebufferAttachmentLoadOperation::Clear,
+                .ClearDepthStencil = { 1.0f, 0 },
+            }
+        });
+
+        if (g_shadowPass.Framebuffers[i].DepthStencilAttachment.has_value()) {
+            g_shadowPass.ShadowMaps[i] = g_shadowPass.Framebuffers[i].DepthStencilAttachment->Texture;
+        }
+    }
 }
 
 auto Renderer::Initialize(
@@ -1126,6 +1160,38 @@ auto Renderer::Initialize(
         .MinFilter = TTextureMinFilter::Linear,
     });
 
+    auto shadowGraphicsPipelineResult = CreateGraphicsPipeline({
+        .Label = "Shadow Pass",
+        .VertexShaderFilePath = "data/shaders/Shadow.vs.glsl",
+        .FragmentShaderFilePath = "data/shaders/Shadow.fs.glsl",
+        .InputAssembly = {
+            .PrimitiveTopology = TPrimitiveTopology::Triangles,
+        },
+        .RasterizerState = {
+            .FillMode = TFillMode::Solid,
+            .CullMode = TCullMode::Back,
+            .FaceWindingOrder = TFaceWindingOrder::CounterClockwise,
+            .IsDepthBiasEnabled = true,
+            .DepthBiasSlopeFactor = 1.75f,
+            .DepthBiasConstantFactor = 2.0f,
+            .IsScissorEnabled = false,
+            .IsRasterizerDisabled = false
+        },
+        .OutputMergerState = {
+            .ColorMask = TColorMaskBits::None,
+            .DepthState = {
+                .IsDepthTestEnabled = true,
+                .IsDepthWriteEnabled = true,
+                .DepthFunction = TDepthFunction::Less
+            },
+        }
+    });
+    if (!shadowGraphicsPipelineResult) {
+        spdlog::error(shadowGraphicsPipelineResult.error());
+        return false;
+    }
+    g_shadowPass.Pipeline = *shadowGraphicsPipelineResult;
+
     g_debugLinesPass.VertexBuffer = CreateBuffer("Debug Lines Pass-VBO", sizeof(TGpuDebugLine) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     for (int i = 0; i < g_jitterCount; ++i) {
@@ -1153,6 +1219,7 @@ auto Renderer::Initialize(
     g_objectsBuffer = CreateBuffer("TGpuObjects", sizeof(TGpuObject) * 16384, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     g_gpuGlobalLights.fill(TGpuGlobalLight{
+        .ShadowViewProjectionMatrix = glm::mat4(1.0f),
         .Direction = glm::vec4{0.0f, -1.0f, 0.0f, 1.0f},
         .ColorAndIntensity = glm::vec4{1.0f, 1.0f, 1.0f, 1.0f},
         .LightProperties = glm::ivec4{0, 0, 0, 0}
@@ -1526,7 +1593,29 @@ auto UpdateGlobalLights(entt::registry& registry) -> void {
     for (const auto globalLightEntity : globalLightsEntities) {
         const auto& globalLight = registry.get<TComponentGlobalLight>(globalLightEntity);
         const auto direction = PolarToCartesian(globalLight.Azimuth, globalLight.Elevation);
+
+        // Calculate shadow view-projection matrix for directional light
+        glm::mat4 shadowViewProjection = glm::mat4(1.0f);
+        if (globalLight.CanCastShadows) {
+            // Create view matrix looking along light direction
+            const auto lightPosition = -direction * 500.0f; // Position light far enough to cover scene
+            const auto lightTarget = glm::vec3(0.0f);
+            const auto lightUp = glm::abs(direction.y) > 0.99f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+            const auto shadowView = glm::lookAt(lightPosition, lightTarget, lightUp);
+
+            // Create orthographic projection for directional light
+            constexpr float shadowExtent = 250.0f;
+            const auto shadowProjection = glm::ortho(
+                -shadowExtent, shadowExtent,
+                -shadowExtent, shadowExtent,
+                0.1f, 1000.0f
+            );
+
+            shadowViewProjection = shadowProjection * shadowView;
+        }
+
         g_gpuGlobalLights[globalLightIndex++] = {
+            .ShadowViewProjectionMatrix = shadowViewProjection,
             .Direction = glm::vec4{-direction, 0.0f},
             .ColorAndIntensity = glm::vec4{globalLight.Color, globalLight.Intensity},
             .LightProperties = glm::ivec4{globalLight.IsEnabled, globalLight.CanCastShadows, 0, 0}
@@ -1731,6 +1820,58 @@ auto inline ResizeFramebuffersIfNecessary() -> void {
     }
 }
 
+auto inline RenderShadowPass(entt::registry& registry) -> void {
+
+    if (!g_shadowPass.IsEnabled) {
+        return;
+    }
+
+    PROFILER_ZONESCOPEDN("Shadow Pass");
+    PushDebugGroup("Shadow Pass");
+
+    const auto globalLightsEntities = registry.view<TComponentGlobalLight>();
+    auto lightIndex = 0;
+
+    g_shadowPass.Pipeline.Bind();
+
+    for (const auto globalLightEntity : globalLightsEntities) {
+        if (lightIndex >= MAX_GLOBAL_LIGHTS) {
+            break;
+        }
+
+        const auto& globalLight = registry.get<TComponentGlobalLight>(globalLightEntity);
+
+        if (!globalLight.IsEnabled || !globalLight.CanCastShadows) {
+            lightIndex++;
+            continue;
+        }
+
+        BindFramebuffer(g_shadowPass.Framebuffers[lightIndex]);
+        g_shadowPass.Pipeline.BindBufferAsUniformBuffer(g_globalLightsBuffer, 2);
+        g_shadowPass.Pipeline.SetUniform(0, lightIndex);
+
+        const auto& renderablesView = registry.view<TComponentGpuMesh, TComponentRenderTransform>();
+        renderablesView.each([&](
+            const entt::entity& entity,
+            const auto& meshComponent,
+            const auto& transformComponent) {
+
+            PROFILER_ZONESCOPEDN("Draw Shadow Geometry");
+
+            const auto& gpuMesh = GetGpuMesh(meshComponent.GpuMesh);
+
+            g_shadowPass.Pipeline.BindBufferAsShaderStorageBuffer(gpuMesh.VertexPositionBuffer, 1);
+            g_shadowPass.Pipeline.SetUniform(1, transformComponent);
+
+            g_shadowPass.Pipeline.DrawElements(gpuMesh.IndexBuffer, gpuMesh.IndexCount);
+        });
+
+        lightIndex++;
+    }
+
+    PopDebugGroup();
+}
+
 auto inline RenderDepthPrePass(entt::registry& registry) -> void {
 
     PROFILER_ZONESCOPEDN("All Depth PrePass Geometry");
@@ -1822,11 +1963,16 @@ auto inline RenderComposePass() -> void {
         g_composePass.Pipeline.BindTexture(3, g_geometryPass.Framebuffer.ColorAttachments[2]->Texture.Id);
         g_composePass.Pipeline.BindTexture(4, g_geometryPass.Framebuffer.ColorAttachments[3]->Texture.Id);
 
-        g_composePass.Pipeline.BindTextureAndSampler(8, g_environmentMaps.EnvironmentMap, sampler.Id);
-        //g_composePass.Pipeline.BindTextureAndSampler(8, g_environmentMaps.IrradianceMap, sampler.Id);
-        g_composePass.Pipeline.BindTextureAndSampler(9, g_environmentMaps.IrradianceMap, sampler.Id);
-        g_composePass.Pipeline.BindTextureAndSampler(10, g_environmentMaps.PrefilteredRadianceMap, sampler.Id);
-        g_composePass.Pipeline.BindTextureAndSampler(11, g_environmentMaps.BrdfIntegrationMap, sampler.Id);
+        // Bind shadow maps
+        for (int i = 0; i < MAX_GLOBAL_LIGHTS; ++i) {
+            g_composePass.Pipeline.BindTexture(5 + i, g_shadowPass.ShadowMaps[i].Id);
+        }
+
+        g_composePass.Pipeline.BindTextureAndSampler(13, g_environmentMaps.EnvironmentMap, sampler.Id);
+        //g_composePass.Pipeline.BindTextureAndSampler(13, g_environmentMaps.IrradianceMap, sampler.Id);
+        g_composePass.Pipeline.BindTextureAndSampler(14, g_environmentMaps.IrradianceMap, sampler.Id);
+        g_composePass.Pipeline.BindTextureAndSampler(15, g_environmentMaps.PrefilteredRadianceMap, sampler.Id);
+        g_composePass.Pipeline.BindTextureAndSampler(16, g_environmentMaps.BrdfIntegrationMap, sampler.Id);
 
         g_composePass.Pipeline.SetUniform(0, glm::inverse(g_globalUniforms.ProjectionMatrix * g_globalUniforms.ViewMatrix));
         g_composePass.Pipeline.SetUniform(4, g_globalUniforms.CameraPosition);
@@ -1941,6 +2087,7 @@ auto Renderer::Render(
 
     ResizeFramebuffersIfNecessary();
 
+    RenderShadowPass(registry);
     RenderDepthPrePass(registry);
     RenderGeometryPass(registry);
     RenderComposePass();

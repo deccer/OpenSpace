@@ -159,7 +159,9 @@ auto TScene::Load() -> bool {
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/Sponza/Sponza.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/FlightHelmet/FlightHelmet.gltf");
     //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/cutlass/cutlass.gltf");
-    Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/scene.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/RefPbr/scene.gltf");
+    //Assets::AddAssetModelFromFile("SM_Capital_001", "data/basic/deccer_balls.glb");
+    Assets::AddAssetModelFromFile("SM_Capital_001", "/home/deccer/Storage/Resources/Models/shader_ball_jl_01/scene.gltf");
     Assets::AddAssetModelFromFile("SM_Cube_x1_y1_z1", "data/basic/SM_Plane_007.glb");
 
     /// Setup Scene ////////////
@@ -169,14 +171,16 @@ auto TScene::Load() -> bool {
         0.0f,
         glm::radians(45.0f),
         glm::vec3{1.0f, 0.0f, 0.5f},
-        0.5f);
+        0.5f,
+        true);
     SetParent(sun1Light, _rootEntity);
     auto sun2Light = CreateGlobalLight(
         "Sun Blue Light (S)",
         glm::radians(180.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 0.0f, 1.0f},
-        0.5f);
+        0.5f,
+        true);
     SetParent(sun2Light, _rootEntity);
 
     auto sun3Light = CreateGlobalLight(
@@ -184,7 +188,8 @@ auto TScene::Load() -> bool {
         glm::radians(90.0f),
         glm::radians(45.0f),
         glm::vec3{0.0f, 1.0f, 0.0f},
-        0.5f);
+        0.5f,
+        true);
     SetParent(sun3Light, _rootEntity);
 
     auto sun4Light = CreateGlobalLight(
@@ -192,7 +197,8 @@ auto TScene::Load() -> bool {
         glm::radians(270.0f),
         glm::radians(45.0f),
         glm::vec3{1.0f, 1.0f, 0.0f},
-        0.5f);
+        0.5f,
+        true);
     SetParent(sun4Light, _rootEntity);
 
     CreateModel("Axes", "axes");
@@ -203,7 +209,7 @@ auto TScene::Load() -> bool {
     SetOrientation(_playerEntity, 0.0f, glm::radians(-90.0f), 0.0f);
     AddComponent<TComponentPositionBackup>(_playerEntity, glm::vec3{0.0f});
     AddComponent<TComponentCamera>(_playerEntity, TComponentCamera {
-        .FieldOfView = 90.0f,
+        .FieldOfView = 50.0f,
         .CameraSpeed = 2.0f,
         .Sensitivity = 0.0025f,
     });

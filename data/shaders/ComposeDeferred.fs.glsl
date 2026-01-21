@@ -10,10 +10,12 @@ layout(binding = 2) uniform sampler2D s_texture_gbuffer_normal_ao;
 layout(binding = 3) uniform sampler2D s_texture_gbuffer_velocity_roughness_metallic;
 layout(binding = 4) uniform sampler2D s_texture_gbuffer_emissive;
 
-layout(binding = 8) uniform samplerCube s_environment;
-layout(binding = 9) uniform samplerCube s_irradiance_environment;
-layout(binding = 10) uniform samplerCube s_prefiltered_radiance_environment;
-layout(binding = 11) uniform sampler2D s_brdf_lut;
+layout(binding = 5) uniform sampler2D s_shadow_maps[8];
+
+layout(binding = 13) uniform samplerCube s_environment;
+layout(binding = 14) uniform samplerCube s_irradiance_environment;
+layout(binding = 15) uniform samplerCube s_prefiltered_radiance_environment;
+layout(binding = 16) uniform sampler2D s_brdf_lut;
 
 layout(location = 0) uniform mat4 u_camera_inverse_view_projection;
 layout(location = 4) uniform vec4 u_camera_position;
@@ -21,6 +23,7 @@ layout(location = 5) uniform vec3 u_sun_position;
 layout(location = 6) uniform vec2 u_screen_size;
 
 struct TGpuGlobalLight {
+    mat4 ShadowViewProjectionMatrix;
     vec4 Direction;
     vec4 ColorAndIntensity;
     ivec4 Properties;
@@ -157,6 +160,45 @@ vec3 ReconstructFragmentWorldPositionFromDepth(float depth, vec2 screenSize, mat
     return position_ws.xyz;
 }
 
+float CalculateShadow(int lightIndex, vec3 worldPosition, vec3 normal, vec3 lightDir) {
+    // Transform world position to light space
+    vec4 lightSpacePos = u_global_lights.Lights[lightIndex].ShadowViewProjectionMatrix * vec4(worldPosition, 1.0);
+
+    // Perspective divide
+    vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+
+    // Transform to [0,1] range
+    projCoords = projCoords * 0.5 + 0.5;
+
+    // Flip Y coordinate for OpenGL texture coordinates
+    projCoords.y = 1.0 - projCoords.y;
+
+    // Outside shadow map bounds = not in shadow
+    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+        return 1.0;
+    }
+
+    // Get depth from shadow map
+    float closestDepth = texture(s_shadow_maps[lightIndex], projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    // Bias to reduce shadow acne
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
+
+    // PCF (Percentage Closer Filtering) for soft shadows
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(s_shadow_maps[lightIndex], 0);
+    for(int x = -1; x <= 1; ++x) {
+        for(int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(s_shadow_maps[lightIndex], projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += (currentDepth - bias) > pcfDepth ? 0.0 : 1.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
+}
+
 void main()
 {
     ivec2 uv_ss = ivec2(gl_FragCoord.xy);
@@ -198,10 +240,16 @@ void main()
             vec3 L = normalize(-light.Direction.xyz);
             vec3 lightColor = light.ColorAndIntensity.rgb * light.ColorAndIntensity.a;
 
+            // Calculate shadow if light casts shadows
+            float shadowFactor = 1.0;
+            if (light.Properties.y == 1) {
+                shadowFactor = CalculateShadow(i, fragmentPosition_ws, N, L);
+            }
+
             // vec3 lighting_ggx(vec3 l_color, vec3 F0, vec3 light, vec3 eye, vec3 normal, vec3 albedo,
             // float metallic, float alpha, float alpha2, float k2, float attenuation)
 
-            directLighting += lighting_ggx(lightColor, F0, L, V, N, albedo.rgb, metallic, alpha, alpha2, k2, 0.5);
+            directLighting += lighting_ggx(lightColor, F0, L, V, N, albedo.rgb, metallic, alpha, alpha2, k2, 0.5) * shadowFactor;
         }
     }
 
@@ -221,7 +269,7 @@ void main()
     // dpecular ambient - split-sum approximation
     vec3 ambientSpecular = prefilteredColor * (F_ambient * brdfLUT.x + brdfLUT.y);
 
-    float ambientOcclusion = normal_ao.w;
+    float ambientOcclusion = 1.0f;//normal_ao.w;
     vec3 ambient = (ambientDiffuse + ambientSpecular) * ambientOcclusion;
 
     vec3 color = ambient + directLighting + emissive;
